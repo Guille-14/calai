@@ -1,0 +1,1397 @@
+# PROMPT COMPLETO PARA GOOGLE AI STUDIO - COPIAR CALAI (CALORIE LENS)
+
+Eres un desarrollador Flutter experto. Tu tarea es crear COMPLETAMENTE desde cero una aplicación Flutter llamada "CalAI" (Calorie Lens). Esta es una aplicación de seguimiento nutricional y fitness con IA integrada. DEBES crear TODOS los archivos necesarios para que la app funcione al 100%.
+
+---
+
+## 1. ESTRUCTURA DEL PROYECTO
+
+Crea un proyecto Flutter con esta estructura EXACTA:
+
+```
+lib/
+├── main.dart
+├── core/
+│   ├── fitness_ai.dart
+│   ├── ai/
+│   │   ├── ai_orchestrator.dart
+│   │   ├── ollama_adapter.dart
+│   │   ├── openrouter_adapter.dart
+│   │   ├── openai_adapter.dart
+│   │   ├── anthropic_adapter.dart
+│   │   ├── gemini_adapter.dart
+│   │   ├── groq_adapter.dart
+│   │   ├── nutrition_intelligence.dart
+│   │   ├── workout_intelligence.dart
+│   │   ├── readiness_engine.dart
+│   │   ├── progress_prediction_engine.dart
+│   │   ├── contextual_coach.dart
+│   │   ├── fitness_memory_profile.dart
+│   │   ├── fitness_memory_service.dart
+│   │   └── training_suggestion.dart
+│   ├── symmetry/
+│   │   ├── symmetry_rank_system.dart
+│   │   ├── macro_bridge.dart
+│   │   ├── health_connect_bridge.dart
+│   │   ├── symmetry_progression_service.dart
+│   │   ├── muscle_fatigue_map.dart
+│   │   ├── health_connect_importer.dart
+│   │   └── hevy_auto_sync_service.dart
+│   ├── theme/
+│   │   ├── app_theme.dart
+│   │   ├── dark_theme.dart
+│   │   └── app_constants.dart
+│   └── utils/
+│       ├── app_translations.dart
+│       └── calorie_calculator.dart
+├── data/
+│   ├── models/
+│   │   ├── food_item.dart
+│   │   ├── user_data.dart
+│   │   ├── health_data.dart
+│   │   ├── ai_profile.dart
+│   │   ├── recipe_model.dart
+│   │   ├── exercise_library.dart
+│   │   ├── product_model.dart
+│   │   └── chat_message.dart
+│   ├── services/
+│   │   ├── food_service.dart
+│   │   ├── ollama_service.dart
+│   │   ├── google_ai_service.dart
+│   │   ├── database_service.dart
+│   │   ├── external_food_service.dart
+│   │   ├── notification_service.dart
+│   │   ├── image_storage_service.dart
+│   │   ├── workout_storage.dart
+│   │   ├── recipe_service.dart
+│   │   ├── ai_config_service.dart
+│   │   ├── strength_ranks_service.dart
+│   │   ├── food_service_ollama.dart
+│   │   ├── health_settings_service.dart
+│   │   └── exercise_database_service.dart
+│   ├── repositories/
+│   │   └── food_repository.dart
+│   └── local/
+│       └── preference_manager.dart
+├── models/
+│   ├── food_entry.dart
+│   ├── chat_message.dart
+│   ├── workout_models.dart
+│   └── (otros modelos legacy)
+├── presentation/
+│   ├── cubit/
+│   │   └── food_log_cubit.dart
+│   ├── screens/
+│   │   ├── home_screen.dart
+│   │   ├── scan_food_screen.dart
+│   │   ├── food_scanner_screen.dart
+│   │   ├── nutrition_screen.dart
+│   │   ├── progress_screen.dart
+│   │   ├── settings_screen.dart
+│   │   ├── ai_settings_screen.dart
+│   │   ├── onboarding_screen.dart
+│   │   ├── workout_screen.dart
+│   │   ├── workout_tracking_screen.dart
+│   │   ├── symmetry_dashboard_screen.dart
+│   │   ├── symmetry_profile_screen.dart
+│   │   ├── symmetry_recommendations_screen.dart
+│   │   ├── symmetry_history_screen.dart
+│   │   ├── symmetry_workout_screen.dart
+│   │   ├── symmetry_navigator.dart
+│   │   ├── symmetry_dashboard.dart
+│   │   ├── normal_mode_navigator.dart
+│   │   ├── app_switcher_screen.dart
+│   │   ├── recipe_home_screen.dart
+│   │   ├── recipe_detail_screen.dart
+│   │   ├── add_edit_recipe_screen.dart
+│   │   ├── nutritional_chat_screen.dart
+│   │   ├── nutri_buddy_chat_screen.dart
+│   │   ├── body_scan_screen.dart
+│   │   ├── meal_detail_screen.dart
+│   │   ├── edit_meal_screen.dart
+│   │   ├── graph_screen.dart
+│   │   ├── hevy_sync_screen.dart
+│   │   └── openrouter_diagnostics_screen.dart
+│   └── widgets/
+│       ├── health_card.dart
+│       ├── food_card.dart
+│       ├── daily_tracker_premium.dart
+│       ├── rank_card.dart
+│       ├── water_tracker.dart
+│       ├── water_intake_card.dart
+│       ├── meal_list.dart
+│       ├── meal_list_item.dart
+│       ├── macro_card.dart
+│       ├── macro_indicator.dart
+│       ├── circular_progress.dart
+│       ├── chat_bubble.dart
+│       ├── body_map_widget.dart
+│       ├── body_muscle_heatmap_widget.dart
+│       ├── symmetry_heatmap_widget.dart
+│       ├── rank_badge_widget.dart
+│       ├── xp_gain_hud.dart
+│       ├── readiness_score_widget.dart
+│       ├── smart_health_overview.dart
+│       ├── exercise_video_player.dart
+│       ├── workout_routine_card.dart
+│       ├── workout_history_card.dart
+│       ├── tiktok_recipe_extractor.dart
+│       ├── nutrition_boost_widget.dart
+│       ├── ergonomic_image_picker_sheet.dart
+│       ├── alert_message_widget.dart
+│       ├── ollama_terminal_widget.dart
+│       ├── daily_tracker.dart
+│       ├── app_drawer.dart
+│       └── popups.dart
+└── screens/
+    ├── nutrition_dashboard_screen.dart
+    └── unified_chat_screen.dart
+```
+
+---
+
+## 2. PALETA DE COLORES (Midnight-Sunset Theme)
+
+```dart
+// lib/core/theme/app_theme.dart
+import 'package:flutter/material.dart';
+
+class AppColors {
+  // Paleta Midnight-Sunset
+  static const Color background = Color(0xFF0A0A0A);
+  static const Color cardBackground = Color(0xFF161618);
+  static const Color primaryAccent = Color(0xFFFF6600); // Naranja Neón
+  static const Color secondaryAccent = Color(0xFF00D9FF); // Cian Neón
+  
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFA0A0A0);
+  static const Color textTertiary = Color(0xFF707070);
+  
+  // Acentos funcionales
+  static const Color proteinColor = Color(0xFF00C853);   // Verde - Proteína
+  static const Color carbsColor = Color(0xFFFFD700);     // Dorado - Carbohidratos
+  static const Color fatColor = Color(0xFFFF6600);       // Naranja - Grasas
+  static const Color caloriesColor = Color(0xFFFF6600);  // Naranja - Calorías
+  static const Color divider = Color(0xFF1C1C1E);
+
+  // Rank Colors
+  static const Color rankIron = Color(0xFF6C757D);
+  static const Color rankBronze = Color(0xFFCD7F32);
+  static const Color rankSilver = Color(0xFFC0C0C0);
+  static const Color rankGold = Color(0xFFFFD700);
+  static const Color rankPlatinum = Color(0xFFE5E4E2);
+  static const Color rankEmerald = Color(0xFF39FF14);
+  static const Color rankDiamond = Color(0xFFB9F2FF);
+  static const Color rankMaster = Color(0xFF9D00FF);
+  static const Color rankChampion = Color(0xFFFF0040);
+  static const Color rankSymmetric = Color(0xFFFFD700);
+
+  // Fatigue Heatmap Colors
+  static const Color muscleRecovered = Color(0xFF00D9FF);
+  static const Color muscleNormal = Color(0xFF39FF14);
+  static const Color muscleFatigued = Color(0xFFFF6600);
+  static const Color muscleExhausted = Color(0xFFFF0040);
+}
+
+class AppTheme {
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: AppColors.background,
+      primaryColor: AppColors.primaryAccent,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primaryAccent,
+        secondary: AppColors.secondaryAccent,
+        surface: AppColors.cardBackground,
+        error: Color(0xFFFF0040),
+        background: AppColors.background,
+      ),
+      fontFamily: 'Inter',
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(fontFamily: 'Inter', fontSize: 34, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.5),
+        displayMedium: TextStyle(fontFamily: 'Inter', fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.5),
+        displaySmall: TextStyle(fontFamily: 'Inter', fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        headlineLarge: TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        headlineMedium: TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        headlineSmall: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+        titleLarge: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        titleMedium: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        titleSmall: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        bodyLarge: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
+        bodyMedium: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+        bodySmall: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textTertiary),
+        labelLarge: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        labelMedium: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+        labelSmall: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textTertiary, letterSpacing: 0.5),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        margin: EdgeInsets.zero,
+      ),
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        backgroundColor: AppColors.background,
+        centerTitle: false,
+        titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: AppColors.primaryAccent,
+          foregroundColor: AppColors.background,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        elevation: 0,
+        backgroundColor: AppColors.primaryAccent,
+        foregroundColor: AppColors.background,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        elevation: 0,
+        backgroundColor: AppColors.background,
+        selectedItemColor: AppColors.primaryAccent,
+        unselectedItemColor: AppColors.textTertiary,
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: true,
+      ),
+      dividerTheme: const DividerThemeData(thickness: 0, space: 0, color: Colors.transparent),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.cardBackground,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primaryAccent, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+    );
+  }
+
+  static BoxShadow get softShadow => BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 4));
+  static BoxShadow get mediumShadow => BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8));
+  static BoxShadow get strongShadow => BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 32, offset: const Offset(0, 12));
+}
+```
+
+---
+
+## 3. ARCHIVOS CORE - MODELOS DE DATOS
+
+### 3.1 food_item.dart
+```dart
+enum FoodUnit { grams, milliliters }
+
+class Ingredient {
+  final String name;
+  final int percentage;
+  const Ingredient({required this.name, required this.percentage});
+  factory Ingredient.fromJson(Map<String, dynamic> json) => Ingredient(name: json['name'] as String? ?? '', percentage: json['percentage'] as int? ?? 0);
+  Map<String, dynamic> toJson() => {'name': name, 'percentage': percentage};
+  Ingredient copyWith({String? name, int? percentage}) => Ingredient(name: name ?? this.name, percentage: percentage ?? this.percentage);
+}
+
+class FoodItem {
+  final String id;
+  final String name;
+  final double calories;
+  final double protein;
+  final double carbs;
+  final double fat;
+  final double sugar;
+  final double quantity;
+  final String? imageUrl;
+  final DateTime timestamp;
+  final List<Ingredient> ingredients;
+  final FoodUnit unit;
+  final double? confidenceScore;
+  final String? aiModel;
+
+  FoodItem({
+    required this.id, required this.name, required this.calories, required this.protein,
+    required this.carbs, required this.fat, required this.sugar, required this.quantity,
+    this.imageUrl, required this.timestamp, this.ingredients = const [], this.unit = FoodUnit.grams,
+    this.confidenceScore, this.aiModel,
+  });
+
+  factory FoodItem.fromJson(Map<String, dynamic> json) {
+    var ingredientsList = <Ingredient>[];
+    if (json['ingredients'] != null) {
+      final list = json['ingredients'] as List;
+      for (var item in list) {
+        if (item is Map<String, dynamic>) ingredientsList.add(Ingredient.fromJson(item));
+      }
+    }
+    return FoodItem(
+      id: json['id'] as String? ?? '', name: json['name'] as String? ?? '',
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      protein: (json['protein'] as num?)?.toDouble() ?? 0.0,
+      carbs: (json['carbs'] as num?)?.toDouble() ?? 0.0,
+      fat: (json['fat'] as num?)?.toDouble() ?? 0.0,
+      sugar: (json['sugar'] as num?)?.toDouble() ?? 0.0,
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: json['imageUrl'] as String?,
+      timestamp: DateTime.parse(json['timestamp'] as String? ?? DateTime.now().toIso8601String()),
+      ingredients: ingredientsList,
+      unit: json['unit'] == 'ml' ? FoodUnit.milliliters : FoodUnit.grams,
+      confidenceScore: (json['confidenceScore'] as num?)?.toDouble(),
+      aiModel: json['aiModel'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id, 'name': name, 'calories': calories, 'protein': protein, 'carbs': carbs,
+    'fat': fat, 'sugar': sugar, 'quantity': quantity, 'imageUrl': imageUrl,
+    'timestamp': timestamp.toIso8601String(), 'ingredients': ingredients.map((i) => i.toJson()).toList(),
+    'unit': unit == FoodUnit.milliliters ? 'ml' : 'g', 'confidenceScore': confidenceScore, 'aiModel': aiModel,
+  };
+
+  FoodItem copyWith({String? name, double? calories, double? protein, double? carbs, double? fat, double? sugar, double? quantity, String? imageUrl, List<Ingredient>? ingredients, FoodUnit? unit, double? confidenceScore, String? aiModel}) {
+    return FoodItem(id: id, name: name ?? this.name, calories: calories ?? this.calories, protein: protein ?? this.protein, carbs: carbs ?? this.carbs, fat: fat ?? this.fat, sugar: sugar ?? this.sugar, quantity: quantity ?? this.quantity, imageUrl: imageUrl ?? this.imageUrl, timestamp: timestamp, ingredients: ingredients ?? this.ingredients, unit: unit ?? this.unit, confidenceScore: confidenceScore ?? this.confidenceScore, aiModel: aiModel ?? this.aiModel);
+  }
+
+  double get totalIngredientPercentage => ingredients.isEmpty ? 0 : ingredients.fold(0, (sum, ing) => sum + ing.percentage);
+  List<Ingredient> get sortedIngredients { final sorted = List<Ingredient>.from(ingredients); sorted.sort((a, b) => b.percentage.compareTo(a.percentage)); return sorted; }
+  String get unitSymbol => unit == FoodUnit.grams ? 'g' : 'ml';
+}
+```
+
+### 3.2 user_data.dart
+```dart
+class UserData {
+  final double weight;
+  final double height;
+  final int age;
+  final String activityLevel;
+  final String gender;
+  final String goal;
+  final int estimatedCalories;
+  final int proteinGoal;
+  final int fatGoal;
+  final int carbsGoal;
+
+  UserData({required this.weight, required this.height, required this.age, required this.activityLevel, required this.gender, required this.goal, required this.estimatedCalories, required this.proteinGoal, required this.fatGoal, required this.carbsGoal});
+
+  Map<String, dynamic> toJson() => {'weight': weight, 'height': height, 'age': age, 'activityLevel': activityLevel, 'gender': gender, 'goal': goal, 'estimatedCalories': estimatedCalories, 'proteinGoal': proteinGoal, 'fatGoal': fatGoal, 'carbsGoal': carbsGoal};
+
+  factory UserData.fromJson(Map<String, dynamic> json) => UserData(weight: json['weight'], height: json['height'], age: json['age'], activityLevel: json['activityLevel'], gender: json['gender'], goal: json['goal'], estimatedCalories: json['estimatedCalories'], proteinGoal: json['proteinGoal'], fatGoal: json['fatGoal'], carbsGoal: json['carbsGoal']);
+
+  UserData copyWith({double? weight, double? height, int? age, String? activityLevel, String? gender, String? goal, int? estimatedCalories, int? proteinGoal, int? fatGoal, int? carbsGoal}) {
+    return UserData(weight: weight ?? this.weight, height: height ?? this.height, age: age ?? this.age, activityLevel: activityLevel ?? this.activityLevel, gender: gender ?? this.gender, goal: goal ?? this.goal, estimatedCalories: estimatedCalories ?? this.estimatedCalories, proteinGoal: proteinGoal ?? this.proteinGoal, fatGoal: fatGoal ?? this.fatGoal, carbsGoal: carbsGoal ?? this.carbsGoal);
+  }
+}
+```
+
+---
+
+## 4. ARCHIVOS CORE - SERVICIOS
+
+### 4.1 food_service.dart
+```dart
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'ollama_service.dart';
+import 'google_ai_service.dart';
+
+class FoodService {
+  static final OllamaService _ollamaService = OllamaService();
+  static final GoogleAiService _googleService = GoogleAiService();
+  static bool _isInitialized = false;
+  static const String _providerPref = 'ai_provider_mode';
+  static const List<Map<String, String>> availableModels = [];
+  static String get model => _activeProvider == 'google' ? _googleService.selectedModel : _ollamaService.selectedModel;
+  static String? get apiKey => _activeProvider == 'google' ? _googleService.apiKey : 'ollama';
+  static String _activeProvider = 'ollama';
+  static String get activeProvider => _activeProvider;
+
+  static Future<void> initFromPrefs() async {
+    if (_isInitialized) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _activeProvider = prefs.getString(_providerPref) ?? 'ollama';
+      await _ollamaService.initialize();
+      await _googleService.initialize();
+      _isInitialized = true;
+    } catch (e) {
+      _isInitialized = true;
+      debugPrint('FoodService: Error inicializando: $e');
+    }
+  }
+
+  static Future<void> setProvider(String provider) async {
+    _activeProvider = provider;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_providerPref, provider);
+  }
+
+  static void setModel(String m) {
+    if (_activeProvider == 'google') { _googleService.updateModel(m); } else { _ollamaService.updateModel(m); }
+  }
+
+  static void setApiKey(String k) {
+    if (_activeProvider == 'google') { _googleService.updateApiKey(k); }
+  }
+
+  static Future<FoodAnalysisResult> analyzeFoodImageFromBytes(Uint8List imageBytes) async {
+    if (!_isInitialized) await initFromPrefs();
+    try {
+      final base64Image = base64Encode(imageBytes);
+      final prompt = 'Analiza esta imagen de comida. Responde SOLO en JSON valido: {"foods":["nombre1"], "estimatedCalories":500, "macros":{"protein":25,"carbs":50,"fat":15}, "confidence":"high"}';
+      String responseText;
+      bool isSuccess;
+      String? error;
+
+      if (_activeProvider == 'google') {
+        final resp = await _googleService.generateResponseWithImage(prompt: prompt, imageBase64: base64Image);
+        isSuccess = resp.isSuccess; responseText = resp.text; error = resp.error;
+      } else {
+        final resp = await _ollamaService.generateResponseWithImage(prompt: prompt, model: _ollamaService.selectedModel, imageBase64: base64Image);
+        isSuccess = resp.isSuccess; responseText = resp.text; error = resp.error;
+      }
+
+      if (isSuccess) {
+        try {
+          final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
+          if (jsonMatch != null) {
+            final jsonData = jsonDecode(jsonMatch.group(0)!);
+            return FoodAnalysisResult.fromJson(jsonData);
+          }
+        } catch (parseErr) {
+          debugPrint('FoodService: Error parseando JSON: $parseErr');
+        }
+        return FoodAnalysisResult(foods: ['Comida detectada'], estimatedCalories: 300, protein: 20, carbs: 30, fat: 10, confidence: 'low');
+      } else {
+        return FoodAnalysisResult.error(error ?? 'Error desconocido');
+      }
+    } catch (e) {
+      return FoodAnalysisResult.error('Error: $e');
+    }
+  }
+
+  static Future<FoodAnalysisResult> estimateCaloriesFromText(String description) async {
+    if (!_isInitialized) await initFromPrefs();
+    try {
+      final prompt = 'Comida: "$description". Responde SOLO en JSON: {"foods":["nombre"], "estimatedCalories":400, "macros":{"protein":20,"carbs":40,"fat":15}, "confidence":"medium"}';
+      String responseText;
+      bool isSuccess;
+      String? error;
+
+      if (_activeProvider == 'google') {
+        final resp = await _googleService.generateResponse(prompt: prompt);
+        isSuccess = resp.isSuccess; responseText = resp.text; error = resp.error;
+      } else {
+        final resp = await _ollamaService.generateResponse(prompt: prompt, model: _ollamaService.selectedModel);
+        isSuccess = resp.isSuccess; responseText = resp.text; error = resp.error;
+      }
+
+      if (isSuccess) {
+        try {
+          final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
+          if (jsonMatch != null) return FoodAnalysisResult.fromJson(jsonDecode(jsonMatch.group(0)!));
+        } catch (parseErr) { debugPrint('Error: $parseErr'); }
+        return FoodAnalysisResult(foods: [description], estimatedCalories: 250, protein: 15, carbs: 25, fat: 8, confidence: 'low');
+      } else {
+        return FoodAnalysisResult.error(error ?? 'Error');
+      }
+    } catch (e) {
+      return FoodAnalysisResult.error('Error: $e');
+    }
+  }
+
+  static Future<String> chatCompletion(String userMessage, {List<String>? context}) async {
+    if (!_isInitialized) await initFromPrefs();
+    try {
+      final ctxStr = context != null && context.isNotEmpty ? 'Historial:\n${context.join("\n")}\n\n' : '';
+      final prompt = 'Eres asesor nutricional experto. Responde en español.\n${ctxStr}Usuario: $userMessage';
+      if (_activeProvider == 'google') {
+        final resp = await _googleService.generateResponse(prompt: prompt);
+        return resp.isSuccess ? resp.text : 'Error Google: ${resp.error}';
+      } else {
+        final resp = await _ollamaService.generateResponse(prompt: prompt, model: _ollamaService.selectedModel);
+        return resp.isSuccess ? resp.text : 'Error Ollama: ${resp.error}';
+      }
+    } catch (e) { return 'Error: $e'; }
+  }
+
+  static Future<bool> testConnection() async {
+    if (!_isInitialized) await initFromPrefs();
+    try {
+      if (_activeProvider == 'google') {
+        final resp = await _googleService.generateResponse(prompt: 'ping');
+        return resp.isSuccess;
+      } else {
+        return await _ollamaService.isServerAvailable();
+      }
+    } catch (e) { return false; }
+  }
+}
+
+class FoodAnalysisResult {
+  final List<String> foods;
+  final int estimatedCalories;
+  final double protein;
+  final double carbs;
+  final double fat;
+  final String confidence;
+  final bool isError;
+  final String? errorMessage;
+
+  FoodAnalysisResult({required this.foods, required this.estimatedCalories, required this.protein, required this.carbs, required this.fat, required this.confidence, this.isError = false, this.errorMessage});
+
+  factory FoodAnalysisResult.error(String message) => FoodAnalysisResult(foods: [], estimatedCalories: 0, protein: 0, carbs: 0, fat: 0, confidence: 'low', isError: true, errorMessage: message);
+
+  factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) {
+    final macros = json['macros'] as Map<String, dynamic>? ?? {};
+    return FoodAnalysisResult(
+      foods: List<String>.from(json['foods'] ?? []),
+      estimatedCalories: json['estimatedCalories'] ?? 300,
+      protein: (macros['protein'] ?? 15).toDouble(),
+      carbs: (macros['carbs'] ?? 30).toDouble(),
+      fat: (macros['fat'] ?? 10).toDouble(),
+      confidence: json['confidence'] ?? 'medium',
+    );
+  }
+}
+```
+
+### 4.2 ollama_service.dart
+```dart
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class OllamaService {
+  static const String _baseUrlKey = 'ollama_base_url';
+  static const String _modelKey = 'ollama_model';
+  static const String _defaultUrl = 'http://localhost:11434';
+  static const String _defaultModel = 'llava';
+
+  String _baseUrl = _defaultUrl;
+  String _selectedModel = _defaultModel;
+  String? _apiKey;
+  bool _isInitialized = false;
+
+  String get baseUrl => _baseUrl;
+  String get selectedModel => _selectedModel;
+  String? get apiKey => _apiKey;
+
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    final prefs = await SharedPreferences.getInstance();
+    _baseUrl = prefs.getString(_baseUrlKey) ?? _defaultUrl;
+    _selectedModel = prefs.getString(_modelKey) ?? _defaultModel;
+    _isInitialized = true;
+  }
+
+  void updateModel(String model) {
+    _selectedModel = model;
+    _savePrefs();
+  }
+
+  void updateBaseUrl(String url) {
+    _baseUrl = url;
+    _savePrefs();
+  }
+
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_baseUrlKey, _baseUrl);
+    await prefs.setString(_modelKey, _selectedModel);
+  }
+
+  Future<bool> isServerAvailable() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/api/tags')).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<String>> listModels() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/api/tags')).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final models = (data['models'] as List).map((m) => m['name'] as String).toList();
+        return models;
+      }
+    } catch (e) {
+      debugPrint('Error listando modelos: $e');
+    }
+    return [];
+  }
+
+  Future<OllamaResponse> generateResponse({required String prompt, required String model, List<String>? context}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/generate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': model,
+          'prompt': prompt,
+          'stream': false,
+          'context': context,
+        }),
+      ).timeout(const Duration(seconds: 120));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return OllamaResponse(text: data['response'] ?? '', isSuccess: true);
+      } else {
+        return OllamaResponse(text: '', isSuccess: false, error: 'Error ${response.statusCode}');
+      }
+    } catch (e) {
+      return OllamaResponse(text: '', isSuccess: false, error: e.toString());
+    }
+  }
+
+  Future<OllamaResponse> generateResponseWithImage({required String prompt, required String model, required String imageBase64}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/generate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'model': model,
+          'prompt': prompt,
+          'images': [imageBase64],
+          'stream': false,
+        }),
+      ).timeout(const Duration(seconds: 120));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return OllamaResponse(text: data['response'] ?? '', isSuccess: true);
+      } else {
+        return OllamaResponse(text: '', isSuccess: false, error: 'Error ${response.statusCode}');
+      }
+    } catch (e) {
+      return OllamaResponse(text: '', isSuccess: false, error: e.toString());
+    }
+  }
+}
+
+class OllamaResponse {
+  final String text;
+  final bool isSuccess;
+  final String? error;
+  OllamaResponse({required this.text, required this.isSuccess, this.error});
+}
+```
+
+### 4.3 google_ai_service.dart
+```dart
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class GoogleAiService {
+  static const String _apiKeyPref = 'google_ai_api_key';
+  static const String _modelPref = 'google_ai_model';
+  static const String _defaultModel = 'gemini-1.5-flash';
+
+  String? _apiKey;
+  String _selectedModel = _defaultModel;
+  bool _isInitialized = false;
+
+  String? get apiKey => _apiKey;
+  String get selectedModel => _selectedModel;
+
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+    final prefs = await SharedPreferences.getInstance();
+    _apiKey = prefs.getString(_apiKeyPref);
+    _selectedModel = prefs.getString(_modelPref) ?? _defaultModel;
+    _isInitialized = true;
+  }
+
+  void updateApiKey(String key) {
+    _apiKey = key;
+    _savePrefs();
+  }
+
+  void updateModel(String model) {
+    _selectedModel = model;
+    _savePrefs();
+  }
+
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_apiKey != null) await prefs.setString(_apiKeyPref, _apiKey!);
+    await prefs.setString(_modelPref, _selectedModel);
+  }
+
+  Future<GoogleAiResponse> generateResponse({required String prompt, String? model}) async {
+    if (_apiKey == null || _apiKey!.isEmpty) {
+      return GoogleAiResponse(text: '', isSuccess: false, error: 'API key no configurada');
+    }
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/${model ?? _selectedModel}:generateContent?key=$_apiKey');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [{'parts': [{'text': prompt}]}],
+          'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 2048},
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+        return GoogleAiResponse(text: text, isSuccess: true);
+      } else {
+        return GoogleAiResponse(text: '', isSuccess: false, error: 'Error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      return GoogleAiResponse(text: '', isSuccess: false, error: e.toString());
+    }
+  }
+
+  Future<GoogleAiResponse> generateResponseWithImage({required String prompt, String? model, required String imageBase64}) async {
+    if (_apiKey == null || _apiKey!.isEmpty) {
+      return GoogleAiResponse(text: '', isSuccess: false, error: 'API key no configurada');
+    }
+    try {
+      final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/${model ?? _selectedModel}:generateContent?key=$_apiKey');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [{'parts': [{'text': prompt}, {'inlineData': {'mimeType': 'image/jpeg', 'data': imageBase64}}]}],
+          'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 2048},
+        }),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+        return GoogleAiResponse(text: text, isSuccess: true);
+      } else {
+        return GoogleAiResponse(text: '', isSuccess: false, error: 'Error ${response.statusCode}');
+      }
+    } catch (e) {
+      return GoogleAiResponse(text: '', isSuccess: false, error: e.toString());
+    }
+  }
+}
+
+class GoogleAiResponse {
+  final String text;
+  final bool isSuccess;
+  final String? error;
+  GoogleAiResponse({required this.text, required this.isSuccess, this.error});
+}
+```
+
+### 4.4 food_repository.dart
+```dart
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:dartz/dartz.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/food_item.dart';
+import '../services/food_service.dart';
+import '../services/database_service.dart';
+import '../services/external_food_service.dart';
+import '../services/image_storage_service.dart';
+
+class FoodRepository {
+  final FoodService _foodService;
+  final SharedPreferences _prefs;
+  final DatabaseService _databaseService;
+  final ExternalFoodService _externalFoodService;
+  final ImageStorageService _imageStorageService;
+
+  FoodRepository(this._foodService, this._prefs, this._databaseService, this._externalFoodService, this._imageStorageService);
+
+  Future<List<FoodItem>> getDailyFoodLog(DateTime date) async {
+    final String key = 'food_log_${date.toIso8601String().split('T')[0]}';
+    final String? storedData = _prefs.getString(key);
+    if (storedData != null) {
+      final List<dynamic> jsonList = json.decode(storedData);
+      return jsonList.map((json) => FoodItem.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  Future<void> addFoodItem(FoodItem item) async {
+    final String key = 'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
+    currentLog.add(item);
+    await _prefs.setString(key, json.encode(currentLog.map((item) => item.toJson()).toList()));
+  }
+
+  Future<Either<String, FoodItem>> detectFoodFromImage(Uint8List imageBytes) async {
+    try {
+      final result = await FoodService.analyzeFoodImageFromBytes(imageBytes);
+      if (result.isError) return Left(result.errorMessage ?? 'Error en el análisis');
+
+      final String foodId = DateTime.now().millisecondsSinceEpoch.toString();
+      final String imagePath = await _imageStorageService.saveFoodImage(imageBytes, foodId);
+      final unit = _inferUnitFromFoodName(result.foods.isNotEmpty ? result.foods.first : 'Comida');
+
+      return Right(FoodItem(
+        id: foodId, name: result.foods.isNotEmpty ? result.foods.first : 'Comida',
+        calories: result.estimatedCalories.toDouble(), protein: result.protein,
+        carbs: result.carbs, fat: result.fat, sugar: 0, quantity: 100,
+        timestamp: DateTime.now(), ingredients: [], imageUrl: imagePath,
+        unit: unit, confidenceScore: double.tryParse(result.confidence) ?? 0.5,
+      ));
+    } catch (e) {
+      return _createDefaultFoodItem(imageBytes);
+    }
+  }
+
+  Future<Either<String, FoodItem>> detectFoodFromDescription(String description) async {
+    try {
+      final result = await FoodService.estimateCaloriesFromText(description);
+      if (result.isError) return Left(result.errorMessage ?? 'Error en el análisis');
+
+      final String foodId = DateTime.now().millisecondsSinceEpoch.toString();
+      final unit = _inferUnitFromFoodName(result.foods.isNotEmpty ? result.foods.first : description);
+
+      return Right(FoodItem(
+        id: foodId, name: result.foods.isNotEmpty ? result.foods.first : description,
+        calories: result.estimatedCalories.toDouble(), protein: result.protein,
+        carbs: result.carbs, fat: result.fat, sugar: 0, quantity: 100,
+        timestamp: DateTime.now(), ingredients: [], imageUrl: null,
+        unit: unit, confidenceScore: double.tryParse(result.confidence) ?? 0.5,
+      ));
+    } catch (e) { return Left('Error: $e'); }
+  }
+
+  Future<void> deleteFoodItem(FoodItem item) async {
+    final String key = 'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
+    currentLog.removeWhere((existingItem) => existingItem.id == item.id);
+    await _prefs.setString(key, json.encode(currentLog.map((item) => item.toJson()).toList()));
+  }
+
+  Future<void> updateFoodItem(FoodItem item) async {
+    final String key = 'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
+    final index = currentLog.indexWhere((existingItem) => existingItem.id == item.id);
+    if (index != -1) {
+      currentLog[index] = item;
+      await _prefs.setString(key, json.encode(currentLog.map((item) => item.toJson()).toList()));
+    }
+  }
+
+  FoodUnit _inferUnitFromFoodName(String foodName) {
+    final lowerName = foodName.toLowerCase();
+    final liquidKeywords = ['agua', 'water', 'jugo', 'juice', 'refresco', 'soda', 'cola', 'leche', 'milk', 'cerveza', 'beer', 'vino', 'wine', 'cafe', 'coffee', 'te', 'tea', 'batido', 'smoothie', 'sopa', 'soup', 'caldo', 'broth', 'aceite', 'oil', 'salsa', 'sauce', 'miel', 'honey'];
+    for (final keyword in liquidKeywords) {
+      if (lowerName.contains(keyword)) return FoodUnit.milliliters;
+    }
+    return FoodUnit.grams;
+  }
+
+  Future<Either<String, FoodItem>> _createDefaultFoodItem(Uint8List imageBytes) async {
+    final String foodId = DateTime.now().millisecondsSinceEpoch.toString();
+    String? imagePath;
+    try { imagePath = await _imageStorageService.saveFoodImage(imageBytes, foodId); } catch (_) {}
+    return Right(FoodItem(id: foodId, name: 'Comida', calories: 200, protein: 10, carbs: 25, fat: 8, sugar: 5, quantity: 100, timestamp: DateTime.now(), ingredients: [], imageUrl: imagePath, unit: FoodUnit.grams, confidenceScore: 0.5));
+  }
+}
+```
+
+---
+
+## 5. ESTADO - FOOD LOG CUBIT
+
+```dart
+import 'dart:typed_data';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/models/food_item.dart';
+import '../../data/repositories/food_repository.dart';
+
+class FoodLogState {
+  final List<FoodItem> meals;
+  final double totalCalories;
+  final double totalProtein;
+  final double totalCarbs;
+  final double totalFat;
+  final List<double> weeklyData;
+  final DateTime? selectedDate;
+  final bool isLoading;
+  final String? error;
+  final String? successMessage;
+  final DateTime? lastUpdate;
+  final int waterGlasses;
+  final int waterGoal;
+
+  const FoodLogState({
+    this.meals = const [], this.totalCalories = 0, this.totalProtein = 0,
+    this.totalCarbs = 0, this.totalFat = 0, this.weeklyData = const [],
+    this.selectedDate, this.isLoading = false, this.error, this.successMessage,
+    this.lastUpdate, this.waterGlasses = 0, this.waterGoal = 8,
+  });
+
+  FoodLogState copyWith({
+    List<FoodItem>? meals, double? totalCalories, double? totalProtein,
+    double? totalCarbs, double? totalFat, List<double>? weeklyData,
+    DateTime? selectedDate, bool? isLoading, String? error, String? successMessage,
+    DateTime? lastUpdate, int? waterGlasses, int? waterGoal,
+    bool clearError = false, bool clearSuccess = false,
+  }) {
+    return FoodLogState(
+      meals: meals ?? this.meals, totalCalories: totalCalories ?? this.totalCalories,
+      totalProtein: totalProtein ?? this.totalProtein, totalCarbs: totalCarbs ?? this.totalCarbs,
+      totalFat: totalFat ?? this.totalFat, weeklyData: weeklyData ?? this.weeklyData,
+      selectedDate: selectedDate ?? this.selectedDate, isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
+      lastUpdate: lastUpdate ?? this.lastUpdate, waterGlasses: waterGlasses ?? this.waterGlasses,
+      waterGoal: waterGoal ?? this.waterGoal,
+    );
+  }
+}
+
+class FoodLogCubit extends Cubit<FoodLogState> {
+  final FoodRepository _repository;
+  List<double>? _cachedWeeklyData;
+  DateTime? _cachedWeeklyDataDate;
+  SharedPreferences? _prefs;
+  static const String _waterKey = 'water_glasses_';
+
+  FoodLogCubit(this._repository) : super(const FoodLogState());
+
+  Future<SharedPreferences> get _getPrefs async { _prefs ??= await SharedPreferences.getInstance(); return _prefs!; }
+
+  Future<void> loadDailyLog() async { await loadLogForDate(DateTime.now()); }
+
+  Future<void> loadLogForDate(DateTime date) async {
+    emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
+    try {
+      final meals = await _repository.getDailyFoodLog(date);
+      final totals = _calculateTotals(meals);
+      final waterGlasses = await _loadWaterGlasses(date);
+      emit(state.copyWith(meals: meals, totalCalories: totals['calories'], totalProtein: totals['protein'], totalCarbs: totals['carbs'], totalFat: totals['fat'], weeklyData: const [], selectedDate: date, isLoading: false, lastUpdate: DateTime.now(), waterGlasses: waterGlasses));
+    } catch (e) { emit(state.copyWith(error: e.toString(), isLoading: false)); }
+  }
+
+  Future<int> _loadWaterGlasses(DateTime date) async {
+    final prefs = await _getPrefs;
+    final key = '$_waterKey${date.toIso8601String().split('T')[0]}';
+    return prefs.getInt(key) ?? 0;
+  }
+
+  Future<void> _saveWaterGlasses(DateTime date, int glasses) async {
+    final prefs = await _getPrefs;
+    final key = '$_waterKey${date.toIso8601String().split('T')[0]}';
+    await prefs.setInt(key, glasses);
+  }
+
+  Future<void> addWaterGlass() async {
+    final newCount = state.waterGlasses + 1;
+    await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
+    emit(state.copyWith(waterGlasses: newCount));
+  }
+
+  Future<void> removeWaterGlass() async {
+    if (state.waterGlasses > 0) {
+      final newCount = state.waterGlasses - 1;
+      await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
+      emit(state.copyWith(waterGlasses: newCount));
+    }
+  }
+
+  Future<void> addMeal(FoodItem meal) async {
+    try {
+      await _repository.addFoodItem(meal);
+      _invalidateWeeklyCache();
+      await loadDailyLog();
+    } catch (e) { emit(state.copyWith(error: e.toString())); }
+  }
+
+  Map<String, double> _calculateTotals(List<FoodItem> meals) {
+    double calories = 0, protein = 0, carbs = 0, fat = 0;
+    for (final meal in meals) { calories += meal.calories; protein += meal.protein; carbs += meal.carbs; fat += meal.fat; }
+    return {'calories': calories, 'protein': protein, 'carbs': carbs, 'fat': fat};
+  }
+
+  void _invalidateWeeklyCache() { _cachedWeeklyData = null; _cachedWeeklyDataDate = null; }
+
+  Future<List<double>> _loadWeeklyData() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (_cachedWeeklyData != null && _cachedWeeklyDataDate != null) {
+      final cachedDay = DateTime(_cachedWeeklyDataDate!.year, _cachedWeeklyDataDate!.month, _cachedWeeklyDataDate!.day);
+      if (cachedDay == today) return _cachedWeeklyData!;
+    }
+    final List<double> weeklyData = [];
+    for (int i = 6; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final meals = await _repository.getDailyFoodLog(date);
+      final calories = _calculateTotals(meals)['calories'] ?? 0.0;
+      weeklyData.add(calories);
+    }
+    _cachedWeeklyData = weeklyData; _cachedWeeklyDataDate = now;
+    return weeklyData;
+  }
+
+  Future<void> addMealFromImage(Uint8List imageBytes) async {
+    emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
+    final result = await _repository.detectFoodFromImage(imageBytes);
+    result.fold((failure) => emit(state.copyWith(error: failure, isLoading: false)), (meal) async {
+      await addMeal(meal);
+      emit(state.copyWith(successMessage: 'Comida "${meal.name}" detectada exitosamente!', isLoading: false));
+    });
+  }
+
+  void clearMessages() { emit(state.copyWith(clearError: true, clearSuccess: true)); }
+
+  Future<void> deleteMeal(FoodItem meal) async {
+    try { await _repository.deleteFoodItem(meal); _invalidateWeeklyCache(); await loadDailyLog(); } catch (e) { emit(state.copyWith(error: e.toString())); }
+  }
+
+  Future<void> updateMeal(FoodItem meal) async {
+    try { await _repository.updateFoodItem(meal); _invalidateWeeklyCache(); await loadDailyLog(); } catch (e) { emit(state.copyWith(error: e.toString())); }
+  }
+}
+```
+
+---
+
+## 6. SISTEMA DE IA - AI ORCHESTRATOR
+
+```dart
+// lib/core/ai/ai_orchestrator.dart
+abstract class AiModelAdapter {
+  String get name;
+  Future<AiResult> generateText(String prompt, {Map<String, dynamic>? context});
+  Future<AiResult> generateWithImage(String prompt, String imageBase64);
+  Future<bool> isAvailable();
+}
+
+class AiResult {
+  final String text;
+  final bool isSuccess;
+  final String? error;
+  final String? modelUsed;
+  final double? confidence;
+
+  AiResult({required this.text, required this.isSuccess, this.error, this.modelUsed, this.confidence});
+}
+
+class AiOrchestrator {
+  final List<AiModelAdapter> _adapters = [];
+  final Map<String, AiResult> _cache = {};
+  static const Duration _cacheTtl = Duration(seconds: 300);
+  int _currentAdapterIndex = 0;
+
+  void registerAdapter(AiModelAdapter adapter) => _adapters.add(adapter);
+
+  Future<AiResult> generateWithFallback(String prompt, {bool isVision = false, String? imageBase64}) async {
+    // Check cache
+    final cacheKey = '$prompt${imageBase64 ?? ''}';
+    if (_cache.containsKey(cacheKey)) {
+      final cached = _cache[cacheKey]!;
+      return cached;
+    }
+
+    // Try each adapter with retry logic
+    for (int i = 0; i < _adapters.length; i++) {
+      final adapterIndex = (_currentAdapterIndex + i) % _adapters.length;
+      final adapter = _adapters[adapterIndex];
+
+      if (await adapter.isAvailable()) {
+        for (int retry = 0; retry < 3; retry++) {
+          try {
+            AiResult result;
+            if (isVision && imageBase64 != null) {
+              result = await adapter.generateWithImage(prompt, imageBase64);
+            } else {
+              result = await adapter.generateText(prompt);
+            }
+
+            if (result.isSuccess) {
+              _cache[cacheKey] = result;
+              _currentAdapterIndex = adapterIndex;
+              return result;
+            }
+          } catch (e) {
+            // Exponential backoff
+            await Future.delayed(Duration(milliseconds: 1000 * (retry + 1)));
+          }
+        }
+      }
+    }
+
+    return AiResult(text: '', isSuccess: false, error: 'Todos los proveedores de IA fallaron');
+  }
+
+  void clearCache() => _cache.clear();
+}
+```
+
+---
+
+## 7. SISTEMA DE GAMIFICACIÓN - SYMMETRY RANK SYSTEM
+
+```dart
+// lib/core/symmetry/symmetry_rank_system.dart
+enum SymmetryRank {
+  iron(0, 'Hierro', 0xFF6C757D),
+  bronze(1, 'Bronce', 0xFFCD7F32),
+  silver(2, 'Plata', 0xFFC0C0C0),
+  gold(3, 'Oro', 0xFFFFD700),
+  platinum(4, 'Platino', 0xFFE5E4E2),
+  emerald(5, 'Esmeralda', 0xFF39FF14),
+  diamond(6, 'Diamante', 0xFFB9F2FF),
+  master(7, 'Maestro', 0xFF9D00FF),
+  champion(8, 'Campeón', 0xFFFF0040),
+  symmetric(9, 'Simétrico', 0xFFFFD700);
+
+  final int level;
+  final String displayName;
+  final int colorValue;
+  const SymmetryRank(this.level, this.displayName, this.colorValue);
+}
+
+class SymmetryRankSystem {
+  static const List<int> _rankThresholds = [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 10000];
+
+  SymmetryRank getRankFromXp(int xp) {
+    for (int i = _rankThresholds.length - 1; i >= 0; i--) {
+      if (xp >= _rankThresholds[i]) return SymmetryRank.values[i];
+    }
+    return SymmetryRank.iron;
+  }
+
+  int getXpForNextRank(int currentXp) {
+    final currentRank = getRankFromXp(currentXp);
+    if (currentRank == SymmetryRank.symmetric) return currentXp;
+    return _rankThresholds[currentRank.level + 1];
+  }
+
+  double getProgressToNextRank(int currentXp) {
+    final currentRank = getRankFromXp(currentXp);
+    if (currentRank == SymmetryRank.symmetric) return 1.0;
+    final currentThreshold = _rankThresholds[currentRank.level];
+    final nextThreshold = _rankThresholds[currentRank.level + 1];
+    return (currentXp - currentThreshold) / (nextThreshold - currentThreshold);
+  }
+
+  int calculateXpFromWorkout({required double tonnage, required int sets, required bool metProteinGoal}) {
+    double xp = (tonnage / 100) + (sets * 2);
+    if (metProteinGoal) xp *= 1.2; // Protein multiplier
+    return xp.round();
+  }
+}
+```
+
+---
+
+## 8. MAIN.DART - ENTRY POINT
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'core/theme/app_theme.dart';
+import 'core/utils/app_translations.dart';
+import 'data/repositories/food_repository.dart';
+import 'data/services/food_service.dart';
+import 'data/services/database_service.dart';
+import 'data/services/external_food_service.dart';
+import 'data/services/notification_service.dart';
+import 'data/services/image_storage_service.dart';
+import 'presentation/cubit/food_log_cubit.dart';
+import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/screens/app_switcher_screen.dart';
+import 'presentation/screens/settings_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  await notificationService.scheduleSmartNotifications();
+
+  final prefs = await SharedPreferences.getInstance();
+  final bool showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
+  final String languageCode = prefs.getString('language_code') ?? 'es';
+  final Locale appLocale = Locale(languageCode);
+
+  final openRouterKey = dotenv.env['OPENROUTER_API_KEY'] ?? '';
+  final openRouterModel = dotenv.env['OPENROUTER_MODEL'] ?? 'google/gemini-2.5-flash';
+
+  await FoodService.initFromPrefs();
+
+  if (FoodService.apiKey == null || FoodService.apiKey!.isEmpty) {
+    FoodService.setApiKey(openRouterKey);
+  }
+  if (FoodService.model.isEmpty) {
+    FoodService.setModel(openRouterModel);
+  }
+
+  final databaseService = DatabaseService();
+  final imageStorageService = ImageStorageService();
+  final foodService = FoodService();
+  final externalFoodService = ExternalFoodService();
+  final foodRepository = FoodRepository(foodService, prefs, databaseService, externalFoodService, imageStorageService);
+
+  runApp(LocaleNotifier(initialLocale: appLocale, showOnboarding: showOnboarding, foodRepository: foodRepository));
+}
+
+class LocaleNotifier extends StatefulWidget {
+  final Locale initialLocale;
+  final bool showOnboarding;
+  final FoodRepository foodRepository;
+
+  const LocaleNotifier({super.key, required this.initialLocale, required this.showOnboarding, required this.foodRepository});
+
+  static void updateLocale(Locale locale) => _LocaleNotifierState.instance?.setLocaleInternal(locale);
+
+  @override
+  State<LocaleNotifier> createState() => _LocaleNotifierState();
+}
+
+class _LocaleNotifierState extends State<LocaleNotifier> {
+  late Locale _locale;
+  static GlobalKey<NavigatorState> navigatorKey = GlobalKey();
+  static _LocaleNotifierState? _instance;
+  static _LocaleNotifierState? get instance => _instance;
+
+  @override
+  void initState() { super.initState(); _locale = widget.initialLocale; _instance = this; }
+
+  static void updateLocale(Locale locale) => _instance?.setLocaleInternal(locale);
+
+  void setLocaleInternal(Locale locale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language_code', locale.languageCode);
+    if (mounted) setState(() => _locale = locale);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => FoodLogCubit(widget.foodRepository)..loadDailyLog(),
+      child: LocaleProvider(
+        locale: _locale,
+        setLocale: setLocaleInternal,
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          title: 'CalAI',
+          locale: _locale,
+          localizationsDelegates: [AppTranslations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+          supportedLocales: [const Locale('en'), const Locale('es')],
+          theme: AppTheme.darkTheme,
+          home: widget.showOnboarding ? const OnboardingScreen() : const AppSwitcherScreen(),
+          routes: {
+            '/main': (context) => const AppSwitcherScreen(),
+            '/home': (context) => const HomeScreen(),
+            '/onboarding': (context) => const OnboardingScreen(),
+            '/settings': (context) => const SettingsScreen(),
+          },
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 9. DEPENDENCIAS (pubspec.yaml)
+
+```yaml
+name: calorie_lens
+description: "CalAI - Smart calorie tracking with AI"
+publish_to: 'none'
+version: 1.0.3+3
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^8.1.6
+  shared_preferences: ^2.3.4
+  json_annotation: ^4.9.0
+  fl_chart: ^0.70.0
+  percent_indicator: ^4.2.4
+  json_serializable: ^6.9.2
+  flutter_dotenv: ^5.2.1
+  http: ^1.2.2
+  image_picker: ^1.2.2
+  flutter_launcher_icons: ^0.14.2
+  timeago: ^3.7.0
+  youtube_player_flutter: ^9.1.3
+  dartz: ^0.10.1
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  provider: ^6.1.2
+  intl: ^0.20.2
+  shimmer: ^2.0.0
+  health: 13.1.4
+  url_launcher: ^6.3.1
+  flutter_inappwebview: ^6.1.5
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.0
+  uuid: ^4.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.14
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/onboarding/
+    - .env
+```
+
+---
+
+## 10. ARCHIVOS .env
+
+```
+OPENROUTER_API_KEY=tu_api_key_aqui
+OPENROUTER_MODEL=google/gemini-2.5-flash
+```
+
+---
+
+## 11. INSTRUCCIONES FINALES
+
+1. Crea TODOS los archivos listados en la estructura
+2. Usa la paleta de colores EXACTA (Midnight-Sunset)
+3. Implementa TODOS los servicios con Singletons
+4. Implementa el sistema de IA con AiOrchestrator y adaptadores
+5. Implementa el sistema de gamificación Symmetry con 10 rangos
+6. Implementa FoodLogCubit con BLoC
+7. Implementa notificaciones inteligentes
+8. Implementa i18n español/inglés con 370+ claves
+9. Implementa la búsqueda en cascada: Local DB → OpenFoodFacts → IA
+10. Implementa detección de líquidos (g/ml) por nombre del alimento
+11. TODAS las pantallas deben funcionar con navegación completa
+12. El theme debe ser EXACTAMENTE como se muestra (Midnight-Sunset)
+13. Los widgets deben ser reutilizables y bien diseñados
+
+NO omitas NINGUN archivo. La app debe funcionar al 100% al compilar.

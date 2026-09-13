@@ -1,0 +1,24 @@
+# macOS
+/.DS_Store
+**/.DS_Store
+
+# Flutter / Dart
+/.dart_tool
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.idea
+/.metadata
+/build/
+/android/build/
+/android/app/build/
+
+# NOTA: pubspec.lock NO se ignora: en aplicaciones (no paquetes) debe
+# versionarse para builds reproducibles.
+
+# Secretos locales (la API key no debe subirse al repo)
+.env
+
+# Datos/aplicaciones externas no pertenecientes al proyecto
+/~
+/fotooos/
+build_verbose.log
