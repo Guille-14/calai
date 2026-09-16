@@ -85,21 +85,25 @@ def mode_analyze(cr_id, args):
             human = f.read()
 
     if not annotations:
-        # Sin datos máquina: publicar el final de la salida humana.
-        if human.strip():
+        # Sin datos máquina: o el proyecto está limpio (flutter analyze
+        # --machine no escribe nada) o algo falló y hay que ver el log.
+        if human.strip() and "No issues found!" not in human:
             annotations.append(
                 {
                     "path": ".github/workflows/flutter-ci.yml",
                     "start_line": 1,
                     "end_line": 1,
                     "annotation_level": "warning",
-                    "title": "flutter analyze",
+                    "title": "flutter analyze (salida inesperada)",
                     "message": human[-60000:],
                 }
             )
-        # `flutter analyze` sin problemas no escribe nada en --machine.
-        has_error = False
-        has_warning = False
+            # Salida no reconocida: no se considera limpio.
+            has_error = "error" in human.lower()
+            has_warning = True
+        else:
+            has_error = False
+            has_warning = False
     else:
         has_error = any(a["annotation_level"] == "failure" for a in annotations)
         has_warning = any(a["annotation_level"] == "warning" for a in annotations)

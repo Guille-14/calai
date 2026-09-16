@@ -35,7 +35,7 @@ jobs:
         continue-on-error: true
         run: flutter pub get > pubget_output.txt 2>&1 || true
 
-      - name: Gate: pub get
+      - name: "Gate: pub get"
         if: always()
         run: >
           python3 .github/scripts/ci_annotate.py --mode tail
@@ -52,7 +52,7 @@ jobs:
           echo '================ flutter analyze ================'
           cat analyze_human.txt
 
-      - name: Gate: analyze
+      - name: "Gate: analyze"
         if: always() && steps.pubget.outcome == 'success'
         run: python3 .github/scripts/ci_annotate.py --mode analyze
 
@@ -62,7 +62,7 @@ jobs:
         continue-on-error: true
         run: flutter test > test_output.txt 2>&1 || true
 
-      - name: Gate: test
+      - name: "Gate: test"
         if: hashFiles('test/**') != ''
         run: >
           python3 .github/scripts/ci_annotate.py --mode tail
@@ -92,7 +92,7 @@ jobs:
         continue-on-error: true
         run: flutter build apk --release > build_output.txt 2>&1 || true
 
-      - name: Gate: build
+      - name: "Gate: build"
         if: always()
         run: >
           python3 .github/scripts/ci_annotate.py --mode tail
