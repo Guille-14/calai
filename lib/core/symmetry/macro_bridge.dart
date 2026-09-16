@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/date_key.dart';
+
 class MacroBridge {
   static final MacroBridge _instance = MacroBridge._internal();
   factory MacroBridge() => _instance;
@@ -25,9 +27,28 @@ class MacroBridge {
     _proteinGoal = prefs.getDouble(_proteinGoalKey) ?? 120;
 
     final today = DateTime.now();
-    final dateKey =
-        _dailyProteinKey + '${today.year}-${today.month}-${today.day}';
-    _dailyProtein = prefs.getDouble(dateKey) ?? 0;
+    final dateKey = _dailyProteinKey + formatDateKey(today);
+
+    var storedProtein = prefs.getDouble(dateKey);
+    if (storedProtein == null) {
+      // Migración: antes las claves se generaban SIN ceros a la izquierda
+      // (p. ej. 'daily_protein_2026-9-6'). Si hoy existe una clave legacy,
+      // se mueve al formato canónico para no perder el valor del día.
+      final legacyKey =
+          _dailyProteinKey + '${today.year}-${today.month}-${today.day}';
+      final legacyProtein = prefs.getDouble(legacyKey);
+      if (legacyProtein != null) {
+        storedProtein = legacyProtein;
+        await prefs.setDouble(dateKey, legacyProtein);
+        await prefs.remove(legacyKey);
+        final legacyTime = prefs.getString('${legacyKey}_time');
+        if (legacyTime != null) {
+          await prefs.setString('${dateKey}_time', legacyTime);
+          await prefs.remove('${legacyKey}_time');
+        }
+      }
+    }
+    _dailyProtein = storedProtein ?? 0;
     _lastProteinUpdate = prefs.getString('${dateKey}_time') != null
         ? DateTime.tryParse(prefs.getString('${dateKey}_time')!)
         : null;
@@ -44,8 +65,7 @@ class MacroBridge {
     _lastProteinUpdate = DateTime.now();
 
     final today = DateTime.now();
-    final dateKey =
-        _dailyProteinKey + '${today.year}-${today.month}-${today.day}';
+    final dateKey = _dailyProteinKey + formatDateKey(today);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(dateKey, _dailyProtein);
     await prefs.setString(
@@ -65,8 +85,7 @@ class MacroBridge {
     if (date.year == today.year &&
         date.month == today.month &&
         date.day == today.day) {
-      final dateKey =
-          _dailyProteinKey + '${date.year}-${date.month}-${date.day}';
+      final dateKey = _dailyProteinKey + formatDateKey(date);
       _dailyProtein = totalProtein;
       _lastProteinUpdate = DateTime.now();
 
@@ -79,8 +98,7 @@ class MacroBridge {
 
   Future<double> getTodayProtein() async {
     final today = DateTime.now();
-    final dateKey =
-        _dailyProteinKey + '${today.year}-${today.month}-${today.day}';
+    final dateKey = _dailyProteinKey + formatDateKey(today);
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(dateKey) ?? 0;
   }
@@ -95,8 +113,7 @@ class MacroBridge {
 
     for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
-      final dateKey =
-          _dailyProteinKey + '${date.year}-${date.month}-${date.day}';
+      final dateKey = _dailyProteinKey + formatDateKey(date);
       final protein = prefs.getDouble(dateKey) ?? 0;
       weeklyTotal += protein;
       if (protein >= _proteinGoal) daysMet++;

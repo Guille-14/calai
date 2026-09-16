@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
+import '../../core/utils/date_key.dart';
 import '../cubit/food_log_cubit.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/services/image_storage_service.dart';
@@ -66,7 +67,7 @@ class _ProgressScreenState extends State<ProgressScreen>
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       if (data != null) {
@@ -91,7 +92,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       final date =
           DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
       final dayKey = DateTime(date.year, date.month, date.day);
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       double dayTotal = 0;
@@ -117,7 +118,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     for (int i = 0; i < 30; i++) {
       final date =
           DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       if (data != null) {

@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import '../../core/utils/date_key.dart';
 import '../models/food_item.dart';
 
 class NotificationService {
@@ -329,7 +330,7 @@ class NotificationService {
   Future<void> analyzeAndNotify() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    final todayKey = 'food_log_${now.toIso8601String().split('T')[0]}';
+    final todayKey = 'food_log_${formatDateKey(now)}';
 
     final data = prefs.getString(todayKey);
     if (data == null) return;
@@ -345,8 +346,7 @@ class NotificationService {
     }
 
     final waterGlasses =
-        prefs.getInt('water_glasses_${now.toIso8601String().split('T')[0]}') ??
-            0;
+        prefs.getInt('water_glasses_${formatDateKey(now)}') ?? 0;
     if (waterGlasses < 4 && now.hour >= 14) {
       await showWaterReminderNotification(waterGlasses, 8);
     }
