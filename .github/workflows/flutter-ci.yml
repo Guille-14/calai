@@ -146,36 +146,31 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      # En esta rama de trabajo dejamos también el APK como asset de una
-      # release draft descargable; no se comitea un binario al repositorio.
-      - name: Publish APK draft for Arena branch
-        if: success() && startsWith(github.ref, 'refs/heads/arena/')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: calai-arena-apk
-          name: CalAI APK (Arena)
-          draft: true
-          prerelease: true
-          files: build/app/outputs/flutter-apk/app-release.apk
-          fail_on_unmatched_files: true
-
-  # Release: solo en tags v*. Crea la GitHub Release del tag con el APK
-  # descargado del artefacto del build (no re-build).
-  release-apk:
-    name: Release (tag v*)
-    needs: build-apk
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download APK artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: calai-release-apk
-          path: apk
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: apk/app-release.apk
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+      # Cada APK exitoso crea su propia Release, como en app-aula. El número
+      # de ejecución hace único el tag aunque aún no se haya cambiado la
+      # versión de pubspec.yaml. Solo se publica el APK; no se suben logs.
+      - name: Publish versioned APK Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION=$(awk '/^version:/ {print $2; exit}' pubspec.yaml)
+          TAG="apk-v${VERSION}-build-${GITHUB_RUN_NUMBER}"
+          ASSET="CalAI-v${VERSION}-build-${GITHUB_RUN_NUMBER}.apk"
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          cp "$APK" "$ASSET"
+          SHA=$(sha256sum "$ASSET" | awk '{print $1}')
+          printf 'APK de CalAI para descargar.\\n\\nCommit: `%s`\\nSHA-256: `%s`\\n' \\
+            "${GITHUB_SHA:0:7}" "$SHA" > release-notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" \\
+              --title "CalAI v${VERSION} · APK build ${GITHUB_RUN_NUMBER}" \\
+              --notes-file release-notes.md --latest
+          else
+            gh release create "$TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" \\
+              --target "$GITHUB_SHA" \\
+              --title "CalAI v${VERSION} · APK build ${GITHUB_RUN_NUMBER}" \\
+              --notes-file release-notes.md --latest
+          fi
