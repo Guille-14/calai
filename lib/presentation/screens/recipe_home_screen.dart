@@ -53,13 +53,13 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
               Container(
                 width: 40, height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.textTertiary, borderRadius: BorderRadius.circular(2)),
               ),
               const Text('Extraer Receta de TikTok', 
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               const Text('Pega la descripción del video y la IA creará la receta.', 
-                style: TextStyle(color: Colors.white54, fontSize: 14)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
               const SizedBox(height: 24),
               TikTokRecipeExtractor(onRecipeAdded: () {
                 Navigator.pop(ctx);
@@ -80,19 +80,19 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis Recetas', 
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         backgroundColor: Colors.transparent,
         elevation: 0,
           actions: [
 IconButton(
-              icon: Icon(Icons.auto_awesome, color: AppColors.primaryAccent),
+              icon: Icon(Icons.auto_awesome, color: AppColors.accent),
               onPressed: _showTikTokExtractor,
               tooltip: 'Extraer de TikTok con IA',
             ),
           ],
       ),
       body: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: AppColors.primaryAccent))
+        ? Center(child: CircularProgressIndicator(color: AppColors.accent))
         : _recipes.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
@@ -112,7 +112,7 @@ IconButton(
           _loadRecipes();
         },
         backgroundColor: theme.colorScheme.primary,
-        child: const Icon(Icons.add, color: Colors.black),
+        child: const Icon(Icons.add, color: AppColors.background),
       ),
     );
   }
@@ -122,16 +122,16 @@ IconButton(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.restaurant_menu, size: 80, color: Colors.white.withValues(alpha: 0.2)),
+          Icon(Icons.restaurant_menu, size: 80, color: AppColors.textPrimary.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           const Text(
             'No hay recetas guardadas',
-            style: TextStyle(color: Colors.white54, fontSize: 18),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 18),
           ),
           const SizedBox(height: 8),
           const Text(
             'Empieza a añadir tus platos favoritos',
-            style: TextStyle(color: Colors.white38, fontSize: 14),
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 14),
           ),
         ],
       ),
@@ -144,7 +144,7 @@ IconButton(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -160,13 +160,13 @@ IconButton(
         ),
         title: Text(
           recipe.name,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
           '${recipe.calories} kcal | P: ${recipe.protein}g C: ${recipe.carbs}g G: ${recipe.fat}g',
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
         onTap: () async {
           await Navigator.push(
             context,
@@ -183,10 +183,10 @@ IconButton(
       width: 60,
       height: 60,
       decoration: BoxDecoration(
-        color: Colors.white10,
+        color: AppColors.divider,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Icon(Icons.restaurant, color: Colors.white38),
+      child: const Icon(Icons.restaurant, color: AppColors.textTertiary),
     );
   }
 }

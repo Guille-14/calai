@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,13 +15,19 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+  Future<void>? _initializationFuture;
 
   static const String _enabledKey = 'notifications_enabled';
   static const String _quietHoursKey = 'quiet_hours';
   static const String _reminderTimesKey = 'reminder_times';
   static const String _goalsKey = 'notification_goals';
 
-  Future<void> initialize() async {
+  Future<void> initialize() {
+    if (_isInitialized) return Future.value();
+    return _initializationFuture ??= _initialize();
+  }
+
+  Future<void> _initialize() async {
     if (_isInitialized) return;
 
     tz_data.initializeTimeZones();
@@ -51,6 +58,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
+    await initialize();
     final android = _notifications.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (android != null) {
@@ -61,6 +69,7 @@ class NotificationService {
   }
 
   Future<void> scheduleSmartNotifications() async {
+    await initialize();
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(_enabledKey) ?? true;
 
@@ -222,7 +231,7 @@ class NotificationService {
           channelDescription: 'Recordatorios diarios de nutrición',
           importance: Importance.high,
           priority: Priority.high,
-          color: Color(0xFF4CAF50),
+          color: AppColors.accent,
           icon: '@mipmap/ic_launcher',
         ),
         iOS: const DarwinNotificationDetails(
@@ -273,6 +282,7 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    await initialize();
     await _notifications.show(
       DateTime.now().millisecondsSinceEpoch.remainder(100000),
       title,
@@ -351,6 +361,7 @@ class NotificationService {
   }
 
   Future<void> cancelAllNotifications() async {
+    await initialize();
     await _notifications.cancelAll();
   }
 

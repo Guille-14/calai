@@ -22,7 +22,6 @@ class _ProgressScreenState extends State<ProgressScreen>
   DateTime _focusedMonth = DateTime.now();
   double _calorieGoal = 2000;
   late AnimationController _animationController;
-  late Animation<double> _animation;
   Map<DateTime, List<FoodItem>> _monthFoodData = {};
   Map<DateTime, double> _weeklyTotals = {};
   List<FoodItem> _recentMeals = [];
@@ -35,8 +34,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _animation = CurvedAnimation(
-        parent: _animationController, curve: Curves.easeOutCubic);
     _animationController.forward();
     _loadData();
   }
@@ -123,21 +120,21 @@ class _ProgressScreenState extends State<ProgressScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: AppColors.background,
           body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         title: const Text('Progreso',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.white),
+            icon: const Icon(Icons.calendar_month, color: AppColors.textPrimary),
             onPressed: _showFullCalendar,
           ),
         ],
@@ -146,8 +143,8 @@ class _ProgressScreenState extends State<ProgressScreen>
         builder: (context, state) {
           return RefreshIndicator(
             onRefresh: _loadData,
-            color: AppColors.accentCalories,
-            backgroundColor: const Color(0xFF111111),
+            color: AppColors.accent,
+            backgroundColor: AppColors.cardBackground,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               physics: const AlwaysScrollableScrollPhysics(),
@@ -181,9 +178,9 @@ class _ProgressScreenState extends State<ProgressScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,17 +190,17 @@ class _ProgressScreenState extends State<ProgressScreen>
             children: [
               const Text('Resumen Semanal',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: AppColors.accentCalories.withValues(alpha: 0.2),
+                    color: AppColors.accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8)),
                 child: Text('${_calorieGoal.toInt()} kcal',
                     style: const TextStyle(
-                        color: AppColors.accentCalories,
+                        color: AppColors.accent,
                         fontSize: 11,
                         fontWeight: FontWeight.bold)),
               ),
@@ -224,17 +221,17 @@ class _ProgressScreenState extends State<ProgressScreen>
                       BarChartRodData(
                         toY: entry.value,
                         color: entry.value > _calorieGoal
-                            ? Colors.red
+                            ? AppColors.error
                             : (isToday
-                                ? AppColors.accentCalories
-                                : Colors.white38),
+                                ? AppColors.accent
+                                : AppColors.textTertiary),
                         width: 20,
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(4)),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: _calorieGoal * 1.5,
-                          color: Colors.white.withValues(alpha: 0.03),
+                          color: AppColors.textPrimary.withValues(alpha: 0.03),
                         ),
                       ),
                     ],
@@ -257,8 +254,8 @@ class _ProgressScreenState extends State<ProgressScreen>
                           child: Text(days[value.toInt() % 7],
                               style: TextStyle(
                                   color: isToday
-                                      ? AppColors.accentCalories
-                                      : Colors.white24,
+                                      ? AppColors.accent
+                                      : AppColors.textTertiary,
                                   fontSize: 11,
                                   fontWeight: isToday
                                       ? FontWeight.bold
@@ -277,7 +274,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         }
                         return Text('${value.toInt()}',
                             style: const TextStyle(
-                                color: Colors.white24, fontSize: 10));
+                                color: AppColors.textTertiary, fontSize: 10));
                       },
                     ),
                   ),
@@ -292,8 +289,8 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalInterval: _calorieGoal,
                   getDrawingHorizontalLine: (value) => FlLine(
                     color: value == _calorieGoal
-                        ? Colors.green.withValues(alpha: 0.5)
-                        : Colors.white.withValues(alpha: 0.03),
+                        ? AppColors.accent.withValues(alpha: 0.5)
+                        : AppColors.textPrimary.withValues(alpha: 0.03),
                     strokeWidth: value == _calorieGoal ? 1 : 0.5,
                     dashArray: value == _calorieGoal ? [5, 5] : null,
                   ),
@@ -303,14 +300,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalLines: [
                     HorizontalLine(
                         y: _calorieGoal,
-                        color: Colors.green.withValues(alpha: 0.5),
+                        color: AppColors.accent.withValues(alpha: 0.5),
                         strokeWidth: 1,
                         dashArray: [5, 5],
                         label: HorizontalLineLabel(
                             show: true,
                             labelResolver: (_) => 'Objetivo',
                             style: const TextStyle(
-                                color: Colors.green, fontSize: 10))),
+                                color: AppColors.accent, fontSize: 10))),
                   ],
                 ),
               ),
@@ -339,11 +336,11 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildSummaryCard('Hoy', '${todayCalories.toInt()} kcal',
-                    AppColors.accentCalories, Icons.local_fire_department)),
+                    AppColors.accent, Icons.local_fire_department)),
             const SizedBox(width: 12),
             Expanded(
                 child: _buildSummaryCard('Comidas', '${todayMeals.length}',
-                    AppColors.accentCarbs, Icons.restaurant)),
+                    AppColors.accent, Icons.restaurant)),
           ],
         ),
         const SizedBox(height: 12),
@@ -351,15 +348,15 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildMacroCard(
-                    'Proteína', '${todayProtein.toInt()}g', Colors.green)),
+                    'Proteína', '${todayProtein.toInt()}g', AppColors.accent)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildMacroCard(
-                    'Carbs', '${todayCarbs.toInt()}g', Colors.blue)),
+                    'Carbs', '${todayCarbs.toInt()}g', AppColors.accent)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildMacroCard(
-                    'Grasa', '${todayFat.toInt()}g', Colors.orange)),
+                    'Grasa', '${todayFat.toInt()}g', AppColors.accent)),
           ],
         ),
         const SizedBox(height: 12),
@@ -367,13 +364,13 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildSummaryCard('Días Registrados', '$daysWithMeals',
-                    Colors.purple, Icons.calendar_today)),
+                    AppColors.accent, Icons.calendar_today)),
             const SizedBox(width: 12),
             Expanded(
                 child: _buildSummaryCard(
                     'Promedio',
                     '${_calculateAverage()} kcal',
-                    Colors.cyan,
+                    AppColors.accent,
                     Icons.analytics)),
           ],
         ),
@@ -386,9 +383,9 @@ class _ProgressScreenState extends State<ProgressScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -406,11 +403,11 @@ class _ProgressScreenState extends State<ProgressScreen>
               children: [
                 Text(title,
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 11)),
+                        const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold)),
               ],
@@ -460,7 +457,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       children: [
         const Text('Comidas Recientes',
             style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
@@ -468,17 +465,17 @@ class _ProgressScreenState extends State<ProgressScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF111111),
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Center(
               child: Column(
                 children: [
                   Icon(Icons.restaurant_outlined,
-                      color: Colors.white24, size: 40),
+                      color: AppColors.textTertiary, size: 40),
                   SizedBox(height: 8),
                   Text('No hay comidas registradas',
-                      style: TextStyle(color: Colors.white54)),
+                      style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -500,9 +497,9 @@ class _ProgressScreenState extends State<ProgressScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -528,9 +525,9 @@ class _ProgressScreenState extends State<ProgressScreen>
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                        color: Colors.white10,
+                        color: AppColors.divider,
                         borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.restaurant, color: Colors.white38),
+                    child: const Icon(Icons.restaurant, color: AppColors.textTertiary),
                   );
                 },
               );
@@ -546,7 +543,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                     Expanded(
                       child: Text(meal.name,
                           style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontWeight: FontWeight.w600,
                               fontSize: 14),
                           maxLines: 1,
@@ -554,14 +551,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                     ),
                     Text(dateStr,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: AppColors.textTertiary, fontSize: 10)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                     '${meal.calories.toInt()} kcal • ${meal.protein.toInt()}g P • ${meal.carbs.toInt()}g C • ${meal.fat.toInt()}g G',
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 11)),
+                        const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
               ],
             ),
           ),
@@ -573,7 +570,7 @@ class _ProgressScreenState extends State<ProgressScreen>
   void _showFullCalendar() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.9,
@@ -586,23 +583,23 @@ class _ProgressScreenState extends State<ProgressScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.white12))),
+                    border: Border(bottom: BorderSide(color: AppColors.divider))),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
+                        icon: const Icon(Icons.close, color: AppColors.textPrimary),
                         onPressed: () => Navigator.pop(context)),
                     const Text('Calendario',
                         style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.bold)),
                     Row(
                       children: [
                         IconButton(
                           icon: const Icon(Icons.chevron_left,
-                              color: Colors.white),
+                              color: AppColors.textPrimary),
                           onPressed: () {
                             setSheetState(() {
                               _focusedMonth = DateTime(
@@ -613,7 +610,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         ),
                         IconButton(
                           icon: const Icon(Icons.chevron_right,
-                              color: Colors.white),
+                              color: AppColors.textPrimary),
                           onPressed: () {
                             setSheetState(() {
                               _focusedMonth = DateTime(
@@ -645,46 +642,46 @@ class _ProgressScreenState extends State<ProgressScreen>
                         height: 40,
                         decoration: BoxDecoration(
                           color: totalCalories > _calorieGoal
-                              ? Colors.red.withValues(alpha: 0.2)
+                              ? AppColors.error.withValues(alpha: 0.2)
                               : (totalCalories > 0
-                                  ? AppColors.accentCalories.withValues(alpha: 0.2)
-                                  : Colors.white10),
+                                  ? AppColors.accent.withValues(alpha: 0.2)
+                                  : AppColors.divider),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
                             child: Text('${date.day}',
                                 style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold))),
                       ),
                       title: Text('${date.day}/${date.month}/${date.year}',
-                          style: const TextStyle(color: Colors.white)),
+                          style: const TextStyle(color: AppColors.textPrimary)),
                       subtitle: Text(
                         meals.isEmpty
                             ? 'Sin registrar'
                             : '${totalCalories.toInt()} kcal • ${meals.length} ${meals.length == 1 ? 'comida' : 'comidas'}',
                         style: TextStyle(
                             color: meals.isEmpty
-                                ? Colors.white38
-                                : Colors.white54),
+                                ? AppColors.textTertiary
+                                : AppColors.textSecondary),
                       ),
                       children: meals.isEmpty
                           ? [
                               const ListTile(
                                   title: Text('No hay comidas registradas',
-                                      style: TextStyle(color: Colors.white54)))
+                                      style: TextStyle(color: AppColors.textSecondary)))
                             ]
                           : meals
                               .map((meal) => ListTile(
                                     leading: const Icon(Icons.restaurant,
-                                        color: Colors.white38),
+                                        color: AppColors.textTertiary),
                                     title: Text(meal.name,
                                         style: const TextStyle(
-                                            color: Colors.white)),
+                                            color: AppColors.textPrimary)),
                                     trailing: Text(
                                         '${meal.calories.toInt()} kcal',
                                         style: const TextStyle(
-                                            color: Colors.white54)),
+                                            color: AppColors.textSecondary)),
                                   ))
                               .toList(),
                     );

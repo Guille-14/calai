@@ -78,6 +78,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   List<double>? _cachedWeeklyData;
   DateTime? _cachedWeeklyDataDate;
   SharedPreferences? _prefs;
+  int _loadGeneration = 0;
   static const String _waterKey = 'water_glasses_';
 
   FoodLogCubit(this._repository) : super(const FoodLogState());
@@ -96,15 +97,18 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   }
 
   Future<void> loadLogForDate(DateTime date) async {
+    final generation = ++_loadGeneration;
     emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(date);
       final totals = _calculateTotals(meals);
       final waterGlasses = await _loadWaterGlasses(date);
+      if (generation != _loadGeneration) return;
 
       // Sincroniza la proteína real del registro con MacroBridge (multiplicador
-      // x1.2 de HEAVY). Antes nunca se llamaba y el perfil mostraba siempre 0 g.
-      _syncProteinToMacroBridge(totals['protein'] ?? 0.0, date);
+      // x1.2 de HEAVY). Se espera para que el dashboard no lea un valor
+      // anterior justo después de guardar una comida.
+      await _syncProteinToMacroBridge(totals['protein'] ?? 0.0, date);
 
       emit(state.copyWith(
         meals: meals,
@@ -119,6 +123,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
         waterGlasses: waterGlasses,
       ));
     } catch (e) {
+      if (generation != _loadGeneration) return;
       emit(state.copyWith(
         error: e.toString(),
         isLoading: false,
@@ -133,13 +138,16 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   /// Antes existía también SymmetryProgressionService.syncProteinFromFoodLog,
   /// un segundo camino muerto que nadie llamaba; se eliminó para que solo
   /// quede este (FoodLogCubit → MacroBridge).
-  void _syncProteinToMacroBridge(double totalProtein, DateTime date) {
+  Future<void> _syncProteinToMacroBridge(
+      double totalProtein, DateTime date) async {
     try {
       final macro = MacroBridge();
-      macro.initialize().then((_) {
-        macro.syncFromFoodLog(totalProtein: totalProtein, date: date);
-      }).catchError((_) {});
-    } catch (_) {}
+      await macro.initialize();
+      await macro.syncFromFoodLog(totalProtein: totalProtein, date: date);
+    } catch (_) {
+      // La sincronización es auxiliar: nunca debe convertir una comida válida
+      // en un error de carga del registro.
+    }
   }
 
   Future<int> _loadWaterGlasses(DateTime date) async {
@@ -174,11 +182,13 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   }
 
   Future<void> loadWeeklySummary() async {
+    final generation = ++_loadGeneration;
     emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(DateTime.now());
       final totals = _calculateTotals(meals);
       final weeklyData = await _loadWeeklyData();
+      if (generation != _loadGeneration) return;
 
       emit(state.copyWith(
         meals: meals,
@@ -192,6 +202,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
         lastUpdate: DateTime.now(),
       ));
     } catch (e) {
+      if (generation != _loadGeneration) return;
       emit(state.copyWith(
         error: e.toString(),
         isLoading: false,
@@ -250,13 +261,19 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       }
     }
 
-    final List<double> weeklyData = [];
-
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final meals = await _repository.getDailyFoodLog(date);
-      final calories = _calculateTotals(meals)['calories'] ?? 0.0;
-      weeklyData.add(calories);
+    // Una única lectura del rango reemplaza las siete consultas secuenciales
+    // que se hacían al abrir el resumen semanal.
+    final start = today.subtract(const Duration(days: 6));
+    final meals = await _repository.getFoodLogForRange(start, today);
+    final caloriesByDay = <String, double>{};
+    for (final meal in meals) {
+      final key = formatDateKey(meal.timestamp);
+      caloriesByDay[key] = (caloriesByDay[key] ?? 0) + meal.calories;
+    }
+    final weeklyData = <double>[];
+    for (var i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      weeklyData.add(caloriesByDay[formatDateKey(date)] ?? 0.0);
     }
 
     _cachedWeeklyData = weeklyData;

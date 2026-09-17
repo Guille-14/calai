@@ -3,9 +3,20 @@
     <array name="health_permissions">
         <item>android.permission.health.READ_STEPS</item>
         <item>android.permission.health.READ_ACTIVE_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_TOTAL_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_HEALTH_DATA_HISTORY</item>
         <item>android.permission.health.READ_DISTANCE</item>
+        <item>android.permission.health.READ_FLOORS_CLIMBED</item>
         <item>android.permission.health.READ_HEART_RATE</item>
+        <item>android.permission.health.READ_RESTING_HEART_RATE</item>
+        <item>android.permission.health.READ_BLOOD_OXYGEN</item>
+        <item>android.permission.health.READ_BODY_FAT</item>
+        <item>android.permission.health.READ_HEIGHT</item>
+        <item>android.permission.health.READ_LEAN_BODY_MASS</item>
+        <item>android.permission.health.READ_WATER</item>
         <item>android.permission.health.READ_BODY_MASS_INDEX</item>
         <item>android.permission.health.READ_WEIGHT</item>
+        <item>android.permission.health.READ_EXERCISE</item>
+        <item>android.permission.health.READ_SLEEP</item>
     </array>
 </resources>

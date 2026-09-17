@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/utils/app_translations.dart';
@@ -23,7 +24,7 @@ class FoodAddedPopup extends StatefulWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Food Added Dialog',
-      barrierColor: Colors.black54,
+      barrierColor: AppColors.background,
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, animation, secondaryAnimation) {
         return FoodAddedPopup(
@@ -121,8 +122,8 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.green.shade400,
-                    Colors.green.shade600,
+                    AppColors.accentStrong,
+                    AppColors.accent,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -130,7 +131,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.5),
+                    color: AppColors.accent.withValues(alpha: 0.5),
                     blurRadius: 30,
                     spreadRadius: 5,
                   ),
@@ -153,11 +154,11 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: AppColors.textPrimary.withValues(alpha: 0.3),
                             blurRadius: 20,
                           ),
                         ],
@@ -165,7 +166,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                       child: Icon(
                         Icons.check_circle,
                         size: 60,
-                        color: Colors.green.shade600,
+                        color: AppColors.accent,
                       ),
                     ),
                   ),
@@ -173,7 +174,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                   Text(
                     t.translate('food_added'),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -185,7 +186,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: AppColors.textPrimary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Column(
@@ -193,7 +194,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                         Text(
                           widget.foodName,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -205,7 +206,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                         Text(
                           '+${widget.calories} ${t.translate('kcal')}',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -217,7 +218,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                   Text(
                     t.translate('tap_to_close'),
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: AppColors.textPrimary.withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -255,7 +256,7 @@ class WaterAddedPopup extends StatefulWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Water Added Dialog',
-      barrierColor: Colors.black54,
+      barrierColor: AppColors.background,
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, animation, secondaryAnimation) {
         return WaterAddedPopup(
@@ -320,15 +321,15 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isGoalJustReached
-                    ? [Colors.cyan.shade400, Colors.blue.shade600]
-                    : [Colors.blue.shade400, Colors.blue.shade600],
+                    ? [AppColors.accentStrong, AppColors.accent]
+                    : [AppColors.accentStrong, AppColors.accent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: (isGoalJustReached ? Colors.cyan : Colors.blue)
+                  color: (isGoalJustReached ? AppColors.accent : AppColors.accent)
                       .withValues(alpha: 0.5),
                   blurRadius: 30,
                   spreadRadius: 5,
@@ -355,7 +356,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -363,7 +364,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                               ? Icons.emoji_events
                               : Icons.water_drop,
                           size: 50,
-                          color: Colors.blue.shade600,
+                          color: AppColors.accent,
                         ),
                       ),
                       if (isGoalJustReached)
@@ -393,7 +394,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                       ? t.translate('water_goal_reached')
                       : t.translate('water_doing_well'),
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -416,8 +417,8 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                               Icons.water_drop,
                               size: 28,
                               color: isFilled
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.3),
+                                  ? AppColors.textPrimary
+                                  : AppColors.textPrimary.withValues(alpha: 0.3),
                             ),
                           ),
                         );
@@ -432,13 +433,13 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: AppColors.textPrimary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${widget.glassCount}/${widget.goal} ${t.translate('glasses')}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -448,7 +449,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                 Text(
                   '+250ml ${'${t.translate('of')} ${t.translate('water')}'}',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: AppColors.textPrimary.withValues(alpha: 0.9),
                     fontSize: 14,
                   ),
                 ),
@@ -456,7 +457,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                 Text(
                   t.translate('tap_to_close'),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: AppColors.textPrimary.withValues(alpha: 0.6),
                     fontSize: 11,
                   ),
                 ),

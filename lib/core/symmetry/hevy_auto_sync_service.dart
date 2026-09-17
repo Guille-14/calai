@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'health_connect_importer.dart';
-import 'health_connect_bridge.dart';
+import 'symmetry_workout_ledger.dart';
 import 'symmetry_progression_service.dart';
 
 /// Servicio que maneja sincronizaciones automáticas periódicas con Hevy
@@ -13,7 +13,7 @@ class HevyAutoSyncService {
 
   late SharedPreferences _prefs;
   late HealthConnectImporter _importer;
-  late HealthConnectBridge _bridge;
+  late SymmetryWorkoutLedger _bridge;
   late SymmetryProgressionService _progression;
 
   bool _isInitialized = false;
@@ -32,7 +32,7 @@ class HevyAutoSyncService {
 
     _prefs = await SharedPreferences.getInstance();
     _importer = HealthConnectImporter();
-    _bridge = HealthConnectBridge();
+    _bridge = SymmetryWorkoutLedger();
     _progression = SymmetryProgressionService();
 
     _isInitialized = true;
@@ -125,7 +125,6 @@ class HevyAutoSyncService {
         ? DateTime.fromMillisecondsSinceEpoch(lastSyncMs)
         : null;
 
-    final now = DateTime.now();
     String? nextSync;
     if (lastSync != null) {
       nextSync = lastSync

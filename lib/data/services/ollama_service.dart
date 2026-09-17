@@ -150,6 +150,26 @@ class OllamaService {
   List<OllamaServer> get servers => List.unmodifiable(_servers);
   OllamaServer? get activeServer => _activeServer;
   String get baseUrl => _activeServer?.url ?? '';
+  bool get isLoopbackUrl => isLoopback(baseUrl);
+
+  static bool isLoopback(String rawUrl) {
+    try {
+      final host = Uri.parse(rawUrl).host.toLowerCase();
+      return host == 'localhost' || host == '127.0.0.1' || host == '::1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String? normalizeUrl(String rawUrl) {
+    final value = rawUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    if (value.isEmpty) return null;
+    final uri = Uri.tryParse(value);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https') || uri.host.isEmpty) {
+      return null;
+    }
+    return uri.toString().replaceAll(RegExp(r'/+$'), '');
+  }
 
   /// Inicializa el servicio y carga config guardada
   Future<void> initialize() async {
@@ -168,10 +188,12 @@ class OllamaService {
       final savedServersJson = prefs.getString(_serversKey);
       if (savedServersJson != null && savedServersJson.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(savedServersJson);
-        _servers = decoded.map((e) => OllamaServer.fromJson(e)).toList();
-      } else {
-        _servers = defaultServers;
+        _servers = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((e) => OllamaServer.fromJson(e))
+            .toList();
       }
+      if (_servers.isEmpty) _servers = defaultServers;
 
       final activeServerId = prefs.getString(_activeServerKey);
       if (activeServerId != null) {
@@ -250,10 +272,15 @@ class OllamaService {
   /// Actualiza la URL del servidor activo
   Future<void> updateBaseUrl(String newUrl) async {
     if (_activeServer != null) {
+      final normalized = normalizeUrl(newUrl);
+      if (normalized == null) {
+        debugPrint('OllamaService: URL no válida: $newUrl');
+        return;
+      }
       final updated = OllamaServer(
         id: _activeServer!.id,
         name: _activeServer!.name,
-        url: newUrl.trim().replaceAll(RegExp(r'/+$'), ''),
+        url: normalized,
         type: _activeServer!.type,
       );
       await updateServer(updated);
@@ -271,7 +298,7 @@ class OllamaService {
   /// Verifica si el servidor Ollama está disponible
   Future<void> _checkServerAvailability() async {
     try {
-      final response = await http
+      final response = await _httpClient
           .get(Uri.parse('$baseUrl/api/tags'))
           .timeout(const Duration(seconds: 5));
 
@@ -289,7 +316,7 @@ class OllamaService {
     if (!_isInitialized) await initialize();
 
     try {
-      final response = await http
+      final response = await _httpClient
           .get(Uri.parse('$baseUrl/api/tags'))
           .timeout(const Duration(seconds: 10));
 
@@ -310,6 +337,7 @@ class OllamaService {
 
   /// Obtiene la lista de modelos en ejecución
   Future<List<String>> getRunningModels() async {
+    if (!_isInitialized) await initialize();
     try {
       final response = await _httpClient.get(Uri.parse('$baseUrl/api/ps'));
       if (response.statusCode == 200) {
@@ -326,11 +354,16 @@ class OllamaService {
 
   /// Descarga un modelo (Stream)
   Stream<String> pullModel(String model) async* {
+    if (!_isInitialized) await initialize();
     final request = http.Request('POST', Uri.parse('$baseUrl/api/pull'));
     request.headers['Content-Type'] = 'application/json';
     request.body = jsonEncode({'name': model, 'stream': true});
 
     final response = await _httpClient.send(request);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = await response.stream.bytesToString();
+      throw StateError('Ollama HTTP ${response.statusCode}: $body');
+    }
 
     // Acumula el buffer: los chunks de red NO están alineados a líneas y
     // partir cada chunk por '\n' generaba JSON parciales → errores de
@@ -367,6 +400,7 @@ class OllamaService {
 
   /// Elimina un modelo
   Future<bool> deleteModel(String model) async {
+    if (!_isInitialized) await initialize();
     try {
       final response = await _httpClient.delete(
         Uri.parse('$baseUrl/api/delete'),
@@ -491,8 +525,9 @@ class OllamaService {
           duration: stopwatch.elapsed,
         );
       } else {
+        final body = utf8.decode(response.bodyBytes).trim();
         final error =
-            'Error HTTP ${response.statusCode}: ${response.reasonPhrase}';
+            'Error HTTP ${response.statusCode}: ${body.isEmpty ? response.reasonPhrase : body}';
         debugPrint('OllamaService: $error');
         return OllamaResponse.error(
           error: error,
@@ -570,8 +605,9 @@ class OllamaService {
           duration: stopwatch.elapsed,
         );
       } else {
+        final body = utf8.decode(response.bodyBytes).trim();
         final error =
-            'Error HTTP ${response.statusCode}: ${response.reasonPhrase}';
+            'Error HTTP ${response.statusCode}: ${body.isEmpty ? response.reasonPhrase : body}';
         debugPrint('OllamaService: $error');
         return OllamaResponse.error(
           error: error,

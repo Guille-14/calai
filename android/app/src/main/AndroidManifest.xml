@@ -6,19 +6,32 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <!-- Eliminados: SCHEDULE/USE_EXACT_ALARM (las notificaciones usan
-         inexactAllowWhileIdle), READ_EXTERNAL_STORAGE (image_picker usa el
-         photo picker del sistema) y ~12 permisos health.* que el código
-         nunca solicita ni lee. -->
+    <!-- SCHEDULE/USE_EXACT_ALARM no se necesitan (las notificaciones usan
+         inexactAllowWhileIdle) y READ_EXTERNAL_STORAGE tampoco (image_picker
+         usa el photo picker del sistema). -->
 
     <!-- Required for Health Connect - Activity Recognition -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
 
-    <!-- Health Connect Permissions: solo los tipos que lee la app -->
+    <!-- Health Connect: actividad, peso, sueño y pulso histórico, además de
+         los datos diarios que ya usaba el dashboard. -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
     <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
     <uses-permission android:name="android.permission.health.READ_BASAL_ENERGY_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_OXYGEN"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+    <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
+    <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
+    <uses-permission android:name="android.permission.health.READ_WATER"/>
 
     <application
         android:label="CalAI"

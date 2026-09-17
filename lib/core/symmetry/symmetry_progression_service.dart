@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/services/database_service.dart';
 import 'symmetry_rank_system.dart';
-import 'health_connect_bridge.dart';
+import 'symmetry_workout_ledger.dart';
 import 'macro_bridge.dart';
 import 'muscle_fatigue_map.dart';
 
@@ -20,7 +20,7 @@ class SymmetryProgressionService {
   static const double _streakBonusXP = 0.1;
   static const double _consistencyBonusXP = 0.05;
 
-  final HealthConnectBridge _healthBridge = HealthConnectBridge();
+  final SymmetryWorkoutLedger _ledger = SymmetryWorkoutLedger();
   final MacroBridge _macroBridge = MacroBridge();
   final MuscleFatigueMap _fatigueMap = MuscleFatigueMap();
 
@@ -44,7 +44,7 @@ class SymmetryProgressionService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    await _healthBridge.loadFromStorage();
+    await _ledger.loadFromStorage();
     await _macroBridge.initialize();
     await _loadFromStorage();
     await _migrateWorkoutSessions();
@@ -53,7 +53,7 @@ class SymmetryProgressionService {
   }
 
   /// Migración one-shot: el historial de sesiones vivía solo en el JSON de
-  /// HealthConnectBridge (máx. 30 sesiones, sin índice). Se copia a
+  /// SymmetryWorkoutLedger (máx. 30 sesiones, sin índice). Se copia a
   /// workout_sessions para que sea consultable y permita rachas cruzadas
   /// (comida + entrenamiento).
   Future<void> _migrateWorkoutSessions() async {
@@ -67,12 +67,12 @@ class SymmetryProgressionService {
         await prefs.setBool(_migratedWorkoutsKey, true);
         return;
       }
-      if (_healthBridge.recentWorkouts.isEmpty) {
+      if (_ledger.recentWorkouts.isEmpty) {
         await prefs.setBool(_migratedWorkoutsKey, true);
         return;
       }
 
-      for (final session in _healthBridge.recentWorkouts) {
+      for (final session in _ledger.recentWorkouts) {
         await db.insertWorkoutSession(
           date: session.date,
           totalTonnage: session.totalTonnage,
@@ -84,7 +84,7 @@ class SymmetryProgressionService {
       }
       await prefs.setBool(_migratedWorkoutsKey, true);
       debugPrint(
-          'Symmetry: ${_healthBridge.recentWorkouts.length} sesiones migradas a SQLite');
+          'Symmetry: ${_ledger.recentWorkouts.length} sesiones migradas a SQLite');
     } catch (e) {
       // La migración no debe romper el arranque; se reintenta la próxima vez.
       debugPrint('Symmetry: error migrando sesiones a SQLite: $e');
@@ -174,7 +174,7 @@ class SymmetryProgressionService {
       exercises: exercises,
     );
 
-    _healthBridge.addWorkout(session);
+    _ledger.addWorkout(session);
     _fatigueMap.updateFromWorkout(session);
 
     _updateStreak();
@@ -217,7 +217,7 @@ class SymmetryProgressionService {
       xp *= (1 + (_streakDays * _streakBonusXP).clamp(0, 0.5));
     }
 
-    if (_healthBridge.totalWorkouts > 10) {
+    if (_ledger.totalWorkouts > 10) {
       xp *= (1 + _consistencyBonusXP);
     }
 
@@ -264,31 +264,41 @@ class SymmetryProgressionService {
   /// media jornada), la racha se evalúa desde ayer hacia atrás.
   Future<int> getDisciplineStreak() async {
     final db = DatabaseService();
-    var date = DateTime.now();
-    if (!await _dayDisciplined(db, date)) {
-      date = date.subtract(const Duration(days: 1));
-    }
-    int streak = 0;
-    // Tope de seguridad (10 años) contra datos corruptos que impidan
-    // alcanzar un día sin condición.
-    for (int i = 0; i < 3650; i++) {
-      if (await _dayDisciplined(db, date)) {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(const Duration(days: 3650));
+    try {
+      // La implementación anterior hacía hasta 7.300 consultas SQLite
+      // secuenciales (dos por cada día). En móviles eso bloqueaba el dashboard
+      // y daba la sensación de que la app se había quedado colgada.
+      final days = await Future.wait([
+        db.getFoodDateKeysBetween(start, today),
+        db.getWorkoutDateKeysBetween(start, today),
+      ]);
+      final foodDays = days[0];
+      final workoutDays = days[1];
+      var date = DateTime(today.year, today.month, today.day);
+      if (!_containsDay(foodDays, workoutDays, date)) {
+        date = date.subtract(const Duration(days: 1));
+      }
+      var streak = 0;
+      for (var i = 0; i < 3650; i++) {
+        if (!_containsDay(foodDays, workoutDays, date)) break;
         streak++;
         date = date.subtract(const Duration(days: 1));
-      } else {
-        break;
       }
-    }
-    return streak;
-  }
-
-  Future<bool> _dayDisciplined(DatabaseService db, DateTime date) async {
-    try {
-      return await db.hasFoodOnDate(date) && await db.hasWorkoutOnDate(date);
+      return streak;
     } catch (e) {
       debugPrint('Symmetry: error consultando racha de disciplina: $e');
-      return false;
+      return 0;
     }
+  }
+
+  bool _containsDay(Set<String> foodDays, Set<String> workoutDays,
+      DateTime date) {
+    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    return foodDays.contains(key) && workoutDays.contains(key);
   }
 
   SymmetryProgress getProgress() {
@@ -320,12 +330,12 @@ class SymmetryProgressionService {
   Map<String, dynamic> getFullStats() {
     return {
       'progress': getProgress(),
-      'healthBridge': {
-        'totalTonnage': _healthBridge.totalTonnage,
-        'totalWorkouts': _healthBridge.totalWorkouts,
-        'totalDurationMinutes': _healthBridge.totalDurationMinutes,
-        'mostTrainedMuscles': _healthBridge.getMostTrainedMuscles(),
-        'leastTrainedMuscles': _healthBridge.getLeastTrainedMuscles(),
+      'workoutLedger': {
+        'totalTonnage': _ledger.totalTonnage,
+        'totalWorkouts': _ledger.totalWorkouts,
+        'totalDurationMinutes': _ledger.totalDurationMinutes,
+        'mostTrainedMuscles': _ledger.getMostTrainedMuscles(),
+        'leastTrainedMuscles': _ledger.getLeastTrainedMuscles(),
       },
       'fatigueMap': _fatigueMap.getDetailedAnalysis(),
       'macroBridge': {
@@ -354,7 +364,7 @@ class SymmetryProgressionService {
     final recommended = _fatigueMap.getRecommendedMuscles();
     final fatigued = _fatigueMap.getFatiguedMuscles();
 
-    if (recommended.isEmpty && _healthBridge.totalWorkouts == 0) {
+    if (recommended.isEmpty && _ledger.totalWorkouts == 0) {
       return ['Comienza con un entrenamiento completo'];
     }
 
@@ -376,7 +386,7 @@ class SymmetryProgressionService {
     _lastWorkoutDate = null;
     _lastDailyReset = null;
     _lastWeeklyReset = null;
-    _healthBridge.reset();
+    _ledger.reset();
     _fatigueMap.reset();
     _saveToStorage();
   }

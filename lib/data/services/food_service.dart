@@ -7,12 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/security/api_key_store.dart';
 import 'ollama_service.dart';
 import 'google_ai_service.dart';
+import 'image_storage_service.dart';
 
 /// FoodService - Gestiona la lógica de IA (Ollama vs Google Gemini vs OpenRouter)
 class FoodService {
   static final OllamaService _ollamaService = OllamaService();
   static final GoogleAiService _googleService = GoogleAiService();
+  static final ImageStorageService _imageStorageService = ImageStorageService();
   static bool _isInitialized = false;
+  static Future<void>? _initializationFuture;
 
   static const String _providerPref = 'ai_provider_mode'; // 'ollama', 'google' o 'openrouter'
   // La clave OpenRouter se guarda vía ApiKeyStore (almacenamiento seguro; la
@@ -58,7 +61,12 @@ class FoodService {
     }
   }
 
-  static Future<void> initFromPrefs() async {
+  static Future<void> initFromPrefs() {
+    if (_isInitialized) return Future.value();
+    return _initializationFuture ??= _initializeFromPrefs();
+  }
+
+  static Future<void> _initializeFromPrefs() async {
     if (_isInitialized) return;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -142,10 +150,13 @@ class FoodService {
   }
 
   /// Llamada genérica a OpenRouter (API compatible con OpenAI).
+  /// Las respuestas de análisis solicitan JSON estructurado y los fallos
+  /// transitorios se reintentan sin repetir errores de autenticación.
   static Future<_AiResponse> _openrouterGenerate({
     required String prompt,
     String? imageBase64,
     String? model,
+    bool structuredJson = false,
   }) async {
     if (_openrouterApiKey.isEmpty) {
       return _AiResponse.error('API Key de OpenRouter no configurada');
@@ -159,45 +170,37 @@ class FoodService {
             'image_url': {'url': 'data:image/jpeg;base64,$imageBase64'},
           },
       ];
-      final body = jsonEncode({
+      final body = <String, dynamic>{
         'model': (model != null && model.isNotEmpty) ? model : _openrouterModel,
         'messages': [
           {'role': 'user', 'content': content},
         ],
-      });
-      final resp = await http
-          .post(
-            Uri.parse(_openrouterUrl),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_openrouterApiKey',
-            },
-            body: body,
-          )
-          .timeout(const Duration(seconds: 90));
+        if (structuredJson) 'response_format': {'type': 'json_object'},
+      };
+      final resp = await _postOpenRouter(body);
 
-      if (resp.statusCode != 200) {
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
         return _AiResponse.error('OpenRouter ${resp.statusCode}: ${resp.body}');
       }
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final choices = data['choices'] as List?;
-      if (choices == null || choices.isEmpty) {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is! Map<String, dynamic>) {
+        return _AiResponse.error('OpenRouter: respuesta JSON inválida');
+      }
+      final choices = decoded['choices'];
+      if (choices is! List || choices.isEmpty || choices.first is! Map) {
         return _AiResponse.error('OpenRouter: respuesta sin choices');
       }
-      final message = (choices.first as Map<String, dynamic>)['message']
-          as Map<String, dynamic>?;
-      final dynamic raw = message?['content'];
-      String text;
-      if (raw is String) {
-        text = raw;
-      } else if (raw is List) {
-        text = raw
-            .whereType<Map<String, dynamic>>()
-            .map((p) => p['text']?.toString() ?? '')
-            .join();
-      } else {
-        text = '';
-      }
+      final message = (choices.first as Map)['message'];
+      final raw = message is Map ? message['content'] : null;
+      final text = raw is String
+          ? raw.trim()
+          : raw is List
+              ? raw
+                  .whereType<Map>()
+                  .map((part) => part['text']?.toString() ?? '')
+                  .join()
+                  .trim()
+              : '';
       if (text.isEmpty) {
         return _AiResponse.error('OpenRouter: respuesta vacía');
       }
@@ -207,71 +210,148 @@ class FoodService {
     }
   }
 
-  static Future<FoodAnalysisResult> analyzeFoodImageFromBytes(Uint8List imageBytes) async {
+  static Future<http.Response> _postOpenRouter(
+      Map<String, dynamic> body) async {
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse(_openrouterUrl),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $_openrouterApiKey',
+              },
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 90));
+        final transient = response.statusCode == 408 ||
+            response.statusCode == 409 ||
+            response.statusCode == 429 ||
+            response.statusCode >= 500;
+        if (!transient || attempt == maxAttempts) return response;
+      } catch (_) {
+        if (attempt == maxAttempts) rethrow;
+      }
+      await Future<void>.delayed(Duration(milliseconds: 400 * (1 << (attempt - 1))));
+    }
+    throw StateError('OpenRouter no devolvió respuesta');
+  }
+
+  static Future<FoodAnalysisResult> analyzeFoodImageFromBytes(
+      Uint8List imageBytes) async {
     if (!_isInitialized) await initFromPrefs();
     try {
-      // encode() en isolate: una foto de varios MB bloqueaba la UI.
-      final base64Image = await compute(base64Encode, imageBytes);
-      final prompt = 'Analiza esta imagen de comida. Responde SOLO en JSON valido: {"foods":["nombre1"], "estimatedCalories":500, "macros":{"protein":25,"carbs":50,"fat":15}, "confidence":"high"}';
-
-      String responseText;
-      bool isSuccess;
-      String? error;
+      // Una sola normalización antes de elegir proveedor: todos reciben un
+      // JPEG de hasta 1024 px y calidad 85, con el mismo coste de cuota.
+      final normalizedBytes = await _imageStorageService.prepareForAi(imageBytes);
+      final base64Image = await compute(base64Encode, normalizedBytes);
+      const prompt = '''Analiza la comida de la imagen. Identifica el plato o
+producto y estima la ración visible. Devuelve únicamente el objeto JSON pedido
+por el esquema, sin texto adicional. Los valores nutricionales son para la
+ración visible, no por 100 g.''';
 
       if (_activeProvider == 'google') {
+        final available = await _googleService.isModelAvailable();
+        if (available == false) {
+          return FoodAnalysisResult.error(
+              'El modelo configurado ya no está disponible, elige uno de la lista actual en Ajustes IA.');
+        }
         final resp = await _googleService.generateResponseWithImage(
           prompt: prompt,
           imageBase64: base64Image,
+          responseSchema: GoogleAiService.foodResponseSchema,
         );
-        isSuccess = resp.isSuccess;
-        responseText = resp.text;
-        error = resp.error;
-      } else if (_activeProvider == 'openrouter') {
+        if (!resp.isSuccess) {
+          return FoodAnalysisResult.error(resp.error ?? 'Error desconocido');
+        }
+        return _parseFoodResponse(resp.text);
+      }
+
+      final String responseText;
+      final String? error;
+      if (_activeProvider == 'openrouter') {
         final resp = await _openrouterGenerate(
           prompt: prompt,
           imageBase64: base64Image,
+          structuredJson: true,
         );
-        isSuccess = resp.isSuccess;
         responseText = resp.text;
         error = resp.error;
+        if (!resp.isSuccess) return FoodAnalysisResult.error(error ?? 'Error desconocido');
       } else {
         final resp = await _ollamaService.generateResponseWithImage(
           prompt: prompt,
           model: _ollamaService.selectedModel,
           imageBase64: base64Image,
         );
-        isSuccess = resp.isSuccess;
         responseText = resp.text;
         error = resp.error;
+        if (!resp.isSuccess) return FoodAnalysisResult.error(error ?? 'Error desconocido');
       }
-
-      if (isSuccess) {
-        try {
-          final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
-          if (jsonMatch != null) {
-            final jsonData = jsonDecode(jsonMatch.group(0)!);
-            return FoodAnalysisResult.fromJson(jsonData);
-          }
-        } catch (parseErr) {
-          debugPrint('FoodService: Error parseando JSON: $parseErr');
-        }
-        // No inventar datos: si la IA respondió pero no se pudo interpretar,
-        // devolvemos error para no contaminar el registro diario.
-        return FoodAnalysisResult.error(
-            'La IA respondió pero no se pudo interpretar. Inténtalo de nuevo.');
-      } else {
-        return FoodAnalysisResult.error(error ?? 'Error desconocido');
-      }
+      return _parseFoodResponse(responseText);
     } catch (e) {
       return FoodAnalysisResult.error('Error: $e');
     }
   }
 
+  static FoodAnalysisResult _parseFoodResponse(String responseText) {
+    try {
+      final jsonData = _firstJsonObject(responseText);
+      if (jsonData != null) return FoodAnalysisResult.fromJson(jsonData);
+    } catch (parseErr) {
+      debugPrint('FoodService: Error parseando JSON: $parseErr');
+    }
+    return FoodAnalysisResult.error(
+        'La IA respondió pero no se pudo interpretar. Inténtalo de nuevo.');
+  }
+
+  /// Extrae el primer objeto JSON completo, incluso si el proveedor lo
+  /// envuelve en markdown o añade una frase antes/después.
+  static Map<String, dynamic>? _firstJsonObject(String text) {
+    for (var start = 0; start < text.length; start++) {
+      if (text[start] != '{') continue;
+      var depth = 0;
+      var inString = false;
+      var escaped = false;
+      for (var index = start; index < text.length; index++) {
+        final char = text[index];
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+          } else if (char == '\\') {
+            escaped = true;
+          } else if (char == '"') {
+            inString = false;
+          }
+          continue;
+        }
+        if (char == '"') {
+          inString = true;
+        } else if (char == '{') {
+          depth++;
+        } else if (char == '}') {
+          depth--;
+          if (depth == 0) {
+            try {
+              final decoded = jsonDecode(text.substring(start, index + 1));
+              if (decoded is Map<String, dynamic>) return decoded;
+            } catch (_) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   static Future<SymmetryRoutineAnalysisResult> analyzeSymmetryRoutineFromBytes(Uint8List imageBytes, String muscleGroup) async {
     if (!_isInitialized) await initFromPrefs();
     try {
-      // encode() en isolate: una foto de varios MB bloqueaba la UI.
-      final base64Image = await compute(base64Encode, imageBytes);
+      // La misma compresión se aplica también a las fotos de rutinas.
+      final normalizedBytes = await _imageStorageService.prepareForAi(imageBytes);
+      final base64Image = await compute(base64Encode, normalizedBytes);
       final prompt = '''
 Analiza esta captura de pantalla de mi aplicación de entrenamiento (Symmetry). 
 Extrae TODOS los ejercicios realizados.
@@ -296,8 +376,8 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
       if (_activeProvider == 'google') {
         final resp = await _googleService.generateResponseWithImage(
           prompt: prompt,
-          model: 'gemini-1.5-flash',
           imageBase64: base64Image,
+          responseSchema: GoogleAiService.symmetryRoutineResponseSchema,
         );
         isSuccess = resp.isSuccess;
         responseText = resp.text;
@@ -306,6 +386,7 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
         final resp = await _openrouterGenerate(
           prompt: prompt,
           imageBase64: base64Image,
+          structuredJson: true,
         );
         isSuccess = resp.isSuccess;
         responseText = resp.text;
@@ -323,11 +404,13 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
 
       if (isSuccess) {
         try {
-          final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
-          if (jsonMatch != null) {
-            final Map<String, dynamic> jsonData = jsonDecode(jsonMatch.group(0)!);
+          final jsonData = _firstJsonObject(responseText);
+          if (jsonData != null) {
             final List<dynamic> exList = jsonData['exercises'] ?? [];
-            final exercises = exList.map((e) => SymmetryExtractedExercise.fromJson(e as Map<String, dynamic>)).toList();
+            final exercises = exList
+                .whereType<Map<String, dynamic>>()
+                .map(SymmetryExtractedExercise.fromJson)
+                .toList();
             return SymmetryRoutineAnalysisResult(exercises: exercises);
           }
         } catch (parseErr) {
@@ -357,7 +440,10 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
         responseText = resp.text;
         error = resp.error;
       } else if (_activeProvider == 'openrouter') {
-        final resp = await _openrouterGenerate(prompt: prompt);
+        final resp = await _openrouterGenerate(
+          prompt: prompt,
+          structuredJson: true,
+        );
         isSuccess = resp.isSuccess;
         responseText = resp.text;
         error = resp.error;
@@ -373,9 +459,9 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
 
       if (isSuccess) {
         try {
-          final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(responseText);
-          if (jsonMatch != null) {
-            return FoodAnalysisResult.fromJson(jsonDecode(jsonMatch.group(0)!));
+          final jsonData = _firstJsonObject(responseText);
+          if (jsonData != null) {
+            return FoodAnalysisResult.fromJson(jsonData);
           }
         } catch (parseErr) {
           debugPrint('Error: $parseErr');
@@ -482,6 +568,7 @@ class FoodAnalysisResult {
   final double protein;
   final double carbs;
   final double fat;
+  final double sugar;
   final String confidence;
   final bool isError;
   final String? errorMessage;
@@ -492,6 +579,7 @@ class FoodAnalysisResult {
     required this.protein,
     required this.carbs,
     required this.fat,
+    this.sugar = 0,
     required this.confidence,
     this.isError = false,
     this.errorMessage,
@@ -504,6 +592,7 @@ class FoodAnalysisResult {
       protein: 0,
       carbs: 0,
       fat: 0,
+      sugar: 0,
       confidence: 'low',
       isError: true,
       errorMessage: message,
@@ -511,15 +600,21 @@ class FoodAnalysisResult {
   }
 
   factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) {
-    final foods = List<String>.from(json['foods'] ?? []);
+    final rawName = json['name']?.toString().trim() ?? '';
+    final legacyFoods = (json['foods'] as List?)
+            ?.map((food) => food.toString().trim())
+            .where((food) => food.isNotEmpty)
+            .toList() ??
+        <String>[];
+    final foods = rawName.isNotEmpty ? [rawName] : legacyFoods;
     final macros = json['macros'] as Map<String, dynamic>? ?? {};
-    final p = (macros['protein'] as num?)?.toDouble() ?? 0.0;
-    final c = (macros['carbs'] as num?)?.toDouble() ?? 0.0;
-    final f = (macros['fat'] as num?)?.toDouble() ?? 0.0;
+    final p = ((json['protein'] ?? macros['protein']) as num?)?.toDouble() ?? 0.0;
+    final c = ((json['carbs'] ?? macros['carbs']) as num?)?.toDouble() ?? 0.0;
+    final f = ((json['fat'] ?? macros['fat']) as num?)?.toDouble() ?? 0.0;
+    final sugar = ((json['sugar'] ?? macros['sugar']) as num?)?.toDouble() ?? 0.0;
 
-    int calories = (json['estimatedCalories'] as num?)?.toInt() ?? 0;
+    int calories = ((json['calories'] ?? json['estimatedCalories']) as num?)?.toInt() ?? 0;
     if (calories <= 0 && (p > 0 || c > 0 || f > 0)) {
-      // Computar calorías a partir de macronutrientes reales (4 kcal/g P, 4 kcal/g C, 9 kcal/g F)
       calories = (p * 4 + c * 4 + f * 9).round();
     }
 
@@ -533,6 +628,7 @@ class FoodAnalysisResult {
       protein: p,
       carbs: c,
       fat: f,
+      sugar: sugar,
       confidence: json['confidence']?.toString() ?? 'medium',
     );
   }
@@ -544,6 +640,7 @@ class FoodAnalysisResult {
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
+      'sugar': sugar,
       'confidenceScore': confidence == 'high' ? 0.95 : (confidence == 'medium' ? 0.75 : 0.45),
       'timestamp': DateTime.now().toIso8601String(),
     };

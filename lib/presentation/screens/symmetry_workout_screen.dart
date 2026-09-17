@@ -1,7 +1,9 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
+import '../../core/symmetry/symmetry_workout_ledger.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/workout_calories.dart';
@@ -57,19 +59,19 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         title: Text(
           _isWorkoutActive ? 'Entrenamiento' : 'Nuevo Entrenamiento',
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -80,7 +82,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               child: const Text(
                 'Finalizar',
                 style: TextStyle(
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -120,17 +122,10 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            progress.currentRank.color.withValues(alpha: 0.2),
-            progress.currentRank.color.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: progress.currentRank.color.withValues(alpha: 0.3),
+          color: progress.currentRank.color.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
@@ -138,7 +133,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star, color: progress.currentRank.color, size: 28),
+              Icon(Icons.star_outline, color: progress.currentRank.color, size: 28),
               const SizedBox(width: 8),
               Text(
                 progress.currentRank.displayName,
@@ -153,13 +148,13 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           const SizedBox(height: 8),
           Text(
             '${progress.totalXP.toStringAsFixed(0)} XP totales',
-            style: const TextStyle(color: Colors.white54),
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: progress.rankProgress,
             color: progress.currentRank.color,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.divider,
             minHeight: 6,
           ),
           const SizedBox(height: 8),
@@ -168,20 +163,20 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
             children: [
               Text(
                 'Hoy: +${progress.dailyXP.toStringAsFixed(0)} XP',
-                style: const TextStyle(color: Color(0xFF00C853), fontSize: 12),
+                style: const TextStyle(color: AppColors.accent, fontSize: 12),
               ),
               if (progress.metProteinGoal)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                    color: AppColors.accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
                     'x1.2 MULTI',
                     style: TextStyle(
-                      color: Color(0xFF00C853),
+                      color: AppColors.accent,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -200,7 +195,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -208,12 +203,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.lightbulb, color: Color(0xFFFFD700), size: 18),
+              Icon(Icons.lightbulb_outline, color: AppColors.accent, size: 18),
               SizedBox(width: 8),
               Text(
                 'Recomendaciones',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -226,12 +221,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('• ',
-                        style: TextStyle(color: Color(0xFF00C853))),
+                        style: TextStyle(color: AppColors.accent)),
                     Expanded(
                       child: Text(
                         rec,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
+                            color: AppColors.textSecondary, fontSize: 13),
                       ),
                     ),
                   ],
@@ -249,7 +244,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
         const Text(
           'Selecciona grupo muscular',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -267,18 +262,18 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF00C853)
-                      : const Color(0xFF1A1A1A),
+                      ? AppColors.accent
+                      : AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color:
-                        isSelected ? const Color(0xFF00C853) : Colors.white12,
+                        isSelected ? AppColors.accent : AppColors.divider,
                   ),
                 ),
                 child: Text(
                   entry.value,
                   style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white70,
+                    color: isSelected ? AppColors.background : AppColors.textSecondary,
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -295,8 +290,8 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
     return ElevatedButton(
       onPressed: _startWorkout,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF00C853),
-        foregroundColor: Colors.black,
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.background,
         padding: const EdgeInsets.symmetric(vertical: 18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -305,7 +300,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.fitness_center, size: 24),
+          Icon(Icons.fitness_center_outlined, size: 24),
           SizedBox(width: 12),
           Text(
             'INICIAR ENTRENAMIENTO',
@@ -336,28 +331,28 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildHUDItem(
-            icon: Icons.fitness_center,
+            icon: Icons.fitness_center_outlined,
             label: 'Ejercicios',
             value: '${_sessionExercises.length}',
           ),
           _buildHUDItem(
-            icon: Icons.monitor_weight,
+            icon: Icons.monitor_weight_outlined,
             label: 'Tonelaje',
             value: '${_sessionTonnage.toStringAsFixed(0)}kg',
           ),
           _buildHUDItem(
-            icon: Icons.star,
+            icon: Icons.star_outline,
             label: 'XP',
             value: '+${_sessionXP.toStringAsFixed(0)}',
-            valueColor: const Color(0xFF00C853),
+            valueColor: AppColors.accent,
           ),
         ],
       ),
@@ -372,19 +367,19 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
   }) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white38, size: 20),
+        Icon(icon, color: AppColors.textTertiary, size: 20),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            color: valueColor ?? Colors.white,
+            color: valueColor ?? AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
         ),
       ],
     );
@@ -397,14 +392,14 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.fitness_center,
+              Icons.fitness_center_outlined,
               size: 64,
-              color: Colors.white.withValues(alpha: 0.2),
+              color: AppColors.textPrimary.withValues(alpha: 0.2),
             ),
             const SizedBox(height: 16),
             const Text(
               'Añade tu primer ejercicio',
-              style: TextStyle(color: Colors.white54, fontSize: 16),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
             ),
           ],
         ),
@@ -426,9 +421,9 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -436,14 +431,14 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF00C853).withValues(alpha: 0.2),
+              color: AppColors.accent.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 '${index + 1}',
                 style: const TextStyle(
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -457,14 +452,14 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                 Text(
                   exercise.name,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${exercise.sets} series × ${exercise.reps} reps @ ${exercise.weight.toStringAsFixed(0)}kg',
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -475,13 +470,13 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               Text(
                 '${exercise.tonnage.toStringAsFixed(0)} kg',
                 style: const TextStyle(
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 20),
+                    color: AppColors.error, size: 20),
                 onPressed: () => _removeExercise(index),
               ),
             ],
@@ -502,18 +497,18 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               child: ElevatedButton(
                 onPressed: _showAddExerciseDialog,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A1A),
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.cardBackground,
+                  foregroundColor: AppColors.textPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Color(0xFF00C853)),
+                    side: const BorderSide(color: AppColors.accent),
                   ),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add, color: Color(0xFF00C853)),
+                    Icon(Icons.add, color: AppColors.accent),
                   ],
                 ),
               ),
@@ -524,8 +519,8 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               child: ElevatedButton(
                 onPressed: _scanRoutine,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                  foregroundColor: Colors.black,
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.background,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -534,7 +529,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.camera_alt, color: Colors.black),
+                    Icon(Icons.camera_alt_outlined, color: AppColors.background),
                     SizedBox(width: 8),
                     Text(
                       'ESCANEAR SYMMETRY',
@@ -560,7 +555,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00C853)),
+        child: CircularProgressIndicator(color: AppColors.accent),
       ),
     );
 
@@ -572,14 +567,14 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
 
     if (result.isError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.errorMessage ?? 'Error leyendo la rutina'), backgroundColor: Colors.red),
+        SnackBar(content: Text(result.errorMessage ?? 'Error leyendo la rutina'), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (result.exercises.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se detectaron ejercicios en la imagen.'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('No se detectaron ejercicios en la imagen.'), backgroundColor: AppColors.accent),
       );
       return;
     }
@@ -601,7 +596,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('¡${result.exercises.length} ejercicios importados!'),
-        backgroundColor: const Color(0xFF00C853),
+        backgroundColor: AppColors.accent,
       ),
     );
   }
@@ -624,7 +619,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.cardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -645,7 +640,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                   const Text(
                     'Añadir Ejercicio',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -653,12 +648,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                   const SizedBox(height: 20),
                   TextField(
                     controller: nameController,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: AppColors.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'Nombre del ejercicio',
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: const TextStyle(color: AppColors.textTertiary),
                       filled: true,
-                      fillColor: Colors.black,
+                      fillColor: AppColors.background,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -672,12 +667,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                         child: TextField(
                           controller: weightController,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: AppColors.textPrimary),
                           decoration: InputDecoration(
                             hintText: 'Peso (kg)',
-                            hintStyle: const TextStyle(color: Colors.white38),
+                            hintStyle: const TextStyle(color: AppColors.textTertiary),
                             filled: true,
-                            fillColor: Colors.black,
+                            fillColor: AppColors.background,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -690,12 +685,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                         child: TextField(
                           controller: setsController,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: AppColors.textPrimary),
                           decoration: InputDecoration(
                             hintText: 'Series',
-                            hintStyle: const TextStyle(color: Colors.white38),
+                            hintStyle: const TextStyle(color: AppColors.textTertiary),
                             filled: true,
-                            fillColor: Colors.black,
+                            fillColor: AppColors.background,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -708,12 +703,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                         child: TextField(
                           controller: repsController,
                           keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: AppColors.textPrimary),
                           decoration: InputDecoration(
                             hintText: 'Reps',
-                            hintStyle: const TextStyle(color: Colors.white38),
+                            hintStyle: const TextStyle(color: AppColors.textTertiary),
                             filled: true,
-                            fillColor: Colors.black,
+                            fillColor: AppColors.background,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -738,8 +733,8 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
-                      foregroundColor: Colors.black,
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -788,7 +783,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Añade al menos un ejercicio'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
       return;
@@ -818,22 +813,22 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: AppColors.cardBackground,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.emoji_events,
-                color: Color(0xFFFFD700),
+                Icons.emoji_events_outlined,
+                color: AppColors.accent,
                 size: 64,
               ),
               const SizedBox(height: 16),
               const Text(
                 '¡Entrenamiento completado!',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -842,7 +837,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               Text(
                 '+${xpEarned.toStringAsFixed(0)} XP',
                 style: const TextStyle(
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
@@ -850,7 +845,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
               const SizedBox(height: 16),
               Text(
                 '${_sessionExercises.length} ejercicios • ${_sessionTonnage.toStringAsFixed(0)} kg',
-                style: const TextStyle(color: Colors.white54),
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),

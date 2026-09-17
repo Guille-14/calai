@@ -206,13 +206,13 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(t.translate('nutrition_chat'),
-            style: const TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.surface,
+            style: const TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.background,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            icon: const Icon(Icons.delete_outline, color: AppColors.textPrimary),
             onPressed: _clearChat,
             tooltip: 'Clear chat',
           ),
@@ -247,20 +247,20 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.red.withValues(alpha: 0.1),
+      color: AppColors.error.withValues(alpha: 0.1),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 18),
+          const Icon(Icons.error_outline, color: AppColors.error, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _error!,
-              style: const TextStyle(color: Colors.red, fontSize: 13),
+              style: const TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
           TextButton(
             onPressed: () => setState(() => _error = null),
-            child: const Text('Dismiss', style: TextStyle(color: Colors.red)),
+            child: const Text('Dismiss', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -280,13 +280,13 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColors.accentCalories.withValues(alpha: 0.15),
+                color: AppColors.accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 Icons.smart_toy,
                 size: 18,
-                color: AppColors.accentCalories,
+                color: AppColors.accent,
               ),
             ),
             const SizedBox(width: 8),
@@ -296,8 +296,8 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: message.isUser
-                    ? AppColors.accentCalories
-                    : AppColors.surface,
+                    ? AppColors.accent
+                    : AppColors.background,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
@@ -311,7 +311,7 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: message.isUser ? Colors.white : AppColors.textPrimary,
+                  color: message.isUser ? AppColors.textPrimary : AppColors.textPrimary,
                   height: 1.4,
                 ),
               ),
@@ -323,13 +323,13 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColors.royalBlue.withValues(alpha: 0.15),
+                color: AppColors.accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.person,
                 size: 18,
-                color: AppColors.royalBlue,
+                color: AppColors.accent,
               ),
             ),
           ],
@@ -348,20 +348,20 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: AppColors.accentCalories.withValues(alpha: 0.15),
+              color: AppColors.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.smart_toy,
               size: 18,
-              color: AppColors.accentCalories,
+              color: AppColors.accent,
             ),
           ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.background,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -414,10 +414,10 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
         bottom: MediaQuery.of(context).padding.bottom + 12,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.background.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -461,14 +461,14 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.accentCalories,
-                    AppColors.accentCalories.withValues(alpha: 0.8),
+                    AppColors.accent,
+                    AppColors.accent.withValues(alpha: 0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentCalories.withValues(alpha: 0.3),
+                    color: AppColors.accent.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -476,7 +476,7 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
               ),
               child: const Icon(
                 Icons.send,
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 size: 20,
               ),
             ),
@@ -511,7 +511,7 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
                 _addWelcomeMessage();
               }
             },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+            child: const Text('Clear', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

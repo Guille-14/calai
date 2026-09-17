@@ -63,7 +63,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
       if (_imageFile != null) {
         // Guardar la imagen localmente dentro de la app
         final appDirectory = await getApplicationDocumentsDirectory(); // Necesito importar path_provider
-        final fileName = Uuid().v4() + '.png';
+        final fileName = '${Uuid().v4()}.png';
         final localImage = await _imageFile!.copy('${appDirectory.path}/$fileName');
         imagePath = localImage.path;
       }
@@ -97,15 +97,15 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         ...list.asMap().entries.map((entry) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
             children: [
-              Expanded(child: Text('${entry.key + 1}. ${entry.value}', style: const TextStyle(color: Colors.white70))),
+              Expanded(child: Text('${entry.key + 1}. ${entry.value}', style: const TextStyle(color: AppColors.textSecondary))),
               IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
                 onPressed: () => onRemoveItem(entry.key),
               ),
             ],
@@ -118,9 +118,9 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                 controller: controller,
                 decoration: InputDecoration(
                   hintText: 'Añadir ${title.toLowerCase().substring(0, title.length -1)}',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: AppColors.textPrimary),
                 onSubmitted: (value) {
                   if (value.trim().isNotEmpty) {
                     onAddItem(value);
@@ -130,7 +130,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
               ),
             ),
                IconButton(
-                 icon: const Icon(Icons.add_circle, color: AppColors.primaryAccent),
+                 icon: const Icon(Icons.add_circle, color: AppColors.accent),
                  onPressed: () {
 
                 if (controller.text.trim().isNotEmpty) {
@@ -150,7 +150,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.recipe == null ? 'Nueva Receta' : 'Editar Receta', style: const TextStyle(color: Colors.white)),
+        title: Text(widget.recipe == null ? 'Nueva Receta' : 'Editar Receta', style: const TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -169,7 +169,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
                     image: _imageFile != null
                         ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
                         : null,
@@ -178,9 +178,9 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.camera_alt, size: 50, color: Colors.white.withValues(alpha: 0.3)),
+                            Icon(Icons.camera_alt, size: 50, color: AppColors.textPrimary.withValues(alpha: 0.3)),
                             const SizedBox(height: 10),
-                            Text('Añadir imagen', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+                            Text('Añadir imagen', style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.5))),
                           ],
                         )
                       : null,
@@ -208,7 +208,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                 onRemoveItem: (index) => setState(() => _instructions.removeAt(index)),
               ),
 
-              const Text('Información Nutricional', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Información Nutricional', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -233,7 +233,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                   onPressed: _saveRecipe,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.background,
                   ),
                   child: const Text('Guardar Receta', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
@@ -249,11 +249,11 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.textPrimary),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
       ),
       validator: (value) => value == null || value.isEmpty ? 'Campo requerido' : null,
     );
@@ -263,11 +263,11 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.number,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: AppColors.textPrimary),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
       ),
       validator: (value) => value == null || value.isEmpty ? 'Req.' : null,
     );
