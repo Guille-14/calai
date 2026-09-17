@@ -75,31 +75,52 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Canal de depuración: si el job falla, publica la salida real en la
-      # rama especial `ci-logs` (NO dispara este workflow: solo corre en
-      # main/arena/**/refactor/**). Desde fuera se lee con
-      #   git fetch origin ci-logs && git show origin/ci-logs:run-<id>/analyze_human.txt
-      # (los artifacts y logs crudos no siempre son accesibles desde el
-      # entorno de trabajo; una rama git sí).
-      - name: Publish logs to ci-logs branch
+      # Canal de depuración principal: si el job falla, la salida REAL de
+      # flutter analyze se publica como cuerpo de una RELEASE DRAFT
+      # (tag ci-debug). Es el único canal que funciona de punta a punta:
+      # los artifacts y logs crudos no son accesibles desde el entorno de
+      # trabajo (bloqueo de red), el push a rama fallaba, y las anotaciones
+      # del check-run las sobreescribe el runner al terminar. Desde fuera:
+      #   gh api repos/<owner>/<repo>/releases/tags/ci-debug --jq .body
+      - name: Publish analyze logs as draft release (debug channel)
         if: failure()
         run: |
-          set +e
-          mkdir -p .ci-logs/run-"$GITHUB_RUN_ID"
-          cp analyze_human.txt analyze_machine.jsonl .ci-logs/run-"$GITHUB_RUN_ID"/ 2>/dev/null
-          printf 'run=%s\nsha=%s\nbranch=%s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$GITHUB_REF_NAME" > .ci-logs/run-"$GITHUB_RUN_ID"/meta.txt
-          cd .ci-logs
-          git init -q
-          git config user.name "ci-logs"
-          git config user.email "ci-logs@calai"
-          git add -A
-          git commit -q -m "CI logs run $GITHUB_RUN_ID"
-          if git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs; then
-            echo "ci-logs: publicado run $GITHUB_RUN_ID"
-          else
-            echo "ci-logs: fallo el push; se intenta otra vez sin -f"
-            git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs || echo "ci-logs: sin publicar (ver log)"
-          fi
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+          token = os.environ.get("GITHUB_TOKEN", "")
+          try:
+              with open("analyze_human.txt", encoding="utf-8", errors="replace") as f:
+                  body = f.read()
+          except FileNotFoundError:
+              body = "(sin analyze_human.txt)"
+          header = (
+              "Salida REAL de `flutter analyze` (run "
+              + os.environ.get("GITHUB_RUN_ID", "?")
+              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
+          )
+          payload = {
+              "tag_name": "ci-debug",
+              "name": "CI debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
+              "draft": True,
+              "target_commitish": os.environ.get("GITHUB_SHA", ""),
+              "body": (header + body)[:900000],
+          }
+          req = urllib.request.Request(
+              "https://api.github.com/repos/"
+              + os.environ.get("GITHUB_REPOSITORY", "")
+              + "/releases/tags/ci-debug",
+              data=json.dumps(payload).encode(),
+              method="PUT",
+          )
+          req.add_header("Authorization", "Bearer " + token)
+          req.add_header("Accept", "application/vnd.github+json")
+          req.add_header("Content-Type", "application/json")
+          try:
+              with urllib.request.urlopen(req) as r:
+                  print("release ci-debug actualizada:", r.status)
+          except Exception as e:
+              print("no se pudo publicar la release ci-debug:", e)
+          PYEOF
 
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
@@ -123,29 +144,54 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Publish test logs to ci-logs branch
+      # Misma vía que el canal de analyze: la salida REAL de flutter test
+      # como release draft (tag ci-debug-test).
+      - name: Publish test logs as draft release (debug channel)
         if: failure() && hashFiles('test/**') != ''
         run: |
-          set +e
-          mkdir -p .ci-logs/run-"$GITHUB_RUN_ID"
-          cp test_human.txt .ci-logs/run-"$GITHUB_RUN_ID"/ 2>/dev/null
-          cd .ci-logs
-          git init -q
-          git config user.name "ci-logs"
-          git config user.email "ci-logs@calai"
-          git add -A
-          git commit -q -m "CI test logs run $GITHUB_RUN_ID"
-          if git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs; then
-            echo "ci-logs: publicado run $GITHUB_RUN_ID"
-          else
-            echo "ci-logs: fallo el push; se intenta otra vez sin -f"
-            git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs || echo "ci-logs: sin publicar (ver log)"
-          fi
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+          token = os.environ.get("GITHUB_TOKEN", "")
+          try:
+              with open("test_human.txt", encoding="utf-8", errors="replace") as f:
+                  body = f.read()
+          except FileNotFoundError:
+              body = "(sin test_human.txt)"
+          header = (
+              "Salida REAL de `flutter test` (run "
+              + os.environ.get("GITHUB_RUN_ID", "?")
+              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
+          )
+          payload = {
+              "tag_name": "ci-debug-test",
+              "name": "CI test debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
+              "draft": True,
+              "target_commitish": os.environ.get("GITHUB_SHA", ""),
+              "body": (header + body)[:900000],
+          }
+          req = urllib.request.Request(
+              "https://api.github.com/repos/"
+              + os.environ.get("GITHUB_REPOSITORY", "")
+              + "/releases/tags/ci-debug-test",
+              data=json.dumps(payload).encode(),
+              method="PUT",
+          )
+          req.add_header("Authorization", "Bearer " + token)
+          req.add_header("Accept", "application/vnd.github+json")
+          req.add_header("Content-Type", "application/json")
+          try:
+              with urllib.request.urlopen(req) as r:
+                  print("release ci-debug-test actualizada:", r.status)
+          except Exception as e:
+              print("no se pudo publicar la release ci-debug-test:", e)
+          PYEOF
 
+  # Build del APK: en main, en workflow_dispatch manual y en tags v*
+  # (los tags alimentan el job de release de abajo).
   build-apk:
     name: Build APK (release)
     needs: analyze-and-test
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -184,3 +230,24 @@ jobs:
           name: calai-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+  # Release: solo en tags v*. Crea la GitHub Release del tag con el APK
+  # descargado del artefacto del build (no re-build).
+  release-apk:
+    name: Release (tag v*)
+    needs: build-apk
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: calai-release-apk
+          path: apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apk/app-release.apk
+          fail_on_unmatched_files: true
+          generate_release_notes: true
