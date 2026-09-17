@@ -27,10 +27,12 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
   }
 
   Future<void> _loadRecipes() async {
-    if (mounted) setState(() {
-      _isLoading = true;
-      _loadError = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
     try {
       final recipes = await _recipeService.getAllRecipes();
       if (!mounted) return;
