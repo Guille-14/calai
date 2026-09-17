@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/app_translations.dart';
 import 'data/repositories/food_repository.dart';
 import 'data/services/ai_gateway.dart';
+import 'data/services/ai_gateway_adapter.dart';
 import 'data/services/database_service.dart';
 import 'data/services/external_food_service.dart';
 import 'data/services/notification_service.dart';
@@ -69,6 +70,7 @@ Future<void> _bootstrap() async {
     databaseService,
     externalFoodService,
     imageStorageService,
+    aiGateway: const AiGatewayAdapter(),
   );
 
   // Migración one-shot: registro de comidas desde SharedPreferences

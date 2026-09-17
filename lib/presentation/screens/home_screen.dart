@@ -17,6 +17,7 @@ import '../../data/models/food_item.dart';
 import '../cubit/food_log_cubit.dart';
 import 'scan_food_screen.dart';
 import 'nutritional_chat_screen.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -513,13 +514,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// juntos, sin cambiar de "modo".
   Widget _buildSymmetryCard() {
     final progress = _symmetryProgress;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.08)),
-      ),
+    return AppCard(
+      semanticLabel: 'Resumen de Symmetry',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

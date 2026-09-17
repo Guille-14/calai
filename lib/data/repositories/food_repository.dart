@@ -4,10 +4,12 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../core/ai/ai_analysis_port.dart';
+import '../../models/food_entry.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
-import '../../models/food_entry.dart';
-import '../services/ai_gateway.dart';
+import '../services/ai_gateway_adapter.dart';
 import '../services/database_service.dart';
 import '../services/external_food_service.dart';
 import '../services/image_storage_service.dart';
@@ -19,13 +21,15 @@ class FoodRepository {
   final DatabaseService _databaseService;
   final ExternalFoodService _externalFoodService;
   final ImageStorageService _imageStorageService;
+  final AiAnalysisPort _aiGateway;
 
   FoodRepository(
     this._prefs,
     this._databaseService,
     this._externalFoodService,
-    this._imageStorageService,
-  );
+    this._imageStorageService, {
+    AiAnalysisPort? aiGateway,
+  }) : _aiGateway = aiGateway ?? const AiGatewayAdapter();
 
   // ------------------------------------------------------------------
   // Registro diario de comidas en SQLite (tabla food_entries).
@@ -134,7 +138,7 @@ class FoodRepository {
   Future<Either<String, FoodItem>> detectFoodFromImage(
       Uint8List imageBytes) async {
     try {
-      final result = await AiGateway.analyzeFoodImageFromBytes(imageBytes);
+      final result = await _aiGateway.analyzeFoodImage(imageBytes);
 
       if (result.isError) {
         return Left(result.errorMessage ?? 'Error en el análisis');
@@ -197,7 +201,7 @@ class FoodRepository {
 
     try {
       final result =
-          await AiGateway.estimateCaloriesFromText(normalizedDescription);
+          await _aiGateway.estimateCalories(normalizedDescription);
       if (result.isError) {
         final cached = await _readCachedAiFood(normalizedDescription);
         return cached == null
@@ -409,7 +413,7 @@ class FoodRepository {
 
   Future<ProductModel?> _getAiFoodData(String query) async {
     try {
-      final result = await AiGateway.estimateCaloriesFromText(query);
+      final result = await _aiGateway.estimateCalories(query);
 
       if (result.isError) {
         return null;
@@ -449,7 +453,7 @@ class FoodRepository {
               })
           .toList();
 
-      return await AiGateway.generateNutritionSummary(entries);
+      return await _aiGateway.generateNutritionSummary(entries);
     } catch (e) {
       return null;
     }
