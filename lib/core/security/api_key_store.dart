@@ -70,26 +70,39 @@ class ApiKeyStore {
   /// seguro y elimina la clave legacy de SharedPreferences si seguía ahí.
   static Future<void> set({required String id, required String value}) async {
     final v = value.trim();
+    var secureOk = false;
     try {
       if (v.isEmpty) {
         await _storage.delete(key: id);
       } else {
         await _storage.write(key: id, value: v);
       }
+      secureOk = true;
     } catch (e) {
-      // Si no se puede escribir en el seguro, se deja en prefs para no
-      // perder la clave (peor que ideal, pero no la rompe).
+      // Almacenamiento seguro no disponible: se deja en prefs para no
+      // perder la clave (peor que ideal, pero no la rompe). En la próxima
+      // lectura get() la migrará de nuevo al seguro si ya está disponible.
       debugPrint('ApiKeyStore: no se pudo guardar en storage seguro: $e');
+      try {
+        final legacyKey = _legacyPrefKeys[id];
+        if (legacyKey != null && v.isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(legacyKey, v);
+        }
+      } catch (_) {}
     }
 
-    try {
-      final legacyKey = _legacyPrefKeys[id];
-      if (legacyKey != null) {
-        final prefs = await SharedPreferences.getInstance();
-        if (prefs.containsKey(legacyKey)) {
-          await prefs.remove(legacyKey);
+    // La clave legacy solo se borra si el seguro aceptó la nueva.
+    if (secureOk) {
+      try {
+        final legacyKey = _legacyPrefKeys[id];
+        if (legacyKey != null) {
+          final prefs = await SharedPreferences.getInstance();
+          if (prefs.containsKey(legacyKey)) {
+            await prefs.remove(legacyKey);
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
   }
 }
