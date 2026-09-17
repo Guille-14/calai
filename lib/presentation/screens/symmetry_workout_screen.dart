@@ -4,6 +4,7 @@ import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/symmetry/health_connect_bridge.dart';
 import '../../data/services/food_service.dart';
+import '../widgets/hevy_sync_button_widget.dart';
 
 class SymmetryWorkoutScreen extends StatefulWidget {
   const SymmetryWorkoutScreen({super.key});
@@ -96,6 +97,10 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Opcional: importar entrenamientos de Hevy vía Health Connect
+          // (tap abre la pantalla de sync, long-press hace sync rápida).
+          const HevySyncButtonWidget(),
+          const SizedBox(height: 16),
           _buildXPCard(progress),
           const SizedBox(height: 20),
           _buildRecommendationsCard(recommendations),
@@ -114,15 +119,15 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            progress.currentRank.color.withOpacity(0.2),
-            progress.currentRank.color.withOpacity(0.05),
+            progress.currentRank.color.withValues(alpha: 0.2),
+            progress.currentRank.color.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: progress.currentRank.color.withOpacity(0.3),
+          color: progress.currentRank.color.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -167,7 +172,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853).withOpacity(0.2),
+                    color: const Color(0xFF00C853).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -330,7 +335,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF00C853).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -391,7 +396,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
             Icon(
               Icons.fitness_center,
               size: 64,
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -420,7 +425,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -428,7 +433,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF00C853).withOpacity(0.2),
+              color: const Color(0xFF00C853).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(

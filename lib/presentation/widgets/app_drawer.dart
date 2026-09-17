@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../screens/recipe_home_screen.dart';
 import '../screens/symmetry_navigator.dart';
-import '../screens/food_scanner_screen.dart';
+import '../screens/scan_food_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -26,7 +26,7 @@ class AppDrawer extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: colors.primary.withOpacity(0.1),
+                  backgroundColor: colors.primary.withValues(alpha: 0.1),
                   child: Icon(
                     Icons.fitness_center,
                     color: colors.primary,
@@ -86,9 +86,12 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Escanear Comida', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
+              // Usa ScanFoodScreen (la pantalla de escaneo de la navegación
+              // principal). Antes apuntaba a FoodScannerScreen, una segunda
+              // implementación duplicada que se eliminó.
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const FoodScannerScreen()),
+                MaterialPageRoute(builder: (_) => const ScanFoodScreen()),
               );
             },
           ),

@@ -140,7 +140,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.neonGreen.withOpacity(0.2),
+                  color: AppColors.neonGreen.withValues(alpha: 0.2),
                   border: Border.all(
                     color: AppColors.neonGreen,
                     width: 2,
@@ -261,8 +261,8 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: _hasPermissions
-            ? AppColors.neonGreen.withOpacity(0.1)
-            : AppColors.neonRed.withOpacity(0.1),
+            ? AppColors.neonGreen.withValues(alpha: 0.1)
+            : AppColors.neonRed.withValues(alpha: 0.1),
         border: Border.all(
           color: _hasPermissions ? AppColors.neonGreen : AppColors.neonRed,
           width: 2,
@@ -320,7 +320,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         borderRadius: BorderRadius.circular(16),
         color: AppColors.rpgCardDark,
         border: Border.all(
-          color: AppColors.neonCyan.withOpacity(0.3),
+          color: AppColors.neonCyan.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -413,7 +413,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         onPressed: _isSyncing ? null : _syncWithHevy,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.neonGreen,
-          disabledBackgroundColor: AppColors.neonGreen.withOpacity(0.5),
+          disabledBackgroundColor: AppColors.neonGreen.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -457,7 +457,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         borderRadius: BorderRadius.circular(16),
         color: AppColors.rpgCardDark,
         border: Border.all(
-          color: AppColors.neonPurple.withOpacity(0.3),
+          color: AppColors.neonPurple.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -515,7 +515,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         borderRadius: BorderRadius.circular(16),
         color: AppColors.rpgCardDark,
         border: Border.all(
-          color: AppColors.neonOrange.withOpacity(0.3),
+          color: AppColors.neonOrange.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -601,7 +601,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         borderRadius: BorderRadius.circular(16),
         color: AppColors.rpgDark,
         border: Border.all(
-          color: AppColors.neonMagenta.withOpacity(0.2),
+          color: AppColors.neonMagenta.withValues(alpha: 0.2),
           width: 1.5,
         ),
       ),
@@ -669,7 +669,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.neonMagenta.withOpacity(0.2),
+            color: AppColors.neonMagenta.withValues(alpha: 0.2),
             border: Border.all(
               color: AppColors.neonMagenta,
               width: 1,

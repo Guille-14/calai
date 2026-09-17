@@ -112,20 +112,20 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.neonGreen.withOpacity(0.2),
-                AppColors.neonCyan.withOpacity(0.1),
+                AppColors.neonGreen.withValues(alpha: 0.2),
+                AppColors.neonCyan.withValues(alpha: 0.1),
               ],
             ),
             border: Border.all(
               color: _isSyncing
                   ? AppColors.neonGreen
-                  : AppColors.neonGreen.withOpacity(0.5),
+                  : AppColors.neonGreen.withValues(alpha: 0.5),
               width: 2,
             ),
             boxShadow: _isSyncing
                 ? [
                     BoxShadow(
-                      color: AppColors.neonGreen.withOpacity(0.6),
+                      color: AppColors.neonGreen.withValues(alpha: 0.6),
                       blurRadius: 12,
                       spreadRadius: 1,
                     ),

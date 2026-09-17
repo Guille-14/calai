@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'health_connect_bridge.dart';
 
@@ -34,7 +35,11 @@ class HealthConnectImporter {
         HealthDataType.WORKOUT,
       ];
 
-      return await _health.requestAuthorization(permissions);
+      // health 13.x: requestAuthorization devuelve la lista de tipos
+      // autorizados, no un bool (así lo tenía el código archivado, y por eso
+      // no compilaba).
+      final granted = await _health.requestAuthorization(permissions);
+      return granted.length == permissions.length;
     } catch (e) {
       debugPrint('❌ Error requesting Health Connect permissions: $e');
       return false;
@@ -164,14 +169,18 @@ class HealthConnectImporter {
   }
 
   /// Calcula tonelaje desde datos de Hevy
+  ///
+  /// Nota: `WorkoutHealthValue.energyBurned` es un `Duration` en el paquete
+  /// `health` (no calorías), así que se estima por minutos de sesión
+  /// (min × 5), mismo criterio que el fallback de EXERCISE_TIME.
   double _calculateTonnageFromWorkouts(List<HealthDataPoint> workouts) {
     double tonnage = 0;
 
     for (final workout in workouts) {
       if (workout.value is WorkoutHealthValue) {
-        final workoutValue = workout.value as WorkoutHealthValue;
-        // Hevy devuelve energía en calorías, estimamos tonelaje
-        tonnage += (workoutValue.energyBurned ?? 0) * 0.1; // ~100 cal = 10kg
+        final minutes =
+            workout.dateTo.difference(workout.dateFrom).inMinutes;
+        tonnage += minutes * 5;
       }
     }
 
@@ -203,7 +212,10 @@ class HealthConnectImporter {
 
         // Mapear nombre de actividad a grupos musculares
         final groups = _mapActivityToMuscleGroups(workoutActivityName);
-        final energy = (workoutValue.energyBurned ?? 0) * 0.1;
+        // energyBurned es un Duration en health 13.x; se usa la duración
+        // de la ventana del punto como proxy de carga.
+        final energy =
+            workout.dateTo.difference(workout.dateFrom).inMinutes * 0.1;
 
         for (final group in groups) {
           muscleGroups.update(
@@ -294,9 +306,11 @@ class HealthConnectImporter {
       if (workout.value is WorkoutHealthValue) {
         final workoutValue = workout.value as WorkoutHealthValue;
         final activityName = workoutValue.workoutActivityName ?? 'Workout';
-        final energy = (workoutValue.energyBurned ?? 0).toDouble();
         final duration =
             workout.dateTo.difference(workout.dateFrom).inMinutes;
+        // energyBurned es un Duration en health 13.x (no calorías): se usa
+        // la duración en minutos como proxy de intensidad.
+        final energy = duration.toDouble();
 
         final muscleGroups = _mapActivityToMuscleGroups(activityName);
         final primaryMuscle =

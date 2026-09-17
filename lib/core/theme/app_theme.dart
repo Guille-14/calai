@@ -35,6 +35,19 @@ class AppColors {
   static const Color muscleNormal = Color(0xFF39FF14);
   static const Color muscleFatigued = Color(0xFFFF6600);
   static const Color muscleExhausted = Color(0xFFFF0040);
+
+  // Paleta del antiguo modo HEAVY, recuperada con la reintegración de la
+  // sincronización con Hevy (HevySyncScreen / HevySyncButtonWidget la
+  // referenciaban y no existía en la paleta actual, así que esos archivos
+  // no compilaban).
+  static const Color neonGreen = Color(0xFF00C853);
+  static const Color neonCyan = Color(0xFF00D9FF);
+  static const Color neonRed = Color(0xFFFF5252);
+  static const Color neonOrange = Color(0xFFFF9500);
+  static const Color neonPurple = Color(0xFFBF5AF2);
+  static const Color neonMagenta = Color(0xFFFF2D95);
+  static const Color rpgDark = Color(0xFF0A0A0A);
+  static const Color rpgCardDark = Color(0xFF141414);
 }
 
 class AppTheme {
