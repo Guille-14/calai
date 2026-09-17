@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
@@ -133,9 +134,9 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
     return Container(
       height: 400,
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: AppColors.elevatedCardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12, width: 1),
+        border: Border.all(color: AppColors.divider, width: 1),
       ),
       child: Column(
         children: [
@@ -143,16 +144,16 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.white12)),
+              border: Border(bottom: BorderSide(color: AppColors.divider)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.terminal, color: Colors.greenAccent, size: 18),
+                const Icon(Icons.terminal, color: AppColors.accentStrong, size: 18),
                 const SizedBox(width: 8),
                 const Text(
                   'OLLAMA REMOTE CONSOLE',
                   style: TextStyle(
-                    color: Colors.greenAccent,
+                    color: AppColors.accentStrong,
                     fontFamily: 'Courier',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -165,7 +166,7 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
                     height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentStrong),
                     ),
                   ),
               ],
@@ -197,12 +198,12 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: const BoxDecoration(
-              color: Colors.black26,
-              border: Border(top: BorderSide(color: Colors.white10)),
+              color: AppColors.background,
+              border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Row(
               children: [
-                const Text('>', style: TextStyle(color: Colors.greenAccent, fontFamily: 'Courier')),
+                const Text('>', style: TextStyle(color: AppColors.accentStrong, fontFamily: 'Courier')),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -210,14 +211,14 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
                     onSubmitted: _handleCommand,
                     enabled: !_isProcessing,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontFamily: 'Courier',
                       fontSize: 14,
                     ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: 'Ingrese comando...',
-                      hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+                      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                     ),
                   ),
                 ),
@@ -232,11 +233,11 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
   Color _getColorForType(EntryType type) {
     switch (type) {
       case EntryType.command:
-        return Colors.white;
+        return AppColors.textPrimary;
       case EntryType.info:
-        return Colors.greenAccent.withValues(alpha: 0.9);
+        return AppColors.accentStrong.withValues(alpha: 0.9);
       case EntryType.error:
-        return Colors.redAccent;
+        return AppColors.error;
     }
   }
 }

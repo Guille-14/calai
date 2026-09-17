@@ -4,15 +4,17 @@ import '../models/recipe_model.dart';
 
 class RecipeService {
   static Database? _database;
+  static Future<Database>? _databaseOpening;
   static final RecipeService _instance = RecipeService._internal();
 
   factory RecipeService() => _instance;
   RecipeService._internal();
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
+    final existing = _database;
+    if (existing != null) return existing;
+    final opening = _databaseOpening ??= _initDatabase();
+    return _database ??= await opening;
   }
 
   Future<Database> _initDatabase() async {

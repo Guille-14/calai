@@ -8,6 +8,7 @@ import '../../core/utils/app_translations.dart';
 import '../../data/models/food_item.dart';
 import '../../data/services/food_service.dart';
 import '../cubit/food_log_cubit.dart';
+import '../widgets/ai_analysis_progress.dart';
 import 'openrouter_diagnostics_screen.dart';
 import 'nutritional_chat_screen.dart';
 
@@ -22,17 +23,16 @@ class ScanFoodScreen extends StatefulWidget {
 
 class _ScanFoodScreenState extends State<ScanFoodScreen>
     with TickerProviderStateMixin {
-  final FoodService _foodService = FoodService();
   final ImagePicker _imagePicker = ImagePicker();
 
   Uint8List? _selectedImageBytes;
   File? _selectedImageFile;
   bool _isAnalyzing = false;
+  AiAnalysisStage _analysisStage = AiAnalysisStage.preparing;
   String? _errorMessage;
   FoodAnalysisResult? _analysisResult;
 
   late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -42,9 +42,6 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
   }
 
   @override
@@ -74,7 +71,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           bottom: MediaQuery.of(context).padding.bottom + 24,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
@@ -108,9 +105,9 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               children: [
                 Expanded(
                   child: _ImageSourceButton(
-                    icon: Icons.camera_alt_rounded,
+                    icon: Icons.camera_alt_outlined,
                     label: t.translate('camera'),
-                    color: AppColors.accentCalories,
+                    color: AppColors.accent,
                     onTap: () {
                       Navigator.pop(context);
                       _pickImage(ImageSource.camera);
@@ -120,9 +117,9 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                 const SizedBox(width: 16),
                 Expanded(
                   child: _ImageSourceButton(
-                    icon: Icons.photo_library_rounded,
+                    icon: Icons.photo_library_outlined,
                     label: t.translate('gallery'),
-                    color: AppColors.royalBlue,
+                    color: AppColors.accent,
                     onTap: () {
                       Navigator.pop(context);
                       _pickImage(ImageSource.gallery);
@@ -157,9 +154,11 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         });
         _maybePausePulse();
       }
-    } catch (e) {
+    } catch (error, stack) {
+      debugPrint('ScanFood: error seleccionando imagen: $error\n$stack');
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Error selecting image: $e';
+        _errorMessage = 'No se pudo seleccionar la imagen. Inténtalo de nuevo.';
       });
     }
   }
@@ -170,16 +169,28 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
     HapticFeedback.mediumImpact();
     setState(() {
       _isAnalyzing = true;
+      _analysisStage = AiAnalysisStage.preparing;
       _errorMessage = null;
       _analysisResult = null;
     });
 
     try {
+      // El servicio comprime la imagen en un isolate; el estado visible evita
+      // que el usuario interprete ese trabajo como un bloqueo de la app.
+      await Future<void>.delayed(Duration.zero);
+      if (!mounted) return;
+      setState(() => _analysisStage = AiAnalysisStage.analyzing);
       final result =
           await FoodService.analyzeFoodImageFromBytes(_selectedImageBytes!);
 
+      if (!mounted) return;
       setState(() {
+        _analysisStage = AiAnalysisStage.validating;
         _analysisResult = result;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (!mounted) return;
+      setState(() {
         _isAnalyzing = false;
       });
 
@@ -190,10 +201,12 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           _errorMessage = result.errorMessage;
         });
       }
-    } catch (e) {
+    } catch (error, stack) {
+      debugPrint('ScanFood: error analizando imagen: $error\n$stack');
+      if (!mounted) return;
       setState(() {
         _isAnalyzing = false;
-        _errorMessage = 'Error analyzing image: $e';
+        _errorMessage = 'No se pudo analizar la imagen. Inténtalo de nuevo.';
       });
     }
   }
@@ -213,7 +226,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       protein: foodData.protein,
       carbs: foodData.carbs,
       fat: foodData.fat,
-      sugar: 0,
+      sugar: foodData.sugar,
       quantity: 100,
       timestamp: DateTime.now(),
       ingredients: ingredients,
@@ -232,21 +245,21 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
     // Antes la comida se guardaba AQUÍ antes de mostrar el diálogo: si el
     // usuario pulsaba "Volver", quedaba registrada igualmente. Ahora solo
     // se guarda al confirmar dentro del diálogo.
-    await _showFoodResultDialog(foodItem, foodData);
+    await _showFoodResultDialog(foodItem);
   }
 
-  Future<void> _showFoodResultDialog(
-      FoodItem foodItem, FoodAnalysisResult foodData) async {
-    String editedName = foodItem.name;
+  Future<void> _showFoodResultDialog(FoodItem foodItem) async {
+    final nameController = TextEditingController(text: foodItem.name);
 
-    await showModalBottomSheet(
+    try {
+      await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
+        builder: (context, _) => Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1C1C1E),
+            color: AppColors.elevatedCardBackground,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.all(24),
@@ -259,7 +272,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppColors.textTertiary,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -267,11 +280,11 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               const SizedBox(height: 20),
               Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                  const Icon(Icons.check_circle, color: AppColors.accent, size: 28),
                   const SizedBox(width: 12),
                   const Text('Alimento Escaneado',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                 ],
@@ -280,7 +293,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2C2C2E),
+                  color: AppColors.elevatedCardBackground,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -289,46 +302,45 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                       children: [
                         Expanded(
                           child: TextField(
-                            controller: TextEditingController(text: editedName),
+                            controller: nameController,
                             style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold),
                             decoration: InputDecoration(
                               hintText: 'Nombre del alimento',
                               hintStyle: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.3)),
+                                  color: AppColors.textPrimary.withValues(alpha: 0.3)),
                               border: InputBorder.none,
                               prefixIcon: const Icon(Icons.edit,
-                                  color: Colors.white54, size: 20),
+                                  color: AppColors.textSecondary, size: 20),
                             ),
-                            onChanged: (value) => editedName = value,
                           ),
                         ),
                       ],
                     ),
-                    const Divider(color: Colors.white12),
+                    const Divider(color: AppColors.divider),
                     const SizedBox(height: 12),
                     _buildMacroRow(
                         'Calorías',
                         '${foodItem.calories.toInt()} kcal',
-                        AppColors.accentCalories),
+                        AppColors.accent),
                     _buildMacroRow('Proteína', '${foodItem.protein.toInt()}g',
-                        Colors.green),
+                        AppColors.accent),
                     _buildMacroRow('Carbohidratos',
-                        '${foodItem.carbs.toInt()}g', Colors.blue),
+                        '${foodItem.carbs.toInt()}g', AppColors.accent),
                     _buildMacroRow(
-                        'Grasa', '${foodItem.fat.toInt()}g', Colors.orange),
+                        'Grasa', '${foodItem.fat.toInt()}g', AppColors.accent),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.auto_awesome,
-                            color: Color(0xFF007AFF), size: 16),
+                            color: AppColors.accent, size: 16),
                         const SizedBox(width: 6),
                         Text('IA: ${FoodService.model}',
                             style: const TextStyle(
-                                color: Colors.white54, fontSize: 11)),
+                                color: AppColors.textSecondary, fontSize: 11)),
                       ],
                     ),
                   ],
@@ -341,8 +353,9 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     child: ElevatedButton.icon(
                       onPressed: () {
                         // Guardar = confirmar: única escritura, con el nombre final.
+                        final editedName = nameController.text.trim();
                         final finalName =
-                            editedName.trim().isNotEmpty ? editedName : foodItem.name;
+                            editedName.isNotEmpty ? editedName : foodItem.name;
                         context.read<FoodLogCubit>().addMeal(
                               finalName == foodItem.name
                                   ? foodItem
@@ -353,8 +366,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                       icon: const Icon(Icons.check),
                       label: const Text('Guardar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.textPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
@@ -378,8 +391,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text('Chatear con IA sobre este alimento'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF007AFF),
-                    side: const BorderSide(color: Color(0xFF007AFF)),
+                    foregroundColor: AppColors.accent,
+                    side: const BorderSide(color: AppColors.accent),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -389,15 +402,17 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: Text('Volver',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.4))),
+                      style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.4))),
                 ),
               ),
               SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
             ],
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      nameController.dispose();
+    }
   }
 
   Widget _buildMacroRow(String label, String value, Color color) {
@@ -413,7 +428,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           const SizedBox(width: 12),
           Expanded(
               child:
-                  Text(label, style: const TextStyle(color: Colors.white54))),
+                  Text(label, style: const TextStyle(color: AppColors.textSecondary))),
           Text(value,
               style: TextStyle(color: color, fontWeight: FontWeight.bold)),
         ],
@@ -436,6 +451,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       _selectedImageFile = null;
       _errorMessage = null;
       _analysisResult = null;
+      _analysisStage = AiAnalysisStage.preparing;
       _isAnalyzing = false;
     });
     _showImageSourceDialog();
@@ -446,21 +462,21 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(Icons.close, color: AppColors.textPrimary),
           onPressed: () {
             widget.onClose?.call();
             Navigator.pop(context);
           },
         ),
         title: Text(AppTranslations.of(context).translate('scan_food'),
-            style: const TextStyle(color: Colors.white)),
+            style: const TextStyle(color: AppColors.textPrimary)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.bug_report, color: Colors.white),
+            icon: const Icon(Icons.bug_report, color: AppColors.textPrimary),
             onPressed: () => OpenRouterDiagnosticsScreen.show(context),
           ),
         ],
@@ -497,21 +513,21 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: AppColors.accentCalories.withValues(alpha: 0.05),
+              color: AppColors.accent.withValues(alpha: 0.05),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.accentCalories.withValues(alpha: 0.2), width: 2),
+                  color: AppColors.accent.withValues(alpha: 0.2), width: 2),
             ),
             child: Icon(
               Icons.camera_alt_outlined,
               size: 80,
-              color: AppColors.accentCalories,
+              color: AppColors.accent,
             ),
           ),
           const SizedBox(height: 48),
           const Text(
             'Toma una foto o selecciona de la galería',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 32),
           SizedBox(
@@ -523,8 +539,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               label: const Text('Seleccionar Imagen',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentCalories,
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.background,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
@@ -573,7 +589,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              Colors.black.withValues(alpha: 0.8),
+              AppColors.background.withValues(alpha: 0.8),
             ],
           ),
         ),
@@ -593,7 +609,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                           child: Text(
                             data.foods.isNotEmpty ? data.foods.first : 'Comida',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                             ),
@@ -602,7 +618,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                         const SizedBox(width: 8),
                         const Icon(
                           Icons.edit,
-                          color: Colors.white70,
+                          color: AppColors.textSecondary,
                           size: 18,
                         ),
                       ],
@@ -613,7 +629,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: AppColors.accent.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -623,7 +639,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                             ? '70%'
                             : '50%',
                     style: const TextStyle(
-                      color: Colors.greenAccent,
+                      color: AppColors.accentStrong,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -634,13 +650,13 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.textPrimary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'AI: ${FoodService.model.split('/').last}',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: AppColors.textPrimary.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
               ),
@@ -653,25 +669,25 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   icon: Icons.local_fire_department,
                   label: 'Cal',
                   value: '${data.estimatedCalories}',
-                  color: AppColors.accentCalories,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.fitness_center,
                   label: 'Protein',
                   value: '${data.protein.toInt()}g',
-                  color: AppColors.accentProtein,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.bakery_dining,
                   label: 'Carbs',
                   value: '${data.carbs.toInt()}g',
-                  color: AppColors.accentCarbs,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.egg_alt,
                   label: 'Fat',
                   value: '${data.fat.toInt()}g',
-                  color: AppColors.accentFat,
+                  color: AppColors.accent,
                 ),
               ],
             ),
@@ -712,6 +728,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     protein: data.protein,
                     carbs: data.carbs,
                     fat: data.fat,
+                    sugar: data.sugar,
                     confidence: data.confidence,
                   );
                 });
@@ -727,7 +744,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
 
   Widget _buildErrorOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.7),
+      color: AppColors.background.withValues(alpha: 0.7),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -736,14 +753,14 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             children: [
               Icon(
                 Icons.error_outline,
-                color: Colors.red.shade300,
+                color: AppColors.error,
                 size: 48,
               ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage ?? 'Error analyzing image',
                 style: TextStyle(
-                  color: Colors.red.shade200,
+                  color: AppColors.error.withValues(alpha: 0.85),
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
@@ -756,42 +773,18 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   }
 
   Widget _buildLoadingOverlay() {
-    final t = AppTranslations.of(context);
-    final modelName = FoodService.model.split('/').last;
-    // Nombre visible del proveedor real (antes decía siempre "Ollama").
     final provider = switch (FoodService.activeProvider) {
       'google' => 'Gemini',
       'openrouter' => 'OpenRouter',
       _ => 'Ollama',
     };
     return Container(
-      color: Colors.black.withValues(alpha: 0.5),
+      color: AppColors.background.withValues(alpha: 0.5),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              t.translate('analyzing_food'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${t.translate('using_ai')} ($provider: $modelName)',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
+        child: AiAnalysisProgress(
+          stage: _analysisStage,
+          provider: provider,
+          model: FoodService.model.split('/').last,
         ),
       ),
     );
@@ -807,10 +800,10 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: AppColors.background.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -825,7 +818,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               label: Text(t.translate('new_image')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: AppColors.accentCalories),
+                side: BorderSide(color: AppColors.accent),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -842,7 +835,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         strokeWidth: 2,
                       ),
                     )
@@ -851,8 +844,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   ? t.translate('analyzing')
                   : t.translate('analyze_food')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentCalories,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.textPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -943,7 +936,7 @@ class _NutritionChip extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -951,7 +944,7 @@ class _NutritionChip extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.textPrimary.withValues(alpha: 0.7),
             fontSize: 10,
           ),
         ),

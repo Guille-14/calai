@@ -20,6 +20,8 @@ import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
 import 'presentation/screens/main_navigator.dart';
 import 'presentation/screens/profile_screen.dart';
+import 'presentation/widgets/app_error_boundary.dart';
+import 'presentation/widgets/app_error_fallback.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +29,11 @@ void main() async {
   // Red global de seguridad: ningún error asíncrono o de framework
   // debe matar la app en silencio.
   FlutterError.onError = (details) {
-    debugPrint('FlutterError: ${details.exception}\n${details.stack}');
+    // El detalle técnico queda en los logs de desarrollo; la UI solo muestra
+    // el fallback recuperable cuando Flutter no puede pintar el árbol.
+    AppErrorBoundary.report(details.exception, details.stack ?? StackTrace.empty);
   };
+  ErrorWidget.builder = (_) => const AppErrorFallback();
 
   await runZonedGuarded(() async {
     await _bootstrap();
@@ -45,19 +50,7 @@ Future<void> _bootstrap() async {
     debugPrint('main: .env no disponible ($e); se continúa sin él');
   }
 
-  // Initialize notification service
   final notificationService = NotificationService();
-  try {
-    await notificationService.initialize();
-  } catch (e) {
-    debugPrint('main: error inicializando notificaciones: $e');
-  }
-  try {
-    await notificationService.scheduleSmartNotifications();
-  } catch (e) {
-    debugPrint('main: error programando notificaciones: $e');
-  }
-
   final prefs = await SharedPreferences.getInstance();
 
   final bool showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
@@ -65,21 +58,13 @@ Future<void> _bootstrap() async {
   final String languageCode = prefs.getString('language_code') ?? 'es';
   final Locale appLocale = Locale(languageCode);
 
-  // FoodService se autoconfigura desde preferencias y (.env) incluyendo
-  // el proveedor OpenRouter; no hay que reencaminar claves manualmente.
-  try {
-    await FoodService.initFromPrefs();
-  } catch (e) {
-    debugPrint('main: error initFromPrefs: $e');
-  }
-
+  // FoodService se autoconfigura de forma perezosa desde preferencias y
+  // (.env). La IA y las notificaciones no deben retrasar el primer frame.
   final databaseService = DatabaseService();
   final imageStorageService = ImageStorageService();
 
-  final foodService = FoodService();
   final externalFoodService = ExternalFoodService();
   final foodRepository = FoodRepository(
-    foodService,
     prefs,
     databaseService,
     externalFoodService,
@@ -97,12 +82,28 @@ Future<void> _bootstrap() async {
   }
 
   runApp(
-    LocaleNotifier(
-      initialLocale: appLocale,
-      showOnboarding: showOnboarding,
-      foodRepository: foodRepository,
+    AppErrorBoundary(
+      child: LocaleNotifier(
+        initialLocale: appLocale,
+        showOnboarding: showOnboarding,
+        foodRepository: foodRepository,
+      ),
     ),
   );
+
+  // Las tareas nativas y la configuración de IA se ejecutan después del
+  // primer frame. Ambas APIs también tienen inicialización perezosa, por lo
+  // que abrir una pantalla inmediatamente sigue siendo seguro.
+  unawaited(() async {
+    try {
+      await Future.wait([
+        FoodService.initFromPrefs(),
+        notificationService.scheduleSmartNotifications(),
+      ]);
+    } catch (error) {
+      debugPrint('main: error en tareas de fondo: $error');
+    }
+  }());
 }
 
 class LocaleNotifier extends StatefulWidget {

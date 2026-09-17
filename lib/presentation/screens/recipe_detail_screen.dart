@@ -16,11 +16,11 @@ class RecipeDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Receta', style: TextStyle(color: Colors.white)),
+        title: const Text('Receta', style: TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
+            icon: const Icon(Icons.edit, color: AppColors.textPrimary),
             onPressed: () {
               Navigator.push(
                 context,
@@ -46,20 +46,20 @@ class RecipeDetailScreen extends StatelessWidget {
                   : Container(
                       height: 250,
                       width: double.infinity,
-                      color: Colors.white10,
-                      child: const Icon(Icons.restaurant, size: 100, color: Colors.white24),
+                      color: AppColors.divider,
+                      child: const Icon(Icons.restaurant, size: 100, color: AppColors.textTertiary),
                     ),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               recipe.name,
-              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               recipe.description,
-              style: const TextStyle(color: Colors.white60, fontSize: 16),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
             ),
             const SizedBox(height: 24),
             _buildMacrosSection(context),
@@ -77,10 +77,10 @@ class RecipeDetailScreen extends StatelessWidget {
                     CircleAvatar(
                       radius: 12,
                       backgroundColor: colors.primary,
-                      child: Text('${entry.key + 1}', style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text('${entry.key + 1}', style: const TextStyle(color: AppColors.background, fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(entry.value, style: const TextStyle(color: Colors.white70, fontSize: 16))),
+                    Expanded(child: Text(entry.value, style: const TextStyle(color: AppColors.textSecondary, fontSize: 16))),
                   ],
                 ),
               );
@@ -98,15 +98,15 @@ class RecipeDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildMacro('Kcal', recipe.calories.toString(), AppColors.caloriesColor),
-          _buildMacro('Proteína', '${recipe.protein}g', AppColors.proteinColor),
-          _buildMacro('Carbos', '${recipe.carbs}g', AppColors.carbsColor),
-          _buildMacro('Grasas', '${recipe.fat}g', AppColors.fatColor),
+          _buildMacro('Kcal', recipe.calories.toString(), AppColors.accent),
+          _buildMacro('Proteína', '${recipe.protein}g', AppColors.accent),
+          _buildMacro('Carbos', '${recipe.carbs}g', AppColors.accent),
+          _buildMacro('Grasas', '${recipe.fat}g', AppColors.accent),
         ],
       ),
     );
@@ -116,7 +116,7 @@ class RecipeDetailScreen extends StatelessWidget {
     return Column(
       children: [
         Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
       ],
     );
   }
@@ -126,7 +126,7 @@ class RecipeDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -136,9 +136,9 @@ class RecipeDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          const Icon(Icons.circle, size: 6, color: AppColors.primaryAccent),
+          const Icon(Icons.circle, size: 6, color: AppColors.accent),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: const TextStyle(color: Colors.white70))),
+          Expanded(child: Text(text, style: const TextStyle(color: AppColors.textSecondary))),
         ],
       ),
     );

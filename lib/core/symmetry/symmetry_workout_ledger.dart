@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'symmetry_rank_system.dart';
 
-class HealthConnectBridge {
-  static final HealthConnectBridge _instance = HealthConnectBridge._internal();
-  factory HealthConnectBridge() => _instance;
-  HealthConnectBridge._internal();
+class SymmetryWorkoutLedger {
+  static final SymmetryWorkoutLedger _instance = SymmetryWorkoutLedger._internal();
+  factory SymmetryWorkoutLedger() => _instance;
+  SymmetryWorkoutLedger._internal();
 
   static const String _storageKey = 'symmetry_health_connect_data';
 
@@ -127,6 +126,11 @@ class WorkoutSession {
   final int durationMinutes;
   final Map<String, double> muscleGroupTonnage;
   final List<ExerciseRecord> exercises;
+  final String source;
+  final String? externalId;
+  final double caloriesBurned;
+  final double distanceMeters;
+  final int steps;
 
   const WorkoutSession({
     required this.date,
@@ -134,6 +138,11 @@ class WorkoutSession {
     required this.durationMinutes,
     required this.muscleGroupTonnage,
     required this.exercises,
+    this.source = 'native',
+    this.externalId,
+    this.caloriesBurned = 0,
+    this.distanceMeters = 0,
+    this.steps = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -142,6 +151,11 @@ class WorkoutSession {
         'durationMinutes': durationMinutes,
         'muscleGroupTonnage': muscleGroupTonnage,
         'exercises': exercises.map((e) => e.toJson()).toList(),
+        'source': source,
+        'externalId': externalId,
+        'caloriesBurned': caloriesBurned,
+        'distanceMeters': distanceMeters,
+        'steps': steps,
       };
 
   factory WorkoutSession.fromJson(Map<String, dynamic> json) {
@@ -154,9 +168,14 @@ class WorkoutSession {
           (k, v) => MapEntry(k, (v as num).toDouble()),
         ),
       ),
-      exercises: (json['exercises'] as List<dynamic>)
+      exercises: (json['exercises'] as List<dynamic>? ?? [])
           .map((e) => ExerciseRecord.fromJson(e as Map<String, dynamic>))
           .toList(),
+      source: json['source']?.toString() ?? 'native',
+      externalId: json['externalId']?.toString(),
+      caloriesBurned: (json['caloriesBurned'] as num?)?.toDouble() ?? 0,
+      distanceMeters: (json['distanceMeters'] as num?)?.toDouble() ?? 0,
+      steps: (json['steps'] as num?)?.toInt() ?? 0,
     );
   }
 }

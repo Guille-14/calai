@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
@@ -5,12 +7,16 @@ import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/symmetry/macro_bridge.dart';
 import '../../core/utils/workout_calories.dart';
+import '../../core/utils/date_key.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/models/user_data.dart';
 import '../../data/services/ollama_service.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/google_fit_service.dart';
+import '../../data/services/database_service.dart';
 import '../../main.dart';
 import 'ai_settings_screen.dart';
+import '../widgets/app_skeleton.dart';
 
 /// Perfil unificado (la fusión CalAI + Symmetry).
 ///
@@ -45,6 +51,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ---- nuevo: feedback entrenamiento -> nutrición ----
   bool _creditWorkoutCalories = false;
 
+  // ---- Health Connect ----
+  final GoogleFitService _healthService = GoogleFitService.instance;
+  bool _healthConnectAvailable = false;
+  bool _healthConnectAuthorized = false;
+  bool _healthSyncing = false;
+  Map<String, int> _workoutSourceCounts = {};
+  DateTime? _lastHealthImport;
+  DateTime? _healthAvailableFrom;
+  DateTime? _healthAvailableTo;
+  GoogleFitDailyData? _healthToday;
+  HealthImportResult? _lastHealthResult;
+  Map<String, int> _healthPointSources = {};
+  List<Map<String, dynamic>> _healthTodayMetricRows = [];
+
   bool _isLoading = true;
 
   @override
@@ -54,32 +74,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final prefManager = PreferenceManager(prefs);
-    final userData = prefManager.getUserData();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final prefManager = PreferenceManager(prefs);
+      final userData = prefManager.getUserData();
 
-    final ollama = OllamaService();
-    await ollama.initialize();
-    final available = await ollama.isServerAvailable();
+      // Estas tareas son independientes. Ejecutarlas en paralelo evita que
+      // un servidor Ollama lento retrase también el perfil y Health Connect.
+      final ollama = OllamaService();
+      final availableFuture = () async {
+        await ollama.initialize();
+        return ollama.isServerAvailable();
+      }();
+      final notifFuture = _notificationService.isEnabled();
+      final symmetryFuture = _symmetryService.initialize();
+      final healthAvailableFuture = _healthService.isHealthConnectInstalled();
+      final results = await Future.wait<dynamic>([
+        availableFuture,
+        notifFuture,
+        symmetryFuture,
+        healthAvailableFuture,
+      ]);
 
-    // Idioma: main.dart lee 'language_code' ('es'/'en'). Antes este ajuste
-    // guardaba 'app_language' con el nombre completo y no tenía efecto.
-    final savedCode = prefs.getString('language_code') ?? 'es';
-    final savedLang = savedCode == 'en' ? 'English' : 'Español';
-    final notifEnabled = await _notificationService.isEnabled();
+      final available = results[0] as bool;
+      // Idioma: main.dart lee 'language_code' ('es'/'en').
+      final savedCode = prefs.getString('language_code') ?? 'es';
+      final savedLang = savedCode == 'en' ? 'English' : 'Español';
+      final notifEnabled = results[1] as bool;
+      final healthAvailable = results[3] as bool;
 
-    await _symmetryService.initialize();
-    await _macroBridge.initialize();
-    _creditWorkoutCalories = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
+      _creditWorkoutCalories = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
+      final healthAuthorized = healthAvailable
+          ? await _healthService.checkAuthorization()
+          : false;
+      final healthToday = healthAuthorized
+          ? await _healthService.fetchDailyData()
+          : null;
+      final database = DatabaseService();
+      final databaseResults = await Future.wait<dynamic>([
+        database.getWorkoutSourceCounts(),
+        if (healthAuthorized)
+          database.getHealthDailyMetricsBetween(DateTime.now(), DateTime.now())
+        else
+          Future.value(<Map<String, dynamic>>[]),
+      ]);
+      final sourceCounts = databaseResults[0] as Map<String, int>;
+      final todayMetricRows =
+          databaseResults[1] as List<Map<String, dynamic>>;
+      final lastImportMs = prefs.getInt(GoogleFitService.lastImportedAtKey);
 
-    if (mounted) {
-      setState(() {
-        _userData = userData;
-        _ollamaAvailable = available;
-        _selectedLanguage = savedLang;
-        _notificationsEnabled = notifEnabled;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _userData = userData;
+          _ollamaAvailable = available;
+          _selectedLanguage = savedLang;
+          _notificationsEnabled = notifEnabled;
+          _healthConnectAvailable = healthAvailable;
+          _healthConnectAuthorized = healthAuthorized;
+          _healthToday = healthToday;
+          _workoutSourceCounts = sourceCounts;
+          _healthTodayMetricRows = todayMetricRows;
+          _lastHealthImport = lastImportMs == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(lastImportMs);
+        });
+      }
+    } catch (e) {
+      debugPrint('Profile: error cargando datos: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _syncHealthHistory() async {
+    if (_healthSyncing) return;
+    setState(() => _healthSyncing = true);
+    try {
+      final result = await _healthService.importFullHistory();
+      if (!mounted) return;
+      if (result.isSuccess) {
+        final database = DatabaseService();
+        final databaseResults = await Future.wait<dynamic>([
+          database.getWorkoutSourceCounts(),
+          database.getHealthDailyMetricsBetween(DateTime.now(), DateTime.now()),
+        ]);
+        final counts = databaseResults[0] as Map<String, int>;
+        final todayMetricRows =
+            databaseResults[1] as List<Map<String, dynamic>>;
+        final healthToday = await _healthService.fetchDailyData();
+        if (!mounted) return;
+        setState(() {
+          _healthConnectAuthorized = true;
+          _workoutSourceCounts = counts;
+          _lastHealthResult = result;
+          _healthPointSources = result.sourcePointCounts;
+          _healthTodayMetricRows = todayMetricRows;
+          _healthToday = healthToday;
+          _lastHealthImport = result.lastImportedAt;
+          _healthAvailableFrom = result.availableFrom;
+          _healthAvailableTo = result.availableTo;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${result.importedWorkouts} entrenamientos importados. Los importados no dan XP.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.error ?? 'No se pudo sincronizar Health Connect')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sincronizando Health Connect: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _healthSyncing = false);
     }
   }
 
@@ -109,31 +219,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.elevatedCardBackground,
+        title: Text(title, style: const TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: controller,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Ingresa $title',
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.3)),
             enabledBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+                borderSide: BorderSide(color: AppColors.textTertiary)),
             focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: AppColors.accentCalories)),
+                borderSide: BorderSide(color: AppColors.accent)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text('Cancelar',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
+                style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.6))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
             child: const Text('Guardar',
-                style: TextStyle(color: AppColors.accentCalories)),
+                style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -174,18 +284,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Seleccionar Idioma',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: languages
               .map((lang) => ListTile(
                     title:
-                        Text(lang, style: const TextStyle(color: Colors.white)),
+                        Text(lang, style: const TextStyle(color: AppColors.textPrimary)),
                     trailing: _selectedLanguage == lang
                         ? const Icon(Icons.check,
-                            color: AppColors.accentCalories)
+                            color: AppColors.accent)
                         : null,
                     onTap: () => Navigator.pop(ctx, lang),
                   ))
@@ -212,17 +322,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Seleccionar Género',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: genders
               .map((g) => ListTile(
-                    title: Text(g, style: const TextStyle(color: Colors.white)),
+                    title: Text(g, style: const TextStyle(color: AppColors.textPrimary)),
                     trailing: _userData?.gender == g
                         ? const Icon(Icons.check,
-                            color: AppColors.accentCalories)
+                            color: AppColors.accent)
                         : null,
                     onTap: () => Navigator.pop(ctx, g),
                   ))
@@ -240,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showNotificationSettingsDialog() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.elevatedCardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -254,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 const Text('Configuración de Notificaciones',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
@@ -287,8 +397,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentCalories,
-                      foregroundColor: Colors.black,
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.background,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text('Permitir Notificaciones',
@@ -308,17 +418,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Horario de Recordatorios',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: AppColors.textPrimary)),
         content: const Text(
             'Los recordatorios se envían a las 08:00, 13:00 y 19:00',
-            style: TextStyle(color: Colors.white70)),
+            style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cerrar',
-                style: TextStyle(color: AppColors.accentCalories)),
+                style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -337,21 +447,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Objetivo de Proteína',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             suffixText: 'g',
-            suffixStyle: const TextStyle(color: Colors.white54),
+            suffixStyle: const TextStyle(color: AppColors.textSecondary),
             filled: true,
-            fillColor: Colors.black,
+            fillColor: AppColors.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -373,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00C853),
+              backgroundColor: AppColors.accent,
             ),
             child: const Text('Guardar'),
           ),
@@ -386,15 +496,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           '¿Restablecer progreso?',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.textPrimary),
         ),
         content: const Text(
           'Esta acción eliminará todo tu progreso de Symmetry, incluyendo XP, rangos e historial.',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -408,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _loadData();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
             child: const Text('Restablecer'),
           ),
@@ -425,19 +535,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          backgroundColor: Colors.black,
-          body: Center(child: CircularProgressIndicator()));
+        backgroundColor: AppColors.background,
+        body: ScreenSkeleton(cards: 5),
+      );
     }
 
     final progress = _symmetryService.getProgress();
     final heatMap = _symmetryService.getMuscleHeatMap();
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         title: const Text('Perfil',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: ListView(
@@ -482,20 +593,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildSectionHeader('ENTRENO'),
           _buildSettingsGroup([
             ListTile(
-              leading: const Icon(Icons.bolt_outlined, color: Colors.white54),
+              leading: const Icon(Icons.bolt_outlined, color: AppColors.textSecondary),
               title: const Text('Creditar calorías quemadas',
-                  style: TextStyle(color: Colors.white, fontSize: 15)),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
               subtitle: const Text(
                   'Resta el gasto estimado de cada entrenamiento del '
                   'objetivo diario (desactivado por defecto)',
-                  style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
               trailing: Switch(
                 value: _creditWorkoutCalories,
                 onChanged: _toggleCreditWorkoutCalories,
-                activeThumbColor: AppColors.accentCalories,
+                activeThumbColor: AppColors.accent,
               ),
             ),
           ]),
+          const SizedBox(height: 24),
+          _buildSectionHeader('FUENTES DE DATOS'),
+          _buildHealthConnectCard(),
           const SizedBox(height: 24),
           _buildSectionHeader('APLICACIÓN'),
           _buildSettingsGroup([
@@ -521,10 +635,222 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text(
               'v1.1.0 - Fusión CalAI + Symmetry',
               style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
+                  color: AppColors.textPrimary.withValues(alpha: 0.2), fontSize: 12),
             ),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthMetricRow() {
+    final today = _healthToday;
+    final values = [
+      ('Pasos', today == null ? '—' : '${today.steps}', Icons.directions_walk_outlined),
+      ('Calorías', today == null ? '—' : '${today.activeCalories} kcal', Icons.local_fire_department_outlined),
+      ('Distancia', today == null ? '—' : '${today.distanceKm.toStringAsFixed(1)} km', Icons.route_outlined),
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < values.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.elevatedCardBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Icon(values[i].$3, size: 16, color: AppColors.accent),
+                  const SizedBox(height: 4),
+                  Text(values[i].$2, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text(values[i].$1, style: const TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  String _healthSourceLabel(String source) {
+    if (source == 'mifit') return 'Mi Fitness';
+    if (source == 'hevy') return 'Hevy';
+    if (source == 'symmetry_app') return 'Symmetry';
+    if (source.startsWith('health_connect:')) {
+      return source.substring('health_connect:'.length);
+    }
+    return source;
+  }
+
+  String _healthMetricLabel(String key) {
+    const labels = {
+      'FLIGHTS_CLIMBED': 'Pisos',
+      'BLOOD_OXYGEN': 'Oxígeno',
+      'BODY_FAT_PERCENTAGE': 'Grasa corporal',
+      'HEIGHT': 'Altura',
+      'LEAN_BODY_MASS': 'Masa magra',
+      'WATER': 'Agua',
+      'TOTAL_CALORIES_BURNED': 'Calorías totales',
+    };
+    return labels[key] ?? key;
+  }
+
+  Widget _buildHealthOtherMetrics() {
+    final rows = <Widget>[];
+    for (final row in _healthTodayMetricRows) {
+      final raw = row['other_metrics'];
+      if (raw is! String || raw.isEmpty) continue;
+      Map<String, dynamic> metrics;
+      try {
+        metrics = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      } catch (_) {
+        continue;
+      }
+      final source = _healthSourceLabel(row['source']?.toString() ?? 'unknown');
+      for (final entry in metrics.entries) {
+        final summary = entry.value is Map
+            ? Map<String, dynamic>.from(entry.value as Map)
+            : <String, dynamic>{'value': entry.value};
+        final value = summary['value'];
+        if (value is! num) continue;
+        final unit = summary['unit']?.toString() ?? '';
+        final records = (summary['records'] as num?)?.toInt() ?? 0;
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '${_healthMetricLabel(entry.key)}: ${value.toStringAsFixed(1)} $unit · $source · $records registros',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+            ),
+          ),
+        );
+      }
+    }
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Otros datos disponibles hoy',
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthConnectCard() {
+    final status = !_healthConnectAvailable
+        ? 'Health Connect no disponible'
+        : _healthConnectAuthorized
+            ? 'Conectado y autorizado'
+            : 'Instalado, falta autorización';
+    final imported = _workoutSourceCounts.entries
+        .where((entry) => entry.key != 'native')
+        .fold<int>(0, (total, entry) => total + entry.value);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: (_healthConnectAvailable && _healthConnectAuthorized)
+              ? AppColors.accent.withValues(alpha: 0.35)
+              : AppColors.divider,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _healthConnectAuthorized
+                    ? Icons.health_and_safety_outlined
+                    : Icons.health_and_safety_outlined,
+                color: _healthConnectAvailable
+                    ? AppColors.accent
+                    : AppColors.textTertiary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(status,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700)),
+              ),
+              if (_healthConnectAuthorized)
+                const Icon(Icons.check_circle_outline,
+                    color: AppColors.accent, size: 20),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '$imported entrenamientos importados · MiFit ${_workoutSourceCounts['mifit'] ?? 0} · Symmetry ${_workoutSourceCounts['symmetry_app'] ?? 0}',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          _buildHealthMetricRow(),
+          _buildHealthOtherMetrics(),
+          const SizedBox(height: 8),
+          Text(
+            _lastHealthResult == null
+                ? 'Pulsa sincronizar para importar el histórico completo.'
+                : '${_lastHealthResult!.healthDays} días · ${_lastHealthResult!.stepsRecords} pasos · ${_lastHealthResult!.activeCaloriesRecords} cal. activas · ${_lastHealthResult!.totalCaloriesRecords} cal. totales · ${_lastHealthResult!.weightRecords} pesos · ${_lastHealthResult!.sleepSessions} sueños · ${_lastHealthResult!.heartRateRecords} pulso',
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+          ),
+          if (_healthPointSources.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Fuentes detectadas: ${_healthPointSources.entries.map((entry) => '${entry.key} (${entry.value})').join(' · ')}',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            _lastHealthImport == null
+                ? 'Todavía no se ha sincronizado el histórico.'
+                : 'Última sincronización: ${formatDateKey(_lastHealthImport!)}',
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+          ),
+          if (_healthAvailableFrom != null && _healthAvailableTo != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Rango recibido: ${formatDateKey(_healthAvailableFrom!)} → ${formatDateKey(_healthAvailableTo!)}',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _healthSyncing ? null : _syncHealthHistory,
+              icon: _healthSyncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync_outlined),
+              label: Text(_healthSyncing ? 'Sincronizando…' : 'Sincronizar ahora'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Los entrenamientos importados se muestran en Historial, pero no conceden XP automático para evitar duplicados.',
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
+          ),
         ],
       ),
     );
@@ -536,18 +862,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            progress.currentRank.color.withValues(alpha: 0.2),
-            progress.currentRank.color.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: progress.currentRank.color.withValues(alpha: 0.4),
-          width: 2,
+          width: 1,
         ),
       ),
       child: Column(
@@ -557,24 +876,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  progress.currentRank.color,
-                  progress.currentRank.color.withValues(alpha: 0.6),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: progress.currentRank.color.withValues(alpha: 0.5),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+              color: progress.currentRank.color.withValues(alpha: 0.14),
+              border: Border.all(color: progress.currentRank.color, width: 2),
             ),
-            child: const Center(
-              child: Icon(Icons.shield, color: Colors.white, size: 50),
+            child: Center(
+              child: Icon(progress.currentRank.icon,
+                  color: progress.currentRank.color, size: 42),
             ),
           ),
           const SizedBox(height: 16),
@@ -590,13 +897,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Text(
             'Nivel ${progress.currentRank.level}',
-            style: const TextStyle(color: Colors.white54),
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 20),
           LinearProgressIndicator(
             value: progress.rankProgress,
             color: progress.currentRank.color,
-            backgroundColor: Colors.white12,
+            backgroundColor: AppColors.divider,
             minHeight: 8,
           ),
           const SizedBox(height: 8),
@@ -605,11 +912,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 '${progress.totalXP.toStringAsFixed(0)} XP',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
               if (progress.currentRank.nextRank != null)
                 Text(
-                  '${progress.currentRank.nextRank!.displayName}',
+                  progress.currentRank.nextRank!.displayName,
                   style: TextStyle(
                     color: progress.currentRank.nextRank!.color,
                     fontSize: 12,
@@ -631,9 +938,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,12 +950,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.restaurant,
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -656,7 +963,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Text(
                   'Meta de Proteína',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -667,20 +974,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
+                    color: AppColors.accent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
                     'x1.2',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: AppColors.background,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
                   ),
                 ),
               IconButton(
-                icon: const Icon(Icons.edit, color: Colors.white54, size: 18),
+                icon: const Icon(Icons.edit, color: AppColors.textSecondary, size: 18),
                 onPressed: () => _showProteinGoalDialog(),
               ),
             ],
@@ -692,7 +999,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 '${currentProtein.toStringAsFixed(0)}g',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
@@ -700,7 +1007,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 '/ ${proteinGoal.toStringAsFixed(0)}g',
                 style: const TextStyle(
-                  color: Colors.white54,
+                  color: AppColors.textSecondary,
                   fontSize: 18,
                 ),
               ),
@@ -710,9 +1017,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           LinearProgressIndicator(
             value: progress,
             color: _macroBridge.metProteinGoal
-                ? const Color(0xFF00C853)
-                : const Color(0xFFFFD700),
-            backgroundColor: Colors.white12,
+                ? AppColors.accent
+                : AppColors.accent,
+            backgroundColor: AppColors.divider,
             minHeight: 8,
           ),
           const SizedBox(height: 8),
@@ -720,8 +1027,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _macroBridge.getProteinStatusMessage(),
             style: TextStyle(
               color: _macroBridge.metProteinGoal
-                  ? const Color(0xFF00C853)
-                  : Colors.white54,
+                  ? AppColors.accent
+                  : AppColors.textSecondary,
               fontSize: 12,
             ),
           ),
@@ -734,21 +1041,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.map, color: Color(0xFFFF6B6B)),
+              Icon(Icons.map, color: AppColors.error),
               SizedBox(width: 8),
               Text(
                 'Estado Muscular',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -759,7 +1066,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (heatMap.isEmpty)
             const Text(
               'Completa entrenamientos para ver el estado muscular',
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: AppColors.textSecondary),
             )
           else
             Wrap(
@@ -790,7 +1097,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         entry.key,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 12,
                         ),
                       ),
@@ -805,9 +1112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Color _getFatigueColor(double fatigue) {
-    if (fatigue < 30) return Colors.green;
-    if (fatigue < 60) return Colors.orange;
-    return Colors.red;
+    // Heatmap monocromo: el nivel se lee por intensidad, no por un color
+    // diferente para recuperado, normal, fatigado o agotado.
+    final intensity = (fatigue / 100).clamp(0.08, 1.0);
+    return Color.lerp(AppColors.accentSubtle, AppColors.accentStrong, intensity)!;
   }
 
   Widget _buildSettingsItem({
@@ -821,15 +1129,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: AppColors.textPrimary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: Colors.white70, size: 20),
+        child: Icon(icon, color: AppColors.textSecondary, size: 20),
       ),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
+      title: Text(title, style: const TextStyle(color: AppColors.textPrimary)),
       subtitle: Text(subtitle,
-          style: const TextStyle(color: Colors.white54, fontSize: 12)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
       onTap: onTap,
     );
   }
@@ -840,19 +1148,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: _ollamaAvailable
-                ? AppColors.accentCalories.withValues(alpha: 0.2)
-                : Colors.red.withValues(alpha: 0.2)),
+                ? AppColors.accent.withValues(alpha: 0.2)
+                : AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: (_ollamaAvailable ? AppColors.accentCalories : Colors.red)
+              color: (_ollamaAvailable ? AppColors.accent : AppColors.error)
                   .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -860,7 +1168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _ollamaAvailable
                   ? Icons.cloud_done_outlined
                   : Icons.cloud_off_outlined,
-              color: _ollamaAvailable ? AppColors.accentCalories : Colors.red,
+              color: _ollamaAvailable ? AppColors.accent : AppColors.error,
             ),
           ),
           const SizedBox(width: 16),
@@ -873,14 +1181,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? 'IA Local Conectada'
                       : 'IA Local Desconectada',
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                      color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   _ollamaAvailable
                       ? 'Ollama está listo'
                       : 'Verifica conexión Tailscale',
                   style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                      color: AppColors.textPrimary.withValues(alpha: 0.4), fontSize: 12),
                 ),
               ],
             ),
@@ -891,7 +1199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(builder: (_) => const AiSettingsScreen())),
             child: Text('CONFIGURAR',
                 style: TextStyle(
-                    color: AppColors.accentCalories,
+                    color: AppColors.accent,
                     fontWeight: FontWeight.bold,
                     fontSize: 12)),
           ),
@@ -906,7 +1214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Text(
         title,
         style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: AppColors.textPrimary.withValues(alpha: 0.3),
             fontSize: 11,
             fontWeight: FontWeight.bold,
             letterSpacing: 1),
@@ -917,9 +1225,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSettingsGroup(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: children.asMap().entries.map((entry) {
@@ -928,10 +1236,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               entry.value,
               if (showDivider)
-                Divider(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    height: 1,
-                    indent: 56),
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.only(left: 56),
+                  color: AppColors.divider,
+                ),
             ],
           );
         }).toList(),
@@ -941,18 +1250,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildActionTile(IconData icon, String title, String value) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      leading: Icon(icon, color: AppColors.textPrimary.withValues(alpha: 0.5), size: 22),
       title: Text(title,
-          style: const TextStyle(color: Colors.white, fontSize: 15)),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(value,
               style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+                  color: AppColors.textPrimary.withValues(alpha: 0.4), fontSize: 14)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right,
-              color: Colors.white.withValues(alpha: 0.2), size: 18),
+              color: AppColors.textPrimary.withValues(alpha: 0.2), size: 18),
         ],
       ),
       onTap: () {},
@@ -962,19 +1271,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildEditableTile(
       IconData icon, String title, String value, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      leading: Icon(icon, color: AppColors.textPrimary.withValues(alpha: 0.5), size: 22),
       title: Text(title,
-          style: const TextStyle(color: Colors.white, fontSize: 15)),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(value,
               style: const TextStyle(
-                  color: AppColors.accentCalories,
+                  color: AppColors.accent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
-          Icon(Icons.edit, color: Colors.white.withValues(alpha: 0.3), size: 16),
+          Icon(Icons.edit, color: AppColors.textPrimary.withValues(alpha: 0.3), size: 16),
         ],
       ),
       onTap: onTap,
@@ -984,18 +1293,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildTapTile(
       IconData icon, String title, String value, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      leading: Icon(icon, color: AppColors.textPrimary.withValues(alpha: 0.5), size: 22),
       title: Text(title,
-          style: const TextStyle(color: Colors.white, fontSize: 15)),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(value,
               style: const TextStyle(
-                  color: AppColors.accentCalories, fontSize: 14)),
+                  color: AppColors.accent, fontSize: 14)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right,
-              color: Colors.white.withValues(alpha: 0.2), size: 18),
+              color: AppColors.textPrimary.withValues(alpha: 0.2), size: 18),
         ],
       ),
       onTap: onTap,
@@ -1005,16 +1314,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildNotificationTile() {
     return ListTile(
       leading: const Icon(Icons.notifications_outlined,
-          color: Colors.white54, size: 22),
+          color: AppColors.textSecondary, size: 22),
       title: const Text('Notificaciones',
-          style: TextStyle(color: Colors.white, fontSize: 15)),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       trailing: Switch(
         value: _notificationsEnabled,
         onChanged: (value) async {
           await _notificationService.setEnabled(value);
           setState(() => _notificationsEnabled = value);
         },
-        activeThumbColor: AppColors.accentCalories,
+        activeThumbColor: AppColors.accent,
       ),
       onTap: () => _showNotificationSettingsDialog(),
     );
@@ -1031,18 +1340,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(color: Colors.white, fontSize: 15)),
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
                 const SizedBox(height: 2),
                 Text(subtitle,
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 12)),
+                        const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
               ],
             ),
           ),
           Switch(
               value: value,
               onChanged: onChanged,
-              activeThumbColor: AppColors.accentCalories),
+              activeThumbColor: AppColors.accent),
         ],
       ),
     );
@@ -1051,29 +1360,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildNotificationSettings() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.schedule, color: Colors.white54),
+            leading: const Icon(Icons.schedule, color: AppColors.textSecondary),
             title: const Text('Horario de recordatorios',
-                style: TextStyle(color: Colors.white)),
+                style: TextStyle(color: AppColors.textPrimary)),
             subtitle: const Text('08:00, 13:00, 19:00',
-                style: TextStyle(color: Colors.white38)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                style: TextStyle(color: AppColors.textTertiary)),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
             onTap: _showReminderTimesDialog,
           ),
-          const Divider(color: Colors.white12, height: 1, indent: 56),
+          Container(
+            height: 1,
+            margin: const EdgeInsets.only(left: 56),
+            color: AppColors.divider,
+          ),
           ListTile(
-            leading: const Icon(Icons.more_time, color: Colors.white54),
+            leading: const Icon(Icons.more_time, color: AppColors.textSecondary),
             title: const Text('Horas silenciosas',
-                style: TextStyle(color: Colors.white)),
+                style: TextStyle(color: AppColors.textPrimary)),
             subtitle: const Text('22:00 - 08:00',
-                style: TextStyle(color: Colors.white38)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                style: TextStyle(color: AppColors.textTertiary)),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
             onTap: () {},
           ),
         ],

@@ -80,8 +80,8 @@ void main() {
     });
 
     test('Otro: promedio de ambas fórmulas (80/180/30 sedentario)', () {
-      // BMR hombre = 1780, BMR mujer = 1395.25 -> promedio 1587.625
-      // TDEE = 1587.625 * 1.2 = 1905.15 -> 1905
+      // BMR hombre = 1780, BMR mujer = 1614 -> promedio 1697
+      // TDEE = 1697 * 1.2 = 2036.4 -> 2036
       expect(
         CalorieCalculator.fallbackEstimateCalories(
           weight: 80,
@@ -90,7 +90,7 @@ void main() {
           activityLevel: 'Sedentary',
           gender: 'Other',
         ),
-        1905,
+        2036,
       );
     });
 

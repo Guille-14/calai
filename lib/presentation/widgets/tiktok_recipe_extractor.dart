@@ -106,12 +106,12 @@ class _TikTokRecipeExtractorState extends State<TikTokRecipeExtractor> {
         TextField(
           controller: _textController,
           maxLines: 5,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Pega aquí la descripción del video de TikTok...',
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: const TextStyle(color: AppColors.textTertiary),
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
+            fillColor: AppColors.textPrimary.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
@@ -124,13 +124,13 @@ class _TikTokRecipeExtractorState extends State<TikTokRecipeExtractor> {
           child: ElevatedButton.icon(
             onPressed: _isLoading ? null : _extractRecipe,
             icon: _isLoading 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background))
               : const Icon(Icons.auto_awesome),
             label: Text(_isLoading ? 'Procesando...' : 'Extraer con IA', 
               style: const TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryAccent,
-                foregroundColor: Colors.black,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.background,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
 

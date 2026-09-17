@@ -53,6 +53,7 @@ class FoodLogState {
     int? waterGoal,
     bool clearError = false,
     bool clearSuccess = false,
+    bool clearSelectedDate = false,
   }) {
     return FoodLogState(
       meals: meals ?? this.meals,
@@ -61,7 +62,8 @@ class FoodLogState {
       totalCarbs: totalCarbs ?? this.totalCarbs,
       totalFat: totalFat ?? this.totalFat,
       weeklyData: weeklyData ?? this.weeklyData,
-      selectedDate: selectedDate ?? this.selectedDate,
+      selectedDate:
+          clearSelectedDate ? null : (selectedDate ?? this.selectedDate),
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       successMessage:
@@ -78,6 +80,9 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   List<double>? _cachedWeeklyData;
   DateTime? _cachedWeeklyDataDate;
   SharedPreferences? _prefs;
+  int _loadGeneration = 0;
+  Future<void> _waterWrite = Future<void>.value();
+  Future<void> _foodWrite = Future<void>.value();
   static const String _waterKey = 'water_glasses_';
 
   FoodLogCubit(this._repository) : super(const FoodLogState());
@@ -96,15 +101,18 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   }
 
   Future<void> loadLogForDate(DateTime date) async {
+    final generation = ++_loadGeneration;
     emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(date);
       final totals = _calculateTotals(meals);
       final waterGlasses = await _loadWaterGlasses(date);
+      if (generation != _loadGeneration) return;
 
       // Sincroniza la proteína real del registro con MacroBridge (multiplicador
-      // x1.2 de HEAVY). Antes nunca se llamaba y el perfil mostraba siempre 0 g.
-      _syncProteinToMacroBridge(totals['protein'] ?? 0.0, date);
+      // x1.2 de HEAVY). Se espera para que el dashboard no lea un valor
+      // anterior justo después de guardar una comida.
+      await _syncProteinToMacroBridge(totals['protein'] ?? 0.0, date);
 
       emit(state.copyWith(
         meals: meals,
@@ -119,6 +127,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
         waterGlasses: waterGlasses,
       ));
     } catch (e) {
+      if (generation != _loadGeneration) return;
       emit(state.copyWith(
         error: e.toString(),
         isLoading: false,
@@ -133,13 +142,16 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   /// Antes existía también SymmetryProgressionService.syncProteinFromFoodLog,
   /// un segundo camino muerto que nadie llamaba; se eliminó para que solo
   /// quede este (FoodLogCubit → MacroBridge).
-  void _syncProteinToMacroBridge(double totalProtein, DateTime date) {
+  Future<void> _syncProteinToMacroBridge(
+      double totalProtein, DateTime date) async {
     try {
       final macro = MacroBridge();
-      macro.initialize().then((_) {
-        macro.syncFromFoodLog(totalProtein: totalProtein, date: date);
-      }).catchError((_) {});
-    } catch (_) {}
+      await macro.initialize();
+      await macro.syncFromFoodLog(totalProtein: totalProtein, date: date);
+    } catch (_) {
+      // La sincronización es auxiliar: nunca debe convertir una comida válida
+      // en un error de carga del registro.
+    }
   }
 
   Future<int> _loadWaterGlasses(DateTime date) async {
@@ -154,31 +166,54 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     await prefs.setInt(key, glasses);
   }
 
+  /// Serializa las escrituras para que varios taps rápidos no se pierdan.
+  /// La UI se actualiza de forma optimista y la persistencia se procesa en
+  /// orden, manteniendo el contador fluido incluso con un canal lento.
+  Future<void> _enqueueWaterWrite(DateTime date, int glasses) {
+    final operation = _waterWrite.then<void>((_) {
+      return _saveWaterGlasses(date, glasses);
+    });
+    _waterWrite = operation.then<void>((_) {}, onError: (_) {});
+    return operation;
+  }
+
+  Future<void> _optimisticWaterChange(int newCount) async {
+    final previousCount = state.waterGlasses;
+    final date = state.selectedDate ?? DateTime.now();
+    if (!isClosed) emit(state.copyWith(waterGlasses: newCount));
+    try {
+      await _enqueueWaterWrite(date, newCount);
+    } catch (error) {
+      // Si no hubo otro tap posterior, revertimos; si lo hubo, no pisamos su
+      // valor optimista y dejamos que la cola termine de persistirlo.
+      if (!isClosed && state.waterGlasses == newCount) {
+        emit(state.copyWith(waterGlasses: previousCount, error: error.toString()));
+      }
+    }
+  }
+
   Future<void> addWaterGlass() async {
-    final newCount = state.waterGlasses + 1;
-    await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
-    emit(state.copyWith(waterGlasses: newCount));
+    await _optimisticWaterChange(state.waterGlasses + 1);
   }
 
   Future<void> removeWaterGlass() async {
     if (state.waterGlasses > 0) {
-      final newCount = state.waterGlasses - 1;
-      await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
-      emit(state.copyWith(waterGlasses: newCount));
+      await _optimisticWaterChange(state.waterGlasses - 1);
     }
   }
 
   Future<void> resetWater() async {
-    await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), 0);
-    emit(state.copyWith(waterGlasses: 0));
+    await _optimisticWaterChange(0);
   }
 
   Future<void> loadWeeklySummary() async {
+    final generation = ++_loadGeneration;
     emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(DateTime.now());
       final totals = _calculateTotals(meals);
       final weeklyData = await _loadWeeklyData();
+      if (generation != _loadGeneration) return;
 
       emit(state.copyWith(
         meals: meals,
@@ -187,11 +222,12 @@ class FoodLogCubit extends Cubit<FoodLogState> {
         totalCarbs: totals['carbs'],
         totalFat: totals['fat'],
         weeklyData: weeklyData,
-        selectedDate: null,
+        clearSelectedDate: true,
         isLoading: false,
         lastUpdate: DateTime.now(),
       ));
     } catch (e) {
+      if (generation != _loadGeneration) return;
       emit(state.copyWith(
         error: e.toString(),
         isLoading: false,
@@ -199,13 +235,43 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     }
   }
 
+  FoodLogState _stateWithMeals(
+    List<FoodItem> meals, {
+    String? error,
+  }) {
+    final totals = _calculateTotals(meals);
+    return state.copyWith(
+      meals: List.unmodifiable(meals),
+      totalCalories: totals['calories'],
+      totalProtein: totals['protein'],
+      totalCarbs: totals['carbs'],
+      totalFat: totals['fat'],
+      isLoading: false,
+      lastUpdate: DateTime.now(),
+      error: error,
+      clearError: error == null,
+      clearSuccess: true,
+    );
+  }
+
+  Future<void> _enqueueFoodWrite(Future<void> Function() operation) {
+    final queued = _foodWrite.then<void>((_) => operation());
+    _foodWrite = queued.then<void>((_) {}, onError: (_) {});
+    return queued;
+  }
+
   Future<void> addMeal(FoodItem meal) async {
+    final previousMeals = state.meals;
+    final operationGeneration = ++_loadGeneration;
+    emit(_stateWithMeals([...previousMeals, meal]));
+
     try {
-      await _repository.addFoodItem(meal);
+      await _enqueueFoodWrite(() => _repository.addFoodItem(meal));
       _invalidateWeeklyCache();
-      await loadDailyLog();
-    } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+    } catch (error) {
+      if (!isClosed && operationGeneration == _loadGeneration) {
+        emit(_stateWithMeals(previousMeals, error: error.toString()));
+      }
     }
   }
 
@@ -250,13 +316,19 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       }
     }
 
-    final List<double> weeklyData = [];
-
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final meals = await _repository.getDailyFoodLog(date);
-      final calories = _calculateTotals(meals)['calories'] ?? 0.0;
-      weeklyData.add(calories);
+    // Una única lectura del rango reemplaza las siete consultas secuenciales
+    // que se hacían al abrir el resumen semanal.
+    final start = today.subtract(const Duration(days: 6));
+    final meals = await _repository.getFoodLogForRange(start, today);
+    final caloriesByDay = <String, double>{};
+    for (final meal in meals) {
+      final key = formatDateKey(meal.timestamp);
+      caloriesByDay[key] = (caloriesByDay[key] ?? 0) + meal.calories;
+    }
+    final weeklyData = <double>[];
+    for (var i = 6; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      weeklyData.add(caloriesByDay[formatDateKey(date)] ?? 0.0);
     }
 
     _cachedWeeklyData = weeklyData;
@@ -291,12 +363,18 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   }
 
   Future<void> deleteMeal(FoodItem meal) async {
+    final previousMeals = state.meals;
+    final optimisticMeals = previousMeals.where((item) => item.id != meal.id).toList();
+    final operationGeneration = ++_loadGeneration;
+    emit(_stateWithMeals(optimisticMeals));
+
     try {
-      await _repository.deleteFoodItem(meal);
+      await _enqueueFoodWrite(() => _repository.deleteFoodItem(meal));
       _invalidateWeeklyCache();
-      await loadDailyLog();
-    } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+    } catch (error) {
+      if (!isClosed && operationGeneration == _loadGeneration) {
+        emit(_stateWithMeals(previousMeals, error: error.toString()));
+      }
     }
   }
 

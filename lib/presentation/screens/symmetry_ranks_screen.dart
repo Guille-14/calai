@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
@@ -11,9 +12,9 @@ class SymmetryRanksScreen extends StatefulWidget {
 }
 
 class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
-  static const Color _accent = Color(0xFF00C853);
-  static const Color _bg = Color(0xFF000000);
-  static const Color _card = Color(0xFF141414);
+  static const Color _accent = AppColors.accent;
+  static const Color _bg = AppColors.background;
+  static const Color _card = AppColors.cardBackground;
 
   final SymmetryProgressionService _service = SymmetryProgressionService();
   bool _loading = true;
@@ -79,7 +80,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       Text(
         'JERARQUÍA DE RANGOS',
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: AppColors.textPrimary.withValues(alpha: 0.5),
           fontSize: 12,
           fontWeight: FontWeight.w800,
           letterSpacing: 2,
@@ -140,7 +141,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
           const SizedBox(height: 6),
           Text(
             '${_formatXP(progress.totalXP)} XP totales',
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 16),
           ClipRRect(
@@ -148,7 +149,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
             child: LinearProgressIndicator(
               value: progress.rankProgress,
               minHeight: 10,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(current.color),
             ),
           ),
@@ -157,7 +158,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
             next == null
                 ? 'Rango máximo alcanzado'
                 : '${_formatXP((progress.totalXP - current.minXP).clamp(0, double.infinity))} / ${_formatXP(next.minXP - current.minXP)} XP para ${next.displayName}',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -173,7 +174,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
         color: isCurrent ? rank.color.withValues(alpha: 0.12) : _card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isCurrent ? rank.color : Colors.white.withValues(alpha: 0.06),
+          color: isCurrent ? rank.color : AppColors.textPrimary.withValues(alpha: 0.06),
           width: isCurrent ? 1.5 : 1,
         ),
       ),
@@ -186,12 +187,12 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
               shape: BoxShape.circle,
               color: achieved
                   ? rank.color.withValues(alpha: 0.2)
-                  : Colors.white.withValues(alpha: 0.05),
+                  : AppColors.textPrimary.withValues(alpha: 0.05),
             ),
             child: Icon(
-              achieved ? Icons.verified : Icons.lock_outline,
+              achieved ? rank.icon : Icons.lock_outline,
               size: 20,
-              color: achieved ? rank.color : Colors.white24,
+              color: achieved ? rank.color : AppColors.textTertiary,
             ),
           ),
           const SizedBox(width: 14),
@@ -204,7 +205,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
                     Text(
                       rank.displayName,
                       style: TextStyle(
-                        color: achieved ? Colors.white : Colors.white38,
+                        color: achieved ? AppColors.textPrimary : AppColors.textTertiary,
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
                       ),
@@ -236,7 +237,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
                   'Nivel ${rank.level} · desde ${_formatXP(rank.minXP)} XP',
                   style: TextStyle(
                     color:
-                        achieved ? Colors.white54 : Colors.white.withValues(alpha: 0.25),
+                        achieved ? AppColors.textSecondary : AppColors.textPrimary.withValues(alpha: 0.25),
                     fontSize: 11,
                   ),
                 ),
@@ -258,13 +259,13 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStat('Hoy', '${progress.dailyXP.round()}', Icons.today),
-          _buildStat('Semana', '${progress.weeklyXP.round()}', Icons.date_range),
-          _buildStat('Racha', '${progress.streakDays.round()} d', Icons.local_fire_department),
+          _buildStat('Hoy', '${progress.dailyXP.round()}', Icons.today_outlined),
+          _buildStat('Semana', '${progress.weeklyXP.round()}', Icons.date_range_outlined),
+          _buildStat('Racha', '${progress.streakDays.round()} d', Icons.local_fire_department_outlined),
           _buildStat(
             'Proteína',
             progress.metProteinGoal ? 'x${progress.proteinMultiplier.toStringAsFixed(1)}' : 'x1.0',
-            Icons.restaurant,
+            Icons.restaurant_outlined,
           ),
         ],
       ),
@@ -279,14 +280,14 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 14,
           ),
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+          style: TextStyle(color: AppColors.textPrimary.withValues(alpha: 0.4), fontSize: 11),
         ),
       ],
     );

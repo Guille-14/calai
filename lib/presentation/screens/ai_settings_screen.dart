@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
 import '../../data/services/google_ai_service.dart';
@@ -35,9 +36,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   // Google states
   bool _googleAvailable = false;
-  String _selectedGoogleModel = 'gemini-1.5-flash';
+  String _selectedGoogleModel = GoogleAiService.defaultModel;
   List<String> _googleModels = [];
   bool _loadingGoogleModels = false;
+  bool _googleModelUnavailable = false;
+  bool _googleCatalogChecked = false;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -95,14 +98,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         if (ollamaAvailable) {
           _loadInstalledModels();
         }
-        if (googleAvailable) {
-          _loadGoogleModels();
-        }
+        // El catálogo se consulta al abrir Ajustes IA, no solo después de
+        // un ping exitoso: así se detectan modelos retirados antes de escanear.
+        _loadGoogleModels();
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar('Error inicializando: $e', Colors.red);
+        _showSnackBar('Error inicializando: $e', AppColors.error);
       }
     }
   }
@@ -113,20 +116,20 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       _activeProvider = provider;
       _responseTimeMs = 0; // Reset response time on switch
     });
-    
+
     // Auto-load models if they are empty
     if (provider == 'ollama' && _installedModels.isEmpty) {
       _loadInstalledModels();
     } else if (provider == 'google' && _googleModels.isEmpty) {
       _loadGoogleModels();
     }
-    
-    _showSnackBar('Proveedor: ${provider.toUpperCase()}', const Color(0xFF34C759));
+
+    _showSnackBar('Proveedor: ${provider.toUpperCase()}', AppColors.accent);
   }
 
   Future<void> _onServerChanged(String? serverId) async {
     if (serverId == null) return;
-    
+
     // Clear models immediately to avoid showing old ones
     setState(() {
       _installedModels = [];
@@ -157,16 +160,32 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Future<void> _loadGoogleModels() async {
     if (_loadingGoogleModels) return;
-    setState(() {
-      _loadingGoogleModels = true;
-      _googleModels = [];
-    });
-    final models = await _googleService.getAvailableModels();
     if (mounted) {
       setState(() {
-        _googleModels = models;
-        _loadingGoogleModels = false;
+        _loadingGoogleModels = true;
+        _googleModelUnavailable = false;
       });
+    }
+    final models = await _googleService.getAvailableModels();
+    if (!mounted) return;
+    if (models.isNotEmpty &&
+        !models.contains(GoogleAiService.defaultModel)) {
+      models.insert(0, GoogleAiService.defaultModel);
+    }
+
+    final unavailable = models.isNotEmpty &&
+        !models.contains(_selectedGoogleModel);
+    setState(() {
+      _googleModels = models;
+      _loadingGoogleModels = false;
+      _googleCatalogChecked = true;
+      _googleModelUnavailable = unavailable;
+    });
+    if (unavailable) {
+      _showSnackBar(
+        'El modelo configurado ya no está disponible, elige uno de la lista actual',
+        AppColors.error,
+      );
     }
   }
 
@@ -181,7 +200,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         // FAST CHECK: Use isServerAvailable which uses /api/tags
         final isAvailable = await _ollamaService.isServerAvailable();
         stopwatch.stop();
-        
+
         if (mounted) {
           if (isAvailable) {
             setState(() {
@@ -189,16 +208,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               _responseTimeMs = stopwatch.elapsedMilliseconds;
             });
             _loadInstalledModels();
-            _showSnackBar('✅ Ollama OK (${_responseTimeMs}ms)', Colors.green);
+            _showSnackBar('✅ Ollama OK (${_responseTimeMs}ms)', AppColors.accent);
           } else {
             setState(() => _ollamaAvailable = false);
-            _showSnackBar('❌ Ollama: Servidor no disponible', Colors.red);
+            _showSnackBar('❌ Ollama: Servidor no disponible', AppColors.error);
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _ollamaAvailable = false);
-          _showSnackBar('❌ Error Ollama: $e', Colors.red);
+          _showSnackBar('❌ Error Ollama: $e', AppColors.error);
         }
       }
     } else {
@@ -216,16 +235,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               _responseTimeMs = stopwatch.elapsedMilliseconds;
             });
             _loadGoogleModels();
-            _showSnackBar('✅ Google OK (${_responseTimeMs}ms)', Colors.green);
+            _showSnackBar('✅ Google OK (${_responseTimeMs}ms)', AppColors.accent);
           } else {
             setState(() => _googleAvailable = false);
-            _showSnackBar('❌ Google: ${response.error}', Colors.red);
+            _showSnackBar('❌ Google: ${response.error}', AppColors.error);
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _googleAvailable = false);
-          _showSnackBar('❌ Error Google: $e', Colors.red);
+          _showSnackBar('❌ Error Google: $e', AppColors.error);
         }
       }
     }
@@ -236,24 +255,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     }
   }
 
-  Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
-      _showSnackBar('Introduce URL', Colors.orange);
-      return;
-    }
-    await _ollamaService.updateBaseUrl(url);
-    _showSnackBar('URL guardada', const Color(0xFF34C759));
-  }
-
   Future<void> _saveGoogleKey() async {
     final key = _googleApiKeyController.text.trim();
     if (key.isEmpty) {
-      _showSnackBar('Introduce API Key', Colors.orange);
+      _showSnackBar('Introduce API Key', AppColors.accent);
       return;
     }
     await _googleService.updateApiKey(key);
-    _showSnackBar('Key guardada', const Color(0xFF34C759));
+    _showSnackBar('Key guardada', AppColors.accent);
   }
 
   Future<void> _selectModel(String model) async {
@@ -262,9 +271,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       setState(() => _selectedModel = model);
     } else {
       await _googleService.updateModel(model);
-      setState(() => _selectedGoogleModel = model);
+      setState(() {
+        _selectedGoogleModel = model;
+        _googleModelUnavailable = false;
+      });
     }
-    _showSnackBar('Modelo: $model', const Color(0xFF34C759));
+    _showSnackBar('Modelo: $model', AppColors.accent);
   }
 
   Future<void> _addOrEditServer({OllamaServer? existingServer}) async {
@@ -276,21 +288,21 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1C1C1E),
-          title: Text(existingServer != null ? 'Editar Servidor' : 'Añadir Servidor', style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.elevatedCardBackground,
+          title: Text(existingServer != null ? 'Editar Servidor' : 'Añadir Servidor', style: const TextStyle(color: AppColors.textPrimary)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Nombre', labelStyle: TextStyle(color: Colors.white70)),
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Nombre', labelStyle: TextStyle(color: AppColors.textSecondary)),
                 ),
                 TextField(
                   controller: urlController,
-                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
-                  decoration: const InputDecoration(labelText: 'URL (http://ip:port)', labelStyle: TextStyle(color: Colors.white70)),
+                  style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'monospace'),
+                  decoration: const InputDecoration(labelText: 'URL (http://ip:port)', labelStyle: TextStyle(color: AppColors.textSecondary)),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -312,16 +324,28 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     );
 
     if (result == true) {
+      final normalizedUrl = OllamaService.normalizeUrl(urlController.text);
+      if (normalizedUrl == null) {
+        _showSnackBar('URL no válida. Usa http://IP:11434', AppColors.error);
+        nameController.dispose();
+        urlController.dispose();
+        return;
+      }
       final newServer = OllamaServer(
         id: existingServer?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        name: nameController.text.trim(),
-        url: urlController.text.trim().replaceAll(RegExp(r'/+$'), ''),
+        name: nameController.text.trim().isEmpty ? 'Servidor Ollama' : nameController.text.trim(),
+        url: normalizedUrl,
         type: selectedType,
       );
-      if (existingServer != null) await _ollamaService.updateServer(newServer);
-      else await _ollamaService.addServer(newServer);
+      if (existingServer != null) {
+        await _ollamaService.updateServer(newServer);
+      } else {
+        await _ollamaService.addServer(newServer);
+      }
       setState(() => _servers = _ollamaService.servers);
     }
+    nameController.dispose();
+    urlController.dispose();
   }
 
   Widget _typeButton(StateSetter setDialogState, ServerType type, String label,
@@ -338,11 +362,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.2) : const Color(0xFF2C2C2E),
+            color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : AppColors.elevatedCardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.transparent),
+            border: Border.all(color: isSelected ? AppColors.accent : Colors.transparent),
           ),
-          child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 12)),
+          child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
         ),
       ),
     );
@@ -352,11 +376,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text('¿Eliminar servidor?', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.elevatedCardBackground,
+        title: const Text('¿Eliminar servidor?', style: TextStyle(color: AppColors.textPrimary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Sí')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.error), child: const Text('Sí')),
         ],
       ),
     );
@@ -389,14 +413,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         appBar: AppBar(title: const Text('Inteligencia Artificial')),
-        body: const Center(child: CircularProgressIndicator(color: Color(0xFF34C759))),
+        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('IA · Configuración'),
         centerTitle: true,
@@ -421,7 +445,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _buildProviderSelector() {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0xFF1C1C1E), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: AppColors.elevatedCardBackground, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           _providerBtn('ollama', 'Ollama Local', Icons.computer),
@@ -440,15 +464,15 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF34C759) : Colors.transparent,
+            color: selected ? AppColors.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: selected ? Colors.white : Colors.white38),
+              Icon(icon, size: 18, color: selected ? AppColors.textPrimary : AppColors.textTertiary),
               const SizedBox(width: 8),
-              Text(label, style: TextStyle(color: selected ? Colors.white : Colors.white38, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+              Text(label, style: TextStyle(color: selected ? AppColors.textPrimary : AppColors.textTertiary, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
             ],
           ),
         ),
@@ -463,39 +487,39 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       builder: (context, _) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.1 * _pulseAnimation.value),
+          color: (ready ? AppColors.accent : AppColors.error).withValues(alpha: 0.1 * _pulseAnimation.value),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.3)),
+          border: Border.all(color: (ready ? AppColors.accent : AppColors.error).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(ready ? Icons.check_circle : Icons.error, color: ready ? Colors.green : Colors.red, size: 32),
+            Icon(ready ? Icons.check_circle : Icons.error, color: ready ? AppColors.accent : AppColors.error, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(ready ? 'CONECTADO Y LISTO' : 'SIN CONEXIÓN', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                  Text(ready ? 'CONECTADO Y LISTO' : 'SIN CONEXIÓN', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
                   const SizedBox(height: 4),
                   if (_responseTimeMs > 0)
                     Text(
                       'Ping: ${_responseTimeMs}ms',
-                      style: const TextStyle(color: Colors.greenAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: AppColors.accentStrong, fontSize: 14, fontWeight: FontWeight.bold),
                     )
                   else
-                    const Text('Haz ping para ver el tiempo de respuesta.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    const Text('Haz ping para ver el tiempo de respuesta.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                 ],
               ),
             ),
             ElevatedButton(
               onPressed: _testingConnection ? null : _testConnection,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF34C759),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.textPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               child: _testingConnection
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
                   : const Text('PING', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -537,11 +561,20 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Column(
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedServerId,
+            initialValue: _selectedServerId,
             items: _servers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 13)))).toList(),
             onChanged: _onServerChanged,
-            decoration: const InputDecoration(filled: true, fillColor: Color(0xFF2C2C2E), border: InputBorder.none),
+            decoration: const InputDecoration(filled: true, fillColor: AppColors.elevatedCardBackground, border: InputBorder.none),
           ),
+          const SizedBox(height: 8),
+          if (_ollamaService.isLoopbackUrl)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Este móvil no puede usar localhost para llegar a tu PC. Usa la IP LAN o Tailscale del equipo donde corre Ollama.',
+                style: TextStyle(color: AppColors.accentStrong, fontSize: 11),
+              ),
+            ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -551,7 +584,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                 onPressed: _selectedServerId == null
                     ? null
                     : () => _deleteServer(_selectedServerId!),
-                icon: const Icon(Icons.delete, color: Colors.red),
+                icon: const Icon(Icons.delete, color: AppColors.error),
               ),
             ],
           ),
@@ -565,7 +598,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     return _section(
       icon: Icons.model_training,
       title: 'Modelo Ollama',
-      child: Text(_selectedModel, style: const TextStyle(fontFamily: 'monospace', color: Colors.greenAccent)),
+      child: Text(_selectedModel, style: const TextStyle(fontFamily: 'monospace', color: AppColors.accentStrong)),
     );
   }
 
@@ -576,12 +609,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Column(
         children: [
           TextField(
-            controller: _googleApiKeyController, 
-            obscureText: true, 
+            controller: _googleApiKeyController,
+            obscureText: true,
             decoration: const InputDecoration(
               hintText: 'Pega tu API Key de Google aquí...',
               filled: true,
-              fillColor: Color(0xFF2C2C2E),
+              fillColor: AppColors.elevatedCardBackground,
             )
           ),
           const SizedBox(height: 12),
@@ -591,7 +624,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               onPressed: _saveGoogleKey,
               icon: const Icon(Icons.save),
               label: const Text('Guardar API Key'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
             ),
           ),
         ],
@@ -600,25 +633,48 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   }
 
   Widget _buildGoogleModelSection() {
-    final List<String> ms = _googleModels.isNotEmpty ? _googleModels : [
-      'gemini-2.0-flash',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b'
-    ];
+    final List<String> ms = _googleModels.isNotEmpty
+        ? _googleModels
+        : [GoogleAiService.defaultModel];
 
-    // Recomendación oficial para escanear comida
-    const String bestForFood = 'gemini-1.5-flash';
+    // El alias latest evita que la recomendación caduque con una versión.
+    const String bestForFood = GoogleAiService.defaultModel;
 
     return _section(
       icon: Icons.psychology,
       title: 'Modelo Gemini',
       child: Column(
         children: [
+          if (_googleModelUnavailable)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+              ),
+              child: const Text(
+                'El modelo configurado ya no está disponible, elige uno de la lista actual',
+                style: TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+            ),
+          if (_googleCatalogChecked &&
+              _googleService.apiKey.isNotEmpty &&
+              _googleModels.isEmpty &&
+              !_googleModelUnavailable)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No se pudo comprobar el catálogo ahora. Pulsa Actualizar modelos antes de escanear.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
           if (_loadingGoogleModels)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator(color: Colors.blue)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
             )
           else
             ...ms.map((m) {
@@ -631,20 +687,20 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                        child: const Text('RECOMENDADO PARA COMIDA', style: TextStyle(color: Colors.greenAccent, fontSize: 8, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                        child: const Text('RECOMENDADO PARA COMIDA', style: TextStyle(color: AppColors.accentStrong, fontSize: 8, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ],
                 ),
                 subtitle: Text(
                   m.contains('thinking') ? 'Pensamiento avanzado' : (m.contains('pro') ? 'Máxima Precisión' : 'Más rápido y ligero'),
-                  style: TextStyle(color: m.contains('pro') ? Colors.orange : (m.contains('thinking') ? Colors.purpleAccent : Colors.tealAccent), fontSize: 11),
+                  style: TextStyle(color: m.contains('pro') ? AppColors.accent : (m.contains('thinking') ? AppColors.accent : AppColors.accentStrong), fontSize: 11),
                 ),
-                trailing: _selectedGoogleModel == m ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.circle_outlined, color: Colors.white24),
+                trailing: _selectedGoogleModel == m ? const Icon(Icons.check_circle, color: AppColors.accent) : const Icon(Icons.circle_outlined, color: AppColors.textTertiary),
                 onTap: () => _selectModel(m),
               );
-            }).toList(),
+            }),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _loadGoogleModels,
@@ -659,11 +715,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _section({required IconData icon, required String title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF1C1C1E), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: AppColors.elevatedCardBackground, borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Icon(icon, size: 18, color: Colors.green), const SizedBox(width: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.bold))]),
+          Row(children: [Icon(icon, size: 18, color: AppColors.accent), const SizedBox(width: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.bold))]),
           const SizedBox(height: 12),
           child,
         ],
@@ -673,17 +729,17 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Widget _buildGoogleInfoSection() {
     return _section(
-      icon: Icons.info, 
-      title: 'Información y Registro', 
+      icon: Icons.info,
+      title: 'Información y Registro',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Usa la potencia de la nube de Google para analizar alimentos de inmediato de forma muy rápida y precisa.', style: TextStyle(fontSize: 12, color: Colors.white70)),
+          const Text('Usa la potencia de la nube de Google para analizar alimentos de inmediato de forma muy rápida y precisa.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-            child: const Text('👉 Obtén tu API Key gratis en: aistudio.google.com', style: TextStyle(fontSize: 12, color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+            decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: const Text('👉 Obtén tu API Key gratis en: aistudio.google.com', style: TextStyle(fontSize: 12, color: AppColors.accentStrong, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -692,26 +748,26 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Widget _buildInstalledModelsSection() {
     return _section(
-      icon: Icons.download_done, 
-      title: 'Modelos en Local', 
+      icon: Icons.download_done,
+      title: 'Modelos en Local',
       child: Column(
         children: [
           if (_loadingModels)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator(color: Colors.green)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
             )
           else if (_installedModels.isEmpty)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Text('No hay modelos instalados o error de conexión', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              child: Text('No hay modelos instalados o error de conexión', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             )
           else
             ..._installedModels.map((m) => ListTile(
-              title: Text(m, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)), 
-              trailing: _selectedModel == m ? const Icon(Icons.check, color: Colors.green) : null, 
+              title: Text(m, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
+              trailing: _selectedModel == m ? const Icon(Icons.check, color: AppColors.accent) : null,
               onTap: () => _selectModel(m)
-            )).toList(),
+            )),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _loadInstalledModels,
@@ -724,13 +780,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   }
 
   Widget _buildInfoSection() {
-    return _section(icon: Icons.privacy_tip, title: 'Privacidad', child: const Text('Ollama mantiene tus datos en local, procesando las imágenes y chats directamente en tus equipos.', style: TextStyle(fontSize: 12, color: Colors.white70)));
+    return _section(icon: Icons.privacy_tip, title: 'Privacidad', child: const Text('Ollama mantiene tus datos en local, procesando las imágenes y chats directamente en tus equipos.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)));
   }
 
   Widget _buildRecommendationSection() {
     return _section(
-      icon: Icons.star, 
-      title: 'Modelos Recomendados', 
+      icon: Icons.star,
+      title: 'Modelos Recomendados',
       child: Column(
         children: [
           _buildRecCard('PC Personal (Potente)', 'llama3.2-vision:11b', 'El mejor para tu RTX 3060 8GB de VRAM. Excelente visión y respuestas.'),
@@ -761,34 +817,34 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.1) : const Color(0xFF2C2C2E),
+          color: isSelected ? AppColors.accent.withValues(alpha: 0.1) : AppColors.elevatedCardBackground,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.deepPurpleAccent.withValues(alpha: 0.4)),
+          border: Border.all(color: isSelected ? AppColors.accent : AppColors.accent.withValues(alpha: 0.4)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.computer, color: Colors.deepPurpleAccent.withValues(alpha: 0.8), size: 16),
+                Icon(Icons.computer, color: AppColors.accent.withValues(alpha: 0.8), size: 16),
                 const SizedBox(width: 6),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent, fontSize: 12)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent, fontSize: 12)),
               ],
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                Expanded(child: Text(model, style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
+                Expanded(child: Text(model, style: const TextStyle(fontFamily: 'monospace', color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold))),
                 GestureDetector(
                   onTap: () => _selectModel(model),
-                  child: Icon(isSelected ? Icons.check_circle : Icons.copy, color: isSelected ? Colors.green : Colors.white54, size: 20),
+                  child: Icon(isSelected ? Icons.check_circle : Icons.copy, color: isSelected ? AppColors.accent : AppColors.textSecondary, size: 20),
                 )
               ]
             ),
             const SizedBox(height: 6),
-            Text(desc, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+            Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
-            Text('Comando: ollama pull $model', style: const TextStyle(fontSize: 10, color: Colors.orangeAccent, fontFamily: 'monospace')),
+            Text('Comando: ollama pull $model', style: const TextStyle(fontSize: 10, color: AppColors.accentStrong, fontFamily: 'monospace')),
           ]
         )
       ),
@@ -798,6 +854,4 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _buildTerminalSection() {
     return _section(icon: Icons.terminal, title: 'Terminal', child: const OllamaTerminalWidget());
   }
-
-  Widget _buildInfoItem(IconData icon, String title, String description) => const SizedBox(); // Placeholder to fix potential calls
 }

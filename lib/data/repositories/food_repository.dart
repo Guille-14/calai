@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
 import '../../models/food_entry.dart';
@@ -13,14 +13,14 @@ import '../services/external_food_service.dart';
 import '../services/image_storage_service.dart';
 
 class FoodRepository {
-  final FoodService _foodService;
+  static const Uuid _uuid = Uuid();
+
   final SharedPreferences _prefs;
   final DatabaseService _databaseService;
   final ExternalFoodService _externalFoodService;
   final ImageStorageService _imageStorageService;
 
   FoodRepository(
-    this._foodService,
     this._prefs,
     this._databaseService,
     this._externalFoodService,
@@ -151,7 +151,8 @@ class FoodRepository {
         timestamp: DateTime.now(),
       );
 
-      final String foodId = DateTime.now().millisecondsSinceEpoch.toString();
+      // Un UUID evita colisiones al registrar dos comidas rápidamente.
+      final String foodId = _uuid.v4();
       final String imagePath =
           await _imageStorageService.saveFoodImage(imageBytes, foodId);
 
@@ -180,48 +181,108 @@ class FoodRepository {
     }
   }
 
+  static const String _aiCachePrefix = 'ai_food_cache_';
+  static const String _aiCacheIndexKey = 'ai_food_cache_index';
+  static const int _maxCachedAiFoods = 30;
+
   Future<Either<String, FoodItem>> detectFoodFromDescription(
       String description) async {
-    try {
-      final result = await FoodService.estimateCaloriesFromText(description);
+    final normalizedDescription = description.trim();
+    if (normalizedDescription.isEmpty) {
+      return const Left('Describe la comida antes de analizarla');
+    }
+    if (normalizedDescription.length > 500) {
+      return const Left('La descripción no puede superar 500 caracteres');
+    }
 
+    try {
+      final result =
+          await FoodService.estimateCaloriesFromText(normalizedDescription);
       if (result.isError) {
-        return Left(result.errorMessage ?? 'Error en el análisis');
+        final cached = await _readCachedAiFood(normalizedDescription);
+        return cached == null
+            ? Left(result.errorMessage ?? 'Error en el análisis')
+            : Right(cached);
       }
 
-      // Crear FoodEntry desde FoodAnalysisResult
-      final foodEntry = FoodEntry(
-        name: result.foods.isNotEmpty ? result.foods.first : description,
-        calories: result.estimatedCalories.toDouble(),
-        protein: result.protein,
-        carbs: result.carbs,
-        fat: result.fat,
-        confidenceScore: _confidenceToScore(result.confidence),
-        timestamp: DateTime.now(),
-      );
-
-      final String foodId = DateTime.now().millisecondsSinceEpoch.toString();
-      final unit = _inferUnitFromFoodName(foodEntry.name);
-
-      final List<Ingredient> ingredients = []; // FoodEntry no tiene ingredients detallados
-
-      return Right(FoodItem(
-        id: foodId,
-        name: foodEntry.name,
-        calories: foodEntry.calories,
-        protein: foodEntry.protein,
-        carbs: foodEntry.carbs,
-        fat: foodEntry.fat,
-        sugar: 0,
-        quantity: 100,
-        timestamp: DateTime.now(),
-        ingredients: ingredients,
-        imageUrl: null,
-        unit: unit,
-        confidenceScore: foodEntry.confidenceScore,
-      ));
+      final foodItem = _foodItemFromAnalysis(result, normalizedDescription);
+      await _cacheAiFood(normalizedDescription, foodItem);
+      return Right(foodItem);
     } catch (e) {
-      return Left('Error: $e');
+      final cached = await _readCachedAiFood(normalizedDescription);
+      return cached == null ? Left('Error: $e') : Right(cached);
+    }
+  }
+
+  FoodItem _foodItemFromAnalysis(
+      FoodAnalysisResult result, String fallbackName) {
+    final name = result.foods.isNotEmpty ? result.foods.first : fallbackName;
+    return FoodItem(
+      id: _uuid.v4(),
+      name: name,
+      calories: result.estimatedCalories.toDouble(),
+      protein: result.protein,
+      carbs: result.carbs,
+      fat: result.fat,
+      sugar: result.sugar,
+      quantity: 100,
+      timestamp: DateTime.now(),
+      unit: _inferUnitFromFoodName(name),
+      confidenceScore: _confidenceToScore(result.confidence),
+    );
+  }
+
+  String _aiCacheKey(String description) {
+    var hash = 17;
+    for (final codeUnit in description.toLowerCase().codeUnits) {
+      hash = 37 * hash + codeUnit;
+    }
+    return '$_aiCachePrefix${hash.abs()}';
+  }
+
+  Future<void> _cacheAiFood(String description, FoodItem item) async {
+    try {
+      final key = _aiCacheKey(description);
+      await _prefs.setString(key, jsonEncode(item.toJson()));
+      final index = _prefs.getStringList(_aiCacheIndexKey) ?? <String>[];
+      index.remove(key);
+      index.insert(0, key);
+      while (index.length > _maxCachedAiFoods) {
+        await _prefs.remove(index.removeLast());
+      }
+      await _prefs.setStringList(_aiCacheIndexKey, index);
+    } catch (e) {
+      debugPrint('FoodRepository: no se pudo guardar caché IA: $e');
+    }
+  }
+
+  Future<FoodItem?> _readCachedAiFood(String description) async {
+    try {
+      final raw = _prefs.getString(_aiCacheKey(description));
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final cached = FoodItem.fromJson(decoded);
+      // El caché es una estimación reutilizable, no el registro de una comida.
+      // Cada uso recibe un id y timestamp nuevos para no sobrescribir comidas.
+      return FoodItem(
+        id: _uuid.v4(),
+        name: cached.name,
+        calories: cached.calories,
+        protein: cached.protein,
+        carbs: cached.carbs,
+        fat: cached.fat,
+        sugar: cached.sugar,
+        quantity: cached.quantity,
+        timestamp: DateTime.now(),
+        ingredients: cached.ingredients,
+        unit: cached.unit,
+        confidenceScore: cached.confidenceScore,
+        aiModel: cached.aiModel,
+      );
+    } catch (e) {
+      debugPrint('FoodRepository: caché IA inválida: $e');
+      return null;
     }
   }
 
@@ -244,7 +305,8 @@ class FoodRepository {
   /// Importa a food_entries todas las claves food_log_* de SharedPreferences.
   ///
   /// Reglas (no debe perderse ni una comida ya registrada):
-  /// - Si la tabla ya tiene datos, se da por migrada y solo se marca.
+  /// - Si no quedan claves legacy, se marca como migrada (aunque la tabla
+  ///   ya tenga datos de una instalación actualizada).
   /// - La importación va en una sola transacción; las claves de
   ///   SharedPreferences solo se borran si su importación fue exitosa.
   /// - La marca migrated_food_log_v1 se escribe AL FINAL; si algo falla,
@@ -252,24 +314,25 @@ class FoodRepository {
   Future<void> migrateFoodLogFromPrefs() async {
     if (_prefs.getBool(_migratedFoodLogKey) ?? false) return;
 
-    final existing = await _databaseService.countFoodEntries();
-    if (existing > 0) {
-      await _prefs.setBool(_migratedFoodLogKey, true);
-      return;
-    }
-
     final keys =
         _prefs.getKeys().where((k) => k.startsWith('food_log_')).toList();
     if (keys.isEmpty) {
+      // Una instalación que ya tiene SQLite pero ninguna clave legacy no
+      // necesita volver a entrar en esta migración.
       await _prefs.setBool(_migratedFoodLogKey, true);
       return;
     }
 
     final rows = <Map<String, dynamic>>[];
     final migratedKeys = <String>[];
+    var hasFailedKeys = false;
     for (final key in keys) {
       final data = _prefs.getString(key);
-      if (data == null) continue;
+      if (data == null) {
+        hasFailedKeys = true;
+        debugPrint('migrateFoodLogFromPrefs: $key no contiene texto JSON');
+        continue;
+      }
       try {
         final List<dynamic> jsonList = json.decode(data);
         for (final j in jsonList) {
@@ -279,7 +342,8 @@ class FoodRepository {
         migratedKeys.add(key);
       } catch (e) {
         // Una clave corrupta no aborta la migración: se queda en prefs y
-        // se reporta para no borrar datos ilegibles.
+        // se reporta para reintentarla en el siguiente arranque.
+        hasFailedKeys = true;
         debugPrint('migrateFoodLogFromPrefs: no se pudo leer $key: $e');
       }
     }
@@ -292,7 +356,9 @@ class FoodRepository {
         await _prefs.remove(key);
       }
     }
-    await _prefs.setBool(_migratedFoodLogKey, true);
+    if (!hasFailedKeys) {
+      await _prefs.setBool(_migratedFoodLogKey, true);
+    }
     debugPrint(
         'migrateFoodLogFromPrefs: ${rows.length} comidas migradas a SQLite');
   }

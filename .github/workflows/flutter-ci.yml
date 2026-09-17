@@ -63,6 +63,17 @@ jobs:
         run: |
           flutter analyze --no-pub --machine > analyze_machine.jsonl 2>&1 || true
           python3 .github/scripts/ci_annotate.py --mode analyze || true
+          # Mantiene el diagnóstico visible incluso cuando GitHub no expone
+          # el log crudo del runner a la API de la sesión.
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('analyze_human.txt').read_text(errors='replace')[-60000:]
+          if text.strip() and 'No issues found!' not in text:
+              encoded = (text.replace('%', '%25')
+                         .replace('\r', '%0D')
+                         .replace('\n', '%0A'))
+              print('::error file=.github/workflows/flutter-ci.yml,line=1::' + encoded)
+          PY
           cat analyze_human.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
       # La salida real del analyzer como artefacto (los logs crudos del
@@ -78,75 +89,6 @@ jobs:
             analyze_machine.jsonl
           if-no-files-found: ignore
           retention-days: 7
-
-      # Canal de depuración principal: si el job falla, la salida REAL de
-      # flutter analyze se publica como cuerpo de una RELEASE DRAFT
-      # (tag ci-debug). Es el único canal que funciona de punta a punta:
-      # los artifacts y logs crudos no son accesibles desde el entorno de
-      # trabajo (bloqueo de red), el push a rama fallaba, y las anotaciones
-      # del check-run las sobreescribe el runner al terminar. Desde fuera:
-      #   gh api repos/<owner>/<repo>/releases/tags/ci-debug --jq .body
-      - name: Publish analyze logs as draft release (debug channel)
-        if: always()
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, urllib.request
-          token = os.environ.get("GITHUB_TOKEN", "")
-          try:
-              with open("analyze_human.txt", encoding="utf-8", errors="replace") as f:
-                  body = f.read()
-          except FileNotFoundError:
-              body = "(sin analyze_human.txt)"
-          header = (
-              "Salida REAL de `flutter analyze` (run "
-              + os.environ.get("GITHUB_RUN_ID", "?")
-              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
-          )
-          payload = {
-              "tag_name": "ci-debug",
-              "name": "CI debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
-              "draft": True,
-              "target_commitish": os.environ.get("GITHUB_SHA", ""),
-              "body": (header + body)[:900000],
-          }
-          req = urllib.request.Request(
-              "https://api.github.com/repos/"
-              + os.environ.get("GITHUB_REPOSITORY", "")
-              + "/releases/tags/ci-debug",
-              data=json.dumps(payload).encode(),
-              method="PUT",
-          )
-          req.add_header("Authorization", "Bearer " + token)
-          req.add_header("Accept", "application/vnd.github+json")
-          req.add_header("Content-Type", "application/json")
-          result = "release PUT: HTTP ?"
-          try:
-              with urllib.request.urlopen(req) as r:
-                  result = "release PUT: HTTP " + str(r.status)
-                  print("release ci-debug actualizada:", r.status)
-          except Exception as e:
-              result = "release PUT FALLA: " + str(e)[:50]
-              print("no se pudo publicar la release ci-debug:", e)
-          # Diagnostico legible via API (GET /commits/{sha}/status):
-          try:
-              sreq = urllib.request.Request(
-                  "https://api.github.com/repos/"
-                  + os.environ.get("GITHUB_REPOSITORY", "")
-                  + "/statuses/" + os.environ.get("GITHUB_SHA", ""),
-                  data=json.dumps({
-                      "state": "success",
-                      "context": "ci-debug-channel",
-                      "description": result[:60],
-                  }).encode(),
-                  method="POST",
-              )
-              sreq.add_header("Authorization", "Bearer " + token)
-              sreq.add_header("Accept", "application/vnd.github+json")
-              sreq.add_header("Content-Type", "application/json")
-              urllib.request.urlopen(sreq)
-          except Exception as e2:
-              print("status no publicado:", e2)
-          PYEOF
 
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
@@ -170,54 +112,12 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Misma vía que el canal de analyze: la salida REAL de flutter test
-      # como release draft (tag ci-debug-test).
-      - name: Publish test logs as draft release (debug channel)
-        if: always() && hashFiles('test/**') != ''
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, urllib.request
-          token = os.environ.get("GITHUB_TOKEN", "")
-          try:
-              with open("test_human.txt", encoding="utf-8", errors="replace") as f:
-                  body = f.read()
-          except FileNotFoundError:
-              body = "(sin test_human.txt)"
-          header = (
-              "Salida REAL de `flutter test` (run "
-              + os.environ.get("GITHUB_RUN_ID", "?")
-              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
-          )
-          payload = {
-              "tag_name": "ci-debug-test",
-              "name": "CI test debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
-              "draft": True,
-              "target_commitish": os.environ.get("GITHUB_SHA", ""),
-              "body": (header + body)[:900000],
-          }
-          req = urllib.request.Request(
-              "https://api.github.com/repos/"
-              + os.environ.get("GITHUB_REPOSITORY", "")
-              + "/releases/tags/ci-debug-test",
-              data=json.dumps(payload).encode(),
-              method="PUT",
-          )
-          req.add_header("Authorization", "Bearer " + token)
-          req.add_header("Accept", "application/vnd.github+json")
-          req.add_header("Content-Type", "application/json")
-          try:
-              with urllib.request.urlopen(req) as r:
-                  print("release ci-debug-test actualizada:", r.status)
-          except Exception as e:
-              print("no se pudo publicar la release ci-debug-test:", e)
-          PYEOF
-
   # Build del APK: en main, en workflow_dispatch manual y en tags v*
   # (los tags alimentan el job de release de abajo).
   build-apk:
     name: Build APK (release)
     needs: analyze-and-test
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -257,79 +157,57 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-      # Misma vía de debug que analyze/test: la salida del build + datos del
-      # APK (tamaño, sha256) como release draft ci-build, siempre.
-      - name: Publish build logs as draft release (debug channel)
-        if: always()
+      # Cada APK exitoso crea su propia Release, como en app-aula. El número
+      # de ejecución hace único el tag aunque aún no se haya cambiado la
+      # versión de pubspec.yaml. Solo se publica el APK; no se suben logs.
+      - name: Prepare versioned APK Release
+        if: success()
         run: |
-          python3 - <<'PYEOF'
-          import hashlib, json, os, urllib.request
-          token = os.environ.get("GITHUB_TOKEN", "")
-          try:
-              with open("build_human.txt", encoding="utf-8", errors="replace") as f:
-                  body = f.read()
-          except FileNotFoundError:
-              body = "(sin build_human.txt)"
-          apk = "build/app/outputs/flutter-apk/app-release.apk"
-          apk_info = ""
-          if os.path.exists(apk):
-              size = os.path.getsize(apk)
-              h = hashlib.sha256()
-              with open(apk, "rb") as f:
-                  for chunk in iter(lambda: f.read(1 << 20), b""):
-                      h.update(chunk)
-              apk_info = (
-                  "\n\nAPK: " + apk + "\n"
-                  + "tamaño: {:,} bytes ({:.1f} MB)\n".format(size, size / 1e6)
-                  + "sha256: " + h.hexdigest()
-              )
-          header = (
-              "Salida REAL de `flutter build apk --release` (run "
-              + os.environ.get("GITHUB_RUN_ID", "?")
-              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")"
-              + apk_info + "\n\n"
-          )
-          payload = {
-              "tag_name": "ci-build",
-              "name": "CI build (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
-              "draft": True,
-              "target_commitish": os.environ.get("GITHUB_SHA", ""),
-              "body": (header + body)[:900000],
-          }
-          req = urllib.request.Request(
-              "https://api.github.com/repos/"
-              + os.environ.get("GITHUB_REPOSITORY", "")
-              + "/releases/tags/ci-build",
-              data=json.dumps(payload).encode(),
-              method="PUT",
-          )
-          req.add_header("Authorization", "Bearer " + token)
-          req.add_header("Accept", "application/vnd.github+json")
-          req.add_header("Content-Type", "application/json")
-          try:
-              with urllib.request.urlopen(req) as r:
-                  print("release ci-build actualizada:", r.status)
-          except Exception as e:
-              print("no se pudo publicar la release ci-build:", e)
-          PYEOF
+          set -euo pipefail
+          VERSION=$(awk '/^version:/ {print $2; exit}' pubspec.yaml)
+          echo "RELEASE_TAG=apk-v${VERSION}-build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "RELEASE_TITLE=CalAI v${VERSION} · APK build ${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          ASSET="CalAI-v${VERSION}-build-${GITHUB_RUN_NUMBER}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$ASSET"
+          echo "RELEASE_ASSET=$ASSET" >> "$GITHUB_ENV"
+          # El cuerpo de la Release solo identifica el descargable. Los
+          # detalles de CI y los hashes permanecen fuera de la Release.
+          printf '%s\n' 'APK de CalAI para descargar.' > release-notes.md
 
-  # Release: solo en tags v*. Crea la GitHub Release del tag con el APK
-  # descargado del artefacto del build (no re-build).
-  release-apk:
-    name: Release (tag v*)
-    needs: build-apk
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download APK artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: calai-release-apk
-          path: apk
-
-      - name: Create GitHub Release
+      - name: Publish versioned APK Release
+        id: publish_release
+        if: success()
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
-          files: apk/app-release.apk
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TITLE }}
+          body_path: release-notes.md
+          target_commitish: ${{ github.sha }}
+          files: ${{ env.RELEASE_ASSET }}
+          draft: false
+          prerelease: false
+          make_latest: true
           fail_on_unmatched_files: true
-          generate_release_notes: true
+
+      # La API de Releases puede devolver un fallo transitorio después de
+      # crear la release pero antes de subir el APK. Reintentamos la misma
+      # publicación sin crear una release adicional.
+      - name: Retry APK Release publication
+        id: retry_release
+        if: steps.publish_release.outcome == 'failure'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TITLE }}
+          body_path: release-notes.md
+          target_commitish: ${{ github.sha }}
+          files: ${{ env.RELEASE_ASSET }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: true
+
+      - name: Fail if APK publication failed twice
+        if: steps.publish_release.outcome == 'failure' && steps.retry_release.outcome == 'failure'
+        run: exit 1

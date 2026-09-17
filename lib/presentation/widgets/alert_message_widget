@@ -1,55 +1,52 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+
 class AlertMessageWidget extends StatelessWidget {
   final String? errorMessage;
   final String? successMessage;
   final VoidCallback onClose;
 
   const AlertMessageWidget({
-    Key? key,
+    super.key,
     this.errorMessage,
-    this.successMessage, 
+    this.successMessage,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     final message = errorMessage ?? successMessage;
     final isError = errorMessage != null;
+    if (message == null) return const SizedBox.shrink();
 
-    if (message == null) return SizedBox.shrink();
-
+    final color = isError ? AppColors.error : AppColors.accent;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Container(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isError ? Colors.red.shade100 : Colors.green.shade100,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isError ? Colors.red : Colors.green,
-          ),
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
         child: Row(
           children: [
-            Icon(
-              isError ? Icons.error : Icons.check_circle,
-              color: isError ? Colors.red : Colors.green,
-            ),
-            SizedBox(width: 8),
+            Icon(isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: color),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
                 style: TextStyle(
-                  color: isError ? Colors.red : Colors.green,
+                  color: color,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.close,
-                  color: isError ? Colors.red : Colors.green),
+              icon: Icon(Icons.close, color: color),
               onPressed: onClose,
             ),
           ],

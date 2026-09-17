@@ -46,7 +46,7 @@ class AppDrawer extends StatelessWidget {
                 const Text(
                   'CalAI',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -56,14 +56,14 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.home, color: colors.primary),
-            title: const Text('Inicio', style: TextStyle(color: Colors.white)),
+            title: const Text('Inicio', style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
             },
           ),
           ListTile(
             leading: Icon(Icons.menu_book, color: colors.secondary),
-            title: const Text('Recetas', style: TextStyle(color: Colors.white)),
+            title: const Text('Recetas', style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -75,7 +75,7 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.camera_alt, color: colors.secondary),
             title:
-                const Text('Escanear Comida', style: TextStyle(color: Colors.white)),
+                const Text('Escanear Comida', style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
               // ScanFoodScreen es la misma pantalla que la pestaña
@@ -89,7 +89,7 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.history, color: colors.secondary),
             title: const Text('Historial de entrenamientos',
-                style: TextStyle(color: Colors.white)),
+                style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -101,7 +101,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.emoji_events, color: colors.secondary),
-            title: const Text('Rangos', style: TextStyle(color: Colors.white)),
+            title: const Text('Rangos', style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -112,7 +112,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.psychology, color: colors.secondary),
-            title: const Text('Diagnóstico IA', style: TextStyle(color: Colors.white)),
+            title: const Text('Diagnóstico IA', style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(

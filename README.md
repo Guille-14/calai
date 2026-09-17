@@ -59,7 +59,7 @@ Welcome to the **Calorie Detector App**! This Flutter app uses Google Gemini AI 
     ```
 
 ### Dependencies
-- [gemini-1.5-pro](https://gemini.google.com/models/gemini-1.5-pro)
+- Gemini usa el alias vigente `gemini-flash-latest`; el catálogo se consulta desde Ajustes IA.
 - [flutter_dotenv](https://pub.dev/packages/flutter_dotenv)
 
 ### Contribution
