@@ -68,6 +68,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      # Canal de depuración: si el job falla, publica la salida real en la
+      # rama especial `ci-logs` (NO dispara este workflow: solo corre en
+      # main/arena/**/refactor/**). Desde fuera se lee con
+      #   git fetch origin ci-logs && git show origin/ci-logs:run-<id>/analyze_human.txt
+      # (los artifacts y logs crudos no siempre son accesibles desde el
+      # entorno de trabajo; una rama git sí).
+      - name: Publish logs to ci-logs branch
+        if: failure()
+        run: |
+          set +e
+          mkdir -p .ci-logs/run-"$GITHUB_RUN_ID"
+          cp analyze_human.txt analyze_machine.jsonl .ci-logs/run-"$GITHUB_RUN_ID"/ 2>/dev/null
+          printf 'run=%s\nsha=%s\nbranch=%s\n' "$GITHUB_RUN_ID" "$GITHUB_SHA" "$GITHUB_REF_NAME" > .ci-logs/run-"$GITHUB_RUN_ID"/meta.txt
+          cd .ci-logs
+          git init -q
+          git config user.name "ci-logs"
+          git config user.email "ci-logs@calai"
+          git add -A
+          git commit -q -m "CI logs run $GITHUB_RUN_ID"
+          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs \
+            && echo "ci-logs: publicado run $GITHUB_RUN_ID" \
+            || echo "ci-logs: no se pudo publicar (sin permisos?)"
+
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
         if: hashFiles('test/**') != ''
@@ -89,6 +112,22 @@ jobs:
           path: test_human.txt
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Publish test logs to ci-logs branch
+        if: failure() && hashFiles('test/**') != ''
+        run: |
+          set +e
+          mkdir -p .ci-logs/run-"$GITHUB_RUN_ID"
+          cp test_human.txt .ci-logs/run-"$GITHUB_RUN_ID"/ 2>/dev/null
+          cd .ci-logs
+          git init -q
+          git config user.name "ci-logs"
+          git config user.email "ci-logs@calai"
+          git add -A
+          git commit -q -m "CI test logs run $GITHUB_RUN_ID"
+          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs \
+            && echo "ci-logs: publicado run $GITHUB_RUN_ID" \
+            || echo "ci-logs: no se pudo publicar (sin permisos?)"
 
   build-apk:
     name: Build APK (release)
