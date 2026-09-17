@@ -15,6 +15,9 @@ name: Flutter CI
 on:
   push:
     branches: [main, 'arena/**', 'refactor/**']
+    # Los tags v* disparan el build + el job de release (un push de tag no
+    # encaja en el filtro de ramas).
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -83,7 +86,7 @@ jobs:
       # del check-run las sobreescribe el runner al terminar. Desde fuera:
       #   gh api repos/<owner>/<repo>/releases/tags/ci-debug --jq .body
       - name: Publish analyze logs as draft release (debug channel)
-        if: failure()
+        if: always()
         run: |
           python3 - <<'PYEOF'
           import json, os, urllib.request
@@ -147,7 +150,7 @@ jobs:
       # Misma vía que el canal de analyze: la salida REAL de flutter test
       # como release draft (tag ci-debug-test).
       - name: Publish test logs as draft release (debug channel)
-        if: failure() && hashFiles('test/**') != ''
+        if: always() && hashFiles('test/**') != ''
         run: |
           python3 - <<'PYEOF'
           import json, os, urllib.request
@@ -230,6 +233,62 @@ jobs:
           name: calai-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+      # Misma vía de debug que analyze/test: la salida del build + datos del
+      # APK (tamaño, sha256) como release draft ci-build, siempre.
+      - name: Publish build logs as draft release (debug channel)
+        if: always()
+        run: |
+          python3 - <<'PYEOF'
+          import hashlib, json, os, urllib.request
+          token = os.environ.get("GITHUB_TOKEN", "")
+          try:
+              with open("build_human.txt", encoding="utf-8", errors="replace") as f:
+                  body = f.read()
+          except FileNotFoundError:
+              body = "(sin build_human.txt)"
+          apk = "build/app/outputs/flutter-apk/app-release.apk"
+          apk_info = ""
+          if os.path.exists(apk):
+              size = os.path.getsize(apk)
+              h = hashlib.sha256()
+              with open(apk, "rb") as f:
+                  for chunk in iter(lambda: f.read(1 << 20), b""):
+                      h.update(chunk)
+              apk_info = (
+                  "\n\nAPK: " + apk + "\n"
+                  + "tamaño: {:,} bytes ({:.1f} MB)\n".format(size, size / 1e6)
+                  + "sha256: " + h.hexdigest()
+              )
+          header = (
+              "Salida REAL de `flutter build apk --release` (run "
+              + os.environ.get("GITHUB_RUN_ID", "?")
+              + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")"
+              + apk_info + "\n\n"
+          )
+          payload = {
+              "tag_name": "ci-build",
+              "name": "CI build (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
+              "draft": True,
+              "target_commitish": os.environ.get("GITHUB_SHA", ""),
+              "body": (header + body)[:900000],
+          }
+          req = urllib.request.Request(
+              "https://api.github.com/repos/"
+              + os.environ.get("GITHUB_REPOSITORY", "")
+              + "/releases/tags/ci-build",
+              data=json.dumps(payload).encode(),
+              method="PUT",
+          )
+          req.add_header("Authorization", "Bearer " + token)
+          req.add_header("Accept", "application/vnd.github+json")
+          req.add_header("Content-Type", "application/json")
+          try:
+              with urllib.request.urlopen(req) as r:
+                  print("release ci-build actualizada:", r.status)
+          except Exception as e:
+              print("no se pudo publicar la release ci-build:", e)
+          PYEOF
 
   # Release: solo en tags v*. Crea la GitHub Release del tag con el APK
   # descargado del artefacto del build (no re-build).
