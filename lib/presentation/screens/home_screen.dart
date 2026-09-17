@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const NutritionalChatScreen()));
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(Icons.chat_bubble_rounded, color: Colors.black),
+        child: const Icon(Icons.chat_bubble_outlined, color: Colors.black),
       ),
     );
   }

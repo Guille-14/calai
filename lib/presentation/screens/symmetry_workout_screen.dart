@@ -132,7 +132,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star, color: progress.currentRank.color, size: 28),
+              Icon(Icons.star_outline, color: progress.currentRank.color, size: 28),
               const SizedBox(width: 8),
               Text(
                 progress.currentRank.displayName,
@@ -202,7 +202,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.lightbulb, color: AppColors.accent, size: 18),
+              Icon(Icons.lightbulb_outline, color: AppColors.accent, size: 18),
               SizedBox(width: 8),
               Text(
                 'Recomendaciones',
@@ -299,7 +299,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.fitness_center, size: 24),
+          Icon(Icons.fitness_center_outlined, size: 24),
           SizedBox(width: 12),
           Text(
             'INICIAR ENTRENAMIENTO',
@@ -338,17 +338,17 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildHUDItem(
-            icon: Icons.fitness_center,
+            icon: Icons.fitness_center_outlined,
             label: 'Ejercicios',
             value: '${_sessionExercises.length}',
           ),
           _buildHUDItem(
-            icon: Icons.monitor_weight,
+            icon: Icons.monitor_weight_outlined,
             label: 'Tonelaje',
             value: '${_sessionTonnage.toStringAsFixed(0)}kg',
           ),
           _buildHUDItem(
-            icon: Icons.star,
+            icon: Icons.star_outline,
             label: 'XP',
             value: '+${_sessionXP.toStringAsFixed(0)}',
             valueColor: AppColors.accent,
@@ -391,7 +391,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.fitness_center,
+              Icons.fitness_center_outlined,
               size: 64,
               color: Colors.white.withValues(alpha: 0.2),
             ),
@@ -528,7 +528,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.camera_alt, color: Colors.black),
+                    Icon(Icons.camera_alt_outlined, color: Colors.black),
                     SizedBox(width: 8),
                     Text(
                       'ESCANEAR SYMMETRY',
@@ -819,7 +819,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.emoji_events,
+                Icons.emoji_events_outlined,
                 color: AppColors.accent,
                 size: 64,
               ),

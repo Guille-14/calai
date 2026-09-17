@@ -259,13 +259,13 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStat('Hoy', '${progress.dailyXP.round()}', Icons.today),
-          _buildStat('Semana', '${progress.weeklyXP.round()}', Icons.date_range),
-          _buildStat('Racha', '${progress.streakDays.round()} d', Icons.local_fire_department),
+          _buildStat('Hoy', '${progress.dailyXP.round()}', Icons.today_outlined),
+          _buildStat('Semana', '${progress.weeklyXP.round()}', Icons.date_range_outlined),
+          _buildStat('Racha', '${progress.streakDays.round()} d', Icons.local_fire_department_outlined),
           _buildStat(
             'Proteína',
             progress.metProteinGoal ? 'x${progress.proteinMultiplier.toStringAsFixed(1)}' : 'x1.0',
-            Icons.restaurant,
+            Icons.restaurant_outlined,
           ),
         ],
       ),

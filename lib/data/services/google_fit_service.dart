@@ -1,46 +1,67 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/symmetry/symmetry_workout_ledger.dart';
+import 'database_service.dart';
+
+/// Bridge real con Android Health Connect.
+///
+/// El nombre GoogleFitService se conserva por compatibilidad histórica con la
+/// UI, pero en Android el proveedor es Health Connect. Las sesiones importadas
+/// no dan XP: no pasan por una sesión guiada y así no se duplica progreso.
 class GoogleFitService {
   GoogleFitService._privateConstructor();
 
   static final GoogleFitService _instance =
       GoogleFitService._privateConstructor();
-
   static GoogleFitService get instance => _instance;
 
-  // Instanciación perezosa: evita cargar las clases nativas del plugin
-  // health (alpha) durante el arranque si la app no llega a usarlas.
+  static const String lastImportedAtKey = 'health_connect_last_imported_at';
+  static const String _importedCountKey = 'health_connect_imported_count';
+
   Health? _healthInstance;
   Health get _health => _healthInstance ??= Health();
 
   bool _isAuthorized = false;
   DateTime? _lastSyncTime;
   bool _isConfigured = false;
+  List<WorkoutSession> _lastImportedSessions = [];
+
+  List<WorkoutSession> get lastImportedSessions =>
+      List.unmodifiable(_lastImportedSessions);
 
   bool get isAuthorized => _isAuthorized;
   DateTime? get lastSyncTime => _lastSyncTime;
   bool get isConfigured => _isConfigured;
 
-  final List<HealthDataType> _coreTypes = [
+  static const List<HealthDataType> _coreTypes = [
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.BASAL_ENERGY_BURNED,
     HealthDataType.DISTANCE_DELTA,
   ];
 
+  static const List<HealthDataType> _historyTypes = [
+    HealthDataType.WORKOUT,
+    HealthDataType.WEIGHT,
+    HealthDataType.SLEEP_SESSION,
+    HealthDataType.HEART_RATE,
+  ];
+
+  List<HealthDataType> get supportedHistoryTypes =>
+      List.unmodifiable(_historyTypes);
+
   Future<bool> configureHealth() async {
     if (!Platform.isAndroid) {
-      debugPrint('GoogleFitService: Only Android is supported');
+      debugPrint('GoogleFitService: Health Connect solo está disponible en Android');
       return false;
     }
-
     try {
-      debugPrint('GoogleFitService: Configuring Health Connect...');
       await _health.configure();
       _isConfigured = true;
-      debugPrint('GoogleFitService: Health Connect configured');
       return true;
     } catch (e) {
       debugPrint('GoogleFitService: Configure error: $e');
@@ -49,30 +70,18 @@ class GoogleFitService {
   }
 
   Future<bool> requestAuthorization() async {
-    if (!Platform.isAndroid) {
-      debugPrint('GoogleFitService: Only Android is supported');
-      return false;
-    }
-
+    if (!Platform.isAndroid) return false;
     try {
-      if (!_isConfigured) {
-        final configured = await configureHealth();
-        if (!configured) return false;
-      }
-
-      debugPrint(
-          'GoogleFitService: Requesting authorization for core types: $_coreTypes');
-
-      final requested = await _health.requestAuthorization(_coreTypes);
-
-      if (requested) {
-        _isAuthorized = true;
-        debugPrint('GoogleFitService: Authorization granted for core types');
-      } else {
-        debugPrint('GoogleFitService: Authorization denied');
-        return false;
-      }
-
+      if (!_isConfigured && !await configureHealth()) return false;
+      final types = <HealthDataType>[..._coreTypes, ..._historyTypes];
+      final permissions = List<HealthDataAccess>.filled(
+        types.length,
+        HealthDataAccess.READ,
+      );
+      _isAuthorized = await _health.requestAuthorization(
+        types,
+        permissions: permissions,
+      );
       return _isAuthorized;
     } catch (e) {
       debugPrint('GoogleFitService: Authorization error: $e');
@@ -83,14 +92,10 @@ class GoogleFitService {
 
   Future<bool> checkAuthorization() async {
     if (!Platform.isAndroid) return false;
-
     try {
-      if (!_isConfigured) {
-        await configureHealth();
-      }
-
-      final hasPermissions = await _health.hasPermissions(_coreTypes);
-      _isAuthorized = hasPermissions == true;
+      if (!_isConfigured) await configureHealth();
+      final types = <HealthDataType>[..._coreTypes, ..._historyTypes];
+      _isAuthorized = await _health.hasPermissions(types) == true;
       return _isAuthorized;
     } catch (e) {
       debugPrint('GoogleFitService: Check auth error: $e');
@@ -98,12 +103,15 @@ class GoogleFitService {
     }
   }
 
+  Future<bool> _ensureAuthorization() async {
+    if (await checkAuthorization()) return true;
+    return requestAuthorization();
+  }
+
   Future<bool> isHealthConnectInstalled() async {
     if (!Platform.isAndroid) return false;
     try {
-      final installed = await _health.isHealthConnectAvailable();
-      debugPrint('GoogleFitService: Health Connect installed: $installed');
-      return installed;
+      return await _health.isHealthConnectAvailable();
     } catch (e) {
       debugPrint('GoogleFitService: Check installed error: $e');
       return false;
@@ -111,108 +119,243 @@ class GoogleFitService {
   }
 
   double _extractNumericValue(HealthValue value) {
-    if (value is NumericHealthValue) {
-      return value.numericValue.toDouble();
-    }
-    debugPrint(
-        'GoogleFitService: Non-numeric value type: ${value.runtimeType}');
-    return 0.0;
+    if (value is NumericHealthValue) return value.numericValue.toDouble();
+    return 0;
   }
 
-
   Future<GoogleFitDailyData> fetchDailyData() async {
-    if (!Platform.isAndroid) return GoogleFitDailyData.error('Solo Android soportado');
-
+    if (!Platform.isAndroid) {
+      return GoogleFitDailyData.error('Solo Android soportado');
+    }
     try {
-      debugPrint('GoogleFitService: === Fetching daily data ===');
-
-      // Comprueba permisos sin abrir el flujo de autorización: antes se
-      // llamaba requestAuthorization() en cada sync (incluido cada
-      // pull-to-refresh del Home) disparando el diálogo de permisos.
-      bool authorized = await checkAuthorization();
-      if (!authorized) {
-        authorized = await requestAuthorization();
+      if (!await _ensureAuthorization()) {
+        return GoogleFitDailyData.error(
+            'No autorizado. Conecta Health Connect.');
       }
-      if (!authorized) {
-        return GoogleFitDailyData.error('No autorizado. Conecta Health Connect.');
-      }
-
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
+      final steps = await _health.getTotalStepsInInterval(startOfDay, now) ?? 0;
 
-      // Get steps (Health Connect recommended way)
-      int totalSteps = 0;
-      try {
-        final steps = await _health.getTotalStepsInInterval(startOfDay, now);
-        totalSteps = steps ?? 0;
-        debugPrint('GoogleFitService: Steps = $totalSteps');
-      } catch (e) {
-        debugPrint('GoogleFitService: Error en pasos: $e');
+      var totalCalories = 0.0;
+      for (final point in await _readType(
+          HealthDataType.ACTIVE_ENERGY_BURNED, startOfDay, now)) {
+        totalCalories += _extractNumericValue(point.value);
+      }
+      for (final point in await _readType(
+          HealthDataType.BASAL_ENERGY_BURNED, startOfDay, now)) {
+        totalCalories += _extractNumericValue(point.value);
       }
 
-      // Fetch total calories (Active + Basal to account for Xiaomi/Zepp Life logic)
-      double totalCalories = 0.0;
-      try {
-        final data = await _health.getHealthDataFromTypes(
-          startTime: startOfDay,
-          endTime: now,
-          types: [
-            HealthDataType.ACTIVE_ENERGY_BURNED,
-            HealthDataType.BASAL_ENERGY_BURNED,
-          ],
-        );
-        for (final dp in data) {
-          totalCalories += _extractNumericValue(dp.value);
-        }
-        
-        // Sometimes TOTAL calories is directly recorded under ACTIVE for some watches but as very large value.
-        // It's safe to sum if they accurately separate.
-        debugPrint('GoogleFitService: Total Computed Calories = $totalCalories');
-      } catch (e) {
-        debugPrint('GoogleFitService: Error en calorías: $e');
+      var distanceKm = 0.0;
+      for (final point in await _readType(
+          HealthDataType.DISTANCE_DELTA, startOfDay, now)) {
+        distanceKm += _extractNumericValue(point.value) / 1000;
       }
-
-      // Fetch distance
-      double distanceKm = 0.0;
-      try {
-        final data = await _health.getHealthDataFromTypes(
-          startTime: startOfDay,
-          endTime: now,
-          types: [HealthDataType.DISTANCE_DELTA],
-        );
-        for (final dp in data) {
-          distanceKm += _extractNumericValue(dp.value) / 1000.0;
-        }
-      } catch (e) {
-        debugPrint('GoogleFitService: Error en distancia: $e');
-      }
-
       _lastSyncTime = DateTime.now();
-
       return GoogleFitDailyData(
-        steps: totalSteps,
-        activeCalories: totalCalories.toInt(),
+        steps: steps,
+        activeCalories: totalCalories.round(),
         distanceKm: distanceKm,
         lastSync: _lastSyncTime!,
-        deviceName: 'Mi Fit / Zepp Life',
+        deviceName: 'Health Connect',
       );
     } catch (e) {
-      debugPrint('GoogleFitService: General fetch error: $e');
       return GoogleFitDailyData.error('Error de sincronización: $e');
     }
   }
 
+  Future<List<HealthDataPoint>> _readType(
+    HealthDataType type,
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      return await _health.getHealthDataFromTypes(
+        startTime: start,
+        endTime: end,
+        types: [type],
+      );
+    } catch (e) {
+      // Health Connect permite que el usuario no conceda cada tipo por
+      // separado; una ausencia de sueño no debe impedir importar workouts.
+      debugPrint('GoogleFitService: no se pudo leer $type: $e');
+      return [];
+    }
+  }
+
+  /// Importa el rango disponible y persiste solo sesiones nuevas.
+  ///
+  /// En la primera ejecución se solicita un rango amplio, pero Health Connect
+  /// solo devuelve lo que conserva cada aplicación de origen. El resultado
+  /// expone [availableFrom]/[availableTo] para que la UI no prometa años de
+  /// histórico que el teléfono no tiene.
+  Future<HealthImportResult> importFullHistory({DateTime? since}) async {
+    if (!Platform.isAndroid) {
+      return HealthImportResult.error('Solo Android soportado');
+    }
+    if (!await _ensureAuthorization()) {
+      return HealthImportResult.error(
+          'No autorizado. Conecta Health Connect desde Ajustes.');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedSince = prefs.getInt(lastImportedAtKey);
+    final start = since ??
+        (savedSince == null
+            ? DateTime.now().subtract(const Duration(days: 3650))
+            : DateTime.fromMillisecondsSinceEpoch(savedSince));
+    final end = DateTime.now();
+
+    final workouts = await _readType(HealthDataType.WORKOUT, start, end);
+    final weights = await _readType(HealthDataType.WEIGHT, start, end);
+    final sleeps = await _readType(HealthDataType.SLEEP_SESSION, start, end);
+    final heartRates = await _readType(HealthDataType.HEART_RATE, start, end);
+
+    final sessions = workouts.map(_toWorkoutSession).toList();
+    _lastImportedSessions = sessions;
+    final db = DatabaseService();
+    var inserted = 0;
+    for (final session in sessions) {
+      await db.insertWorkoutSession(
+        date: session.date,
+        totalTonnage: session.totalTonnage,
+        durationMinutes: session.durationMinutes,
+        muscleGroupTonnage: session.muscleGroupTonnage,
+        // Diseño deliberado: los importados aparecen en historial pero no
+        // conceden XP automático, porque no son sesiones guiadas de Symmetry.
+        xpEarned: 0,
+        source: session.source,
+        externalId: session.externalId,
+        importedAt: end,
+      );
+      inserted++;
+    }
+
+    // El timestamp marca el final de un sync correcto. Si algún tipo no está
+    // disponible, el siguiente sync seguirá siendo seguro gracias al índice
+    // source + external_id de las sesiones que sí se hayan recibido.
+    await prefs.setInt(lastImportedAtKey, end.millisecondsSinceEpoch);
+    final totalImported = (prefs.getInt(_importedCountKey) ?? 0) + inserted;
+    await prefs.setInt(_importedCountKey, totalImported);
+    _lastSyncTime = end;
+
+    final allPoints = <HealthDataPoint>[
+      ...workouts,
+      ...weights,
+      ...sleeps,
+      ...heartRates,
+    ];
+    DateTime? availableFrom;
+    DateTime? availableTo;
+    for (final point in allPoints) {
+      if (availableFrom == null || point.dateFrom.isBefore(availableFrom)) {
+        availableFrom = point.dateFrom;
+      }
+      if (availableTo == null || point.dateTo.isAfter(availableTo)) {
+        availableTo = point.dateTo;
+      }
+    }
+
+    return HealthImportResult(
+      importedWorkouts: inserted,
+      weightRecords: weights.length,
+      sleepSessions: sleeps.length,
+      heartRateRecords: heartRates.length,
+      availableFrom: availableFrom,
+      availableTo: availableTo,
+      lastImportedAt: end,
+    );
+  }
+
+  WorkoutSession _toWorkoutSession(HealthDataPoint point) {
+    final duration = point.dateTo.difference(point.dateFrom).inMinutes;
+    final safeDuration = duration < 0 ? 0 : duration;
+    final activity = point.value is WorkoutHealthValue
+        ? (point.value as WorkoutHealthValue).workoutActivityName ?? 'Workout'
+        : 'Workout';
+    final source = _sourceFor(point.sourceName);
+    final externalId =
+        '$source|${point.dateFrom.toUtc().toIso8601String()}|${point.dateTo.toUtc().toIso8601String()}|$activity';
+    final group = _groupFor(activity);
+    final tonnage = safeDuration * 5.0;
+    return WorkoutSession(
+      date: point.dateFrom,
+      totalTonnage: tonnage,
+      durationMinutes: safeDuration,
+      muscleGroupTonnage: {group: tonnage},
+      exercises: [
+        ExerciseRecord(
+          name: activity,
+          muscleGroup: group,
+          weight: (safeDuration / 10).clamp(0, 150).toDouble(),
+          sets: 1,
+          reps: safeDuration == 0 ? 1 : safeDuration,
+        ),
+      ],
+      source: source,
+      externalId: externalId,
+    );
+  }
+
+  String _sourceFor(String sourceName) {
+    final source = sourceName.toLowerCase();
+    if (source.contains('mifit') ||
+        source.contains('mi fitness') ||
+        source.contains('xiaomi') ||
+        source.contains('zepp')) {
+      return 'mifit';
+    }
+    if (source.contains('symmetry')) return 'symmetry_app';
+    return 'health_connect';
+  }
+
+  String _groupFor(String activity) {
+    final value = activity.toLowerCase();
+    if (value.contains('run') || value.contains('walk') || value.contains('bike')) {
+      return 'cardio';
+    }
+    if (value.contains('leg') || value.contains('squat')) return 'cuadriceps';
+    if (value.contains('press') || value.contains('push')) return 'pecho';
+    if (value.contains('row') || value.contains('pull')) return 'espalda';
+    return 'general';
+  }
 
   Future<void> revokeAccess() async {
     try {
       await _health.revokePermissions();
       _isAuthorized = false;
       _lastSyncTime = null;
-      debugPrint('GoogleFitService: Access revoked');
     } catch (e) {
       debugPrint('GoogleFitService: Revoke error: $e');
     }
   }
+}
+
+class HealthImportResult {
+  final bool isSuccess;
+  final String? error;
+  final int importedWorkouts;
+  final int weightRecords;
+  final int sleepSessions;
+  final int heartRateRecords;
+  final DateTime? availableFrom;
+  final DateTime? availableTo;
+  final DateTime? lastImportedAt;
+
+  const HealthImportResult({
+    required this.isSuccess,
+    this.error,
+    this.importedWorkouts = 0,
+    this.weightRecords = 0,
+    this.sleepSessions = 0,
+    this.heartRateRecords = 0,
+    this.availableFrom,
+    this.availableTo,
+    this.lastImportedAt,
+  });
+
+  factory HealthImportResult.error(String message) =>
+      HealthImportResult(isSuccess: false, error: message);
 }
 
 class GoogleFitDailyData {
@@ -236,7 +379,7 @@ class GoogleFitDailyData {
     return GoogleFitDailyData(
       steps: 0,
       activeCalories: 0,
-      distanceKm: 0.0,
+      distanceKm: 0,
       lastSync: DateTime.now(),
       error: message,
     );

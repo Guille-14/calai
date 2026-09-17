@@ -63,17 +63,17 @@ class _MainNavigatorState extends State<MainNavigator> {
                 onTap: (index) => setState(() => _currentIndex = index),
                 items: const [
                   BottomNavigationBarItem(
-                      icon: Icon(Icons.home_rounded), label: 'Inicio'),
+                      icon: Icon(Icons.home_outlined), label: 'Inicio'),
                   BottomNavigationBarItem(
-                      icon: Icon(Icons.qr_code_scanner_rounded),
+                      icon: Icon(Icons.qr_code_scanner_outlined),
                       label: 'Escanear'),
                   BottomNavigationBarItem(
-                      icon: Icon(Icons.fitness_center_rounded),
+                      icon: Icon(Icons.fitness_center_outlined),
                       label: 'Entrenar'),
                   BottomNavigationBarItem(
-                      icon: Icon(Icons.insights_rounded), label: 'Progreso'),
+                      icon: Icon(Icons.insights_outlined), label: 'Progreso'),
                   BottomNavigationBarItem(
-                      icon: Icon(Icons.person_rounded), label: 'Perfil'),
+                      icon: Icon(Icons.person_outlined), label: 'Perfil'),
                 ],
               ),
             ),

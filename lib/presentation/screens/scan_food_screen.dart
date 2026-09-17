@@ -108,7 +108,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               children: [
                 Expanded(
                   child: _ImageSourceButton(
-                    icon: Icons.camera_alt_rounded,
+                    icon: Icons.camera_alt_outlined,
                     label: t.translate('camera'),
                     color: AppColors.accent,
                     onTap: () {
@@ -120,7 +120,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                 const SizedBox(width: 16),
                 Expanded(
                   child: _ImageSourceButton(
-                    icon: Icons.photo_library_rounded,
+                    icon: Icons.photo_library_outlined,
                     label: t.translate('gallery'),
                     color: AppColors.accent,
                     onTap: () {

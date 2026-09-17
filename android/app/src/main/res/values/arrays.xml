@@ -7,5 +7,7 @@
         <item>android.permission.health.READ_HEART_RATE</item>
         <item>android.permission.health.READ_BODY_MASS_INDEX</item>
         <item>android.permission.health.READ_WEIGHT</item>
+        <item>android.permission.health.READ_EXERCISE</item>
+        <item>android.permission.health.READ_SLEEP</item>
     </array>
 </resources>

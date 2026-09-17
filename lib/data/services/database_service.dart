@@ -23,7 +23,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -68,6 +68,30 @@ class DatabaseService {
       await _createFoodEntriesTable(db);
       await _createWorkoutSessionsTable(db);
     }
+    if (oldVersion < 3) {
+      await _upgradeWorkoutSessionsWithImportMetadata(db);
+    }
+  }
+
+  Future<void> _upgradeWorkoutSessionsWithImportMetadata(Database db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(workout_sessions)');
+    final names = columns.map((row) => row['name']?.toString()).toSet();
+    if (!names.contains('source')) {
+      await db.execute(
+          "ALTER TABLE workout_sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'native'");
+    }
+    if (!names.contains('external_id')) {
+      await db.execute(
+          'ALTER TABLE workout_sessions ADD COLUMN external_id TEXT');
+    }
+    if (!names.contains('imported_at')) {
+      await db.execute(
+          'ALTER TABLE workout_sessions ADD COLUMN imported_at INTEGER');
+    }
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_workout_sessions_source ON workout_sessions(source)');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_workout_sessions_external_id ON workout_sessions(source, external_id) WHERE external_id IS NOT NULL');
   }
 
   Future<void> _createFoodEntriesTable(Database db) async {
@@ -103,11 +127,18 @@ class DatabaseService {
         total_tonnage REAL NOT NULL,
         duration_minutes INTEGER NOT NULL,
         muscle_group_tonnage TEXT,
-        xp_earned REAL
+        xp_earned REAL,
+        source TEXT NOT NULL DEFAULT 'native',
+        external_id TEXT,
+        imported_at INTEGER
       )
     ''');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_workout_sessions_date ON workout_sessions(date)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_workout_sessions_source ON workout_sessions(source)');
+    await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_workout_sessions_external_id ON workout_sessions(source, external_id) WHERE external_id IS NOT NULL');
   }
 
   Future<List<ProductModel>> searchProducts(String query) async {
@@ -285,16 +316,26 @@ class DatabaseService {
     required int durationMinutes,
     required Map<String, double> muscleGroupTonnage,
     double xpEarned = 0.0,
+    String source = 'native',
+    String? externalId,
+    DateTime? importedAt,
   }) async {
     final db = await database;
-    return db.insert('workout_sessions', {
-      'date': DateTime(date.year, date.month, date.day)
-          .millisecondsSinceEpoch,
-      'total_tonnage': totalTonnage,
-      'duration_minutes': durationMinutes,
-      'muscle_group_tonnage': jsonEncode(muscleGroupTonnage),
-      'xp_earned': xpEarned,
-    });
+    return db.insert(
+      'workout_sessions',
+      {
+        'date': DateTime(date.year, date.month, date.day)
+            .millisecondsSinceEpoch,
+        'total_tonnage': totalTonnage,
+        'duration_minutes': durationMinutes,
+        'muscle_group_tonnage': jsonEncode(muscleGroupTonnage),
+        'xp_earned': xpEarned,
+        'source': source,
+        'external_id': externalId,
+        'imported_at': importedAt?.millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getWorkoutSessionsBetween(
@@ -321,6 +362,26 @@ class DatabaseService {
   Future<bool> hasWorkoutOnDate(DateTime date) async {
     final rows = await getWorkoutSessionsBetween(date, date);
     return rows.isNotEmpty;
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentWorkoutSessions(
+      {int limit = 50}) async {
+    final db = await database;
+    return db.query(
+      'workout_sessions',
+      orderBy: 'date DESC, id DESC',
+      limit: limit,
+    );
+  }
+
+  Future<Map<String, int>> getWorkoutSourceCounts() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+        'SELECT source, COUNT(*) AS n FROM workout_sessions GROUP BY source');
+    return {
+      for (final row in rows)
+        row['source']?.toString() ?? 'unknown': (row['n'] as num).toInt(),
+    };
   }
 
   Future<int> countWorkoutSessions() async {

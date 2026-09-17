@@ -5,10 +5,13 @@ import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/symmetry/macro_bridge.dart';
 import '../../core/utils/workout_calories.dart';
+import '../../core/utils/date_key.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/models/user_data.dart';
 import '../../data/services/ollama_service.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/google_fit_service.dart';
+import '../../data/services/database_service.dart';
 import '../../main.dart';
 import 'ai_settings_screen.dart';
 
@@ -45,6 +48,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ---- nuevo: feedback entrenamiento -> nutrición ----
   bool _creditWorkoutCalories = false;
 
+  // ---- Health Connect ----
+  final GoogleFitService _healthService = GoogleFitService.instance;
+  bool _healthConnectAvailable = false;
+  bool _healthConnectAuthorized = false;
+  bool _healthSyncing = false;
+  Map<String, int> _workoutSourceCounts = {};
+  DateTime? _lastHealthImport;
+  DateTime? _healthAvailableFrom;
+  DateTime? _healthAvailableTo;
+
   bool _isLoading = true;
 
   @override
@@ -72,14 +85,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _macroBridge.initialize();
     _creditWorkoutCalories = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
 
+    final healthAvailable = await _healthService.isHealthConnectInstalled();
+    final healthAuthorized = healthAvailable
+        ? await _healthService.checkAuthorization()
+        : false;
+    final sourceCounts = await DatabaseService().getWorkoutSourceCounts();
+    final lastImportMs = prefs.getInt(GoogleFitService.lastImportedAtKey);
+
     if (mounted) {
       setState(() {
         _userData = userData;
         _ollamaAvailable = available;
         _selectedLanguage = savedLang;
         _notificationsEnabled = notifEnabled;
+        _healthConnectAvailable = healthAvailable;
+        _healthConnectAuthorized = healthAuthorized;
+        _workoutSourceCounts = sourceCounts;
+        _lastHealthImport = lastImportMs == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(lastImportMs);
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _syncHealthHistory() async {
+    if (_healthSyncing) return;
+    setState(() => _healthSyncing = true);
+    final result = await _healthService.importFullHistory();
+    if (!mounted) return;
+    if (result.isSuccess) {
+      final counts = await DatabaseService().getWorkoutSourceCounts();
+      if (!mounted) return;
+      setState(() {
+        _healthSyncing = false;
+        _healthConnectAuthorized = true;
+        _workoutSourceCounts = counts;
+        _lastHealthImport = result.lastImportedAt;
+        _healthAvailableFrom = result.availableFrom;
+        _healthAvailableTo = result.availableTo;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${result.importedWorkouts} entrenamientos importados. Los importados no dan XP.')),
+      );
+    } else {
+      setState(() => _healthSyncing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'No se pudo sincronizar Health Connect')),
+      );
     }
   }
 
@@ -497,6 +550,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ]),
           const SizedBox(height: 24),
+          _buildSectionHeader('FUENTES DE DATOS'),
+          _buildHealthConnectCard(),
+          const SizedBox(height: 24),
           _buildSectionHeader('APLICACIÓN'),
           _buildSettingsGroup([
             _buildTapTile(Icons.language_outlined, 'Idioma', _selectedLanguage,
@@ -525,6 +581,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthConnectCard() {
+    final status = !_healthConnectAvailable
+        ? 'Health Connect no disponible'
+        : _healthConnectAuthorized
+            ? 'Conectado y autorizado'
+            : 'Instalado, falta autorización';
+    final imported = (_workoutSourceCounts['mifit'] ?? 0) +
+        (_workoutSourceCounts['symmetry_app'] ?? 0) +
+        (_workoutSourceCounts['health_connect'] ?? 0);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: (_healthConnectAvailable && _healthConnectAuthorized)
+              ? AppColors.accent.withValues(alpha: 0.35)
+              : AppColors.divider,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _healthConnectAuthorized
+                    ? Icons.health_and_safety_outlined
+                    : Icons.health_and_safety_outlined,
+                color: _healthConnectAvailable
+                    ? AppColors.accent
+                    : AppColors.textTertiary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(status,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700)),
+              ),
+              if (_healthConnectAuthorized)
+                const Icon(Icons.check_circle_outline,
+                    color: AppColors.accent, size: 20),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '$imported entrenamientos importados · MiFit ${_workoutSourceCounts['mifit'] ?? 0} · Symmetry ${_workoutSourceCounts['symmetry_app'] ?? 0}',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _lastHealthImport == null
+                ? 'Todavía no se ha sincronizado el histórico.'
+                : 'Última sincronización: ${formatDateKey(_lastHealthImport!)}',
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+          ),
+          if (_healthAvailableFrom != null && _healthAvailableTo != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Rango recibido: ${formatDateKey(_healthAvailableFrom!)} → ${formatDateKey(_healthAvailableTo!)}',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _healthSyncing ? null : _syncHealthHistory,
+              icon: _healthSyncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync_outlined),
+              label: Text(_healthSyncing ? 'Sincronizando…' : 'Sincronizar ahora'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Los entrenamientos importados se muestran en Historial, pero no conceden XP automático para evitar duplicados.',
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
+          ),
         ],
       ),
     );
@@ -910,10 +1056,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               entry.value,
               if (showDivider)
-                Divider(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    height: 1,
-                    indent: 56),
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.only(left: 56),
+                  color: AppColors.divider,
+                ),
             ],
           );
         }).toList(),
@@ -1048,7 +1195,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             trailing: const Icon(Icons.chevron_right, color: Colors.white24),
             onTap: _showReminderTimesDialog,
           ),
-          const Divider(color: Colors.white12, height: 1, indent: 56),
+          Container(
+            height: 1,
+            margin: const EdgeInsets.only(left: 56),
+            color: AppColors.divider,
+          ),
           ListTile(
             leading: const Icon(Icons.more_time, color: Colors.white54),
             title: const Text('Horas silenciosas',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/symmetry/health_connect_importer.dart';
-import '../../core/symmetry/health_connect_bridge.dart';
+import '../../core/symmetry/symmetry_workout_ledger.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 
 class HevySyncScreen extends StatefulWidget {
@@ -13,7 +13,7 @@ class HevySyncScreen extends StatefulWidget {
 
 class _HevySyncScreenState extends State<HevySyncScreen> {
   late HealthConnectImporter _healthImporter;
-  late HealthConnectBridge _healthBridge;
+  late SymmetryWorkoutLedger _healthBridge;
   late SymmetryProgressionService _progressionService;
 
   bool _isLoading = false;
@@ -27,7 +27,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
   @override
   void initState() {
     super.initState();
-    _healthBridge = HealthConnectBridge();
+    _healthBridge = SymmetryWorkoutLedger();
     _healthImporter = HealthConnectImporter();
     _progressionService = SymmetryProgressionService();
     _checkPermissionsAndSync();
