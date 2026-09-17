@@ -175,7 +175,9 @@ jobs:
           printf '%s\n' 'APK de CalAI para descargar.' > release-notes.md
 
       - name: Publish versioned APK Release
+        id: publish_release
         if: success()
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
@@ -187,3 +189,25 @@ jobs:
           prerelease: false
           make_latest: true
           fail_on_unmatched_files: true
+
+      # La API de Releases puede devolver un fallo transitorio después de
+      # crear la release pero antes de subir el APK. Reintentamos la misma
+      # publicación sin crear una release adicional.
+      - name: Retry APK Release publication
+        id: retry_release
+        if: steps.publish_release.outcome == 'failure'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TITLE }}
+          body_path: release-notes.md
+          target_commitish: ${{ github.sha }}
+          files: ${{ env.RELEASE_ASSET }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: true
+
+      - name: Fail if APK publication failed twice
+        if: steps.publish_release.outcome == 'failure' && steps.retry_release.outcome == 'failure'
+        run: exit 1
