@@ -297,7 +297,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                             decoration: InputDecoration(
                               hintText: 'Nombre del alimento',
                               hintStyle: TextStyle(
-                                  color: Colors.white.withOpacity(0.3)),
+                                  color: Colors.white.withValues(alpha: 0.3)),
                               border: InputBorder.none,
                               prefixIcon: const Icon(Icons.edit,
                                   color: Colors.white54, size: 20),
@@ -389,7 +389,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: Text('Volver',
-                      style: TextStyle(color: Colors.white.withOpacity(0.4))),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.4))),
                 ),
               ),
               SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
@@ -497,10 +497,10 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: AppColors.accentCalories.withOpacity(0.05),
+              color: AppColors.accentCalories.withValues(alpha: 0.05),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.accentCalories.withOpacity(0.2), width: 2),
+                  color: AppColors.accentCalories.withValues(alpha: 0.2), width: 2),
             ),
             child: Icon(
               Icons.camera_alt_outlined,

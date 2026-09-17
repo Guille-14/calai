@@ -122,7 +122,7 @@ IconButton(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.restaurant_menu, size: 80, color: Colors.white.withOpacity(0.2)),
+          Icon(Icons.restaurant_menu, size: 80, color: Colors.white.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           const Text(
             'No hay recetas guardadas',
@@ -144,7 +144,7 @@ IconButton(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),

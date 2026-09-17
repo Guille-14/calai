@@ -81,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'Ingresa $title',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
             enabledBorder: const OutlineInputBorder(
                 borderSide: BorderSide(color: Colors.white24)),
             focusedBorder: const OutlineInputBorder(
@@ -92,7 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text('Cancelar',
-                style: TextStyle(color: Colors.white.withOpacity(0.6))),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
@@ -245,7 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               'v1.0.3 (build 3)',
               style:
-                  TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12),
+                  TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
             ),
           ),
           const SizedBox(height: 20),
@@ -292,8 +292,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: _ollamaAvailable
-                ? AppColors.accentCalories.withOpacity(0.2)
-                : Colors.red.withOpacity(0.2)),
+                ? AppColors.accentCalories.withValues(alpha: 0.2)
+                : Colors.red.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -301,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: (_ollamaAvailable ? AppColors.accentCalories : Colors.red)
-                  .withOpacity(0.1),
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -328,7 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'Ollama está listo'
                       : 'Verifica conexión Tailscale',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.4), fontSize: 12),
+                      color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
                 ),
               ],
             ),
@@ -353,7 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: TextStyle(
-            color: Colors.white.withOpacity(0.3),
+            color: Colors.white.withValues(alpha: 0.3),
             fontSize: 11,
             fontWeight: FontWeight.bold,
             letterSpacing: 1),
@@ -366,7 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: children.asMap().entries.map((entry) {
@@ -376,7 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               entry.value,
               if (showDivider)
                 Divider(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     height: 1,
                     indent: 56),
             ],
@@ -388,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildActionTile(IconData icon, String title, String value) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
       title: Text(title,
           style: const TextStyle(color: Colors.white, fontSize: 15)),
       trailing: Row(
@@ -396,10 +396,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Text(value,
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.4), fontSize: 14)),
+                  color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right,
-              color: Colors.white.withOpacity(0.2), size: 18),
+              color: Colors.white.withValues(alpha: 0.2), size: 18),
         ],
       ),
       onTap: () {},
@@ -409,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildEditableTile(
       IconData icon, String title, String value, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
       title: Text(title,
           style: const TextStyle(color: Colors.white, fontSize: 15)),
       trailing: Row(
@@ -421,7 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
-          Icon(Icons.edit, color: Colors.white.withOpacity(0.3), size: 16),
+          Icon(Icons.edit, color: Colors.white.withValues(alpha: 0.3), size: 16),
         ],
       ),
       onTap: onTap,
@@ -431,7 +431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildTapTile(
       IconData icon, String title, String value, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white.withOpacity(0.5), size: 22),
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
       title: Text(title,
           style: const TextStyle(color: Colors.white, fontSize: 15)),
       trailing: Row(
@@ -442,7 +442,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: AppColors.accentCalories, fontSize: 14)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right,
-              color: Colors.white.withOpacity(0.2), size: 18),
+              color: Colors.white.withValues(alpha: 0.2), size: 18),
         ],
       ),
       onTap: onTap,
@@ -567,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [

@@ -350,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Column(
             children: [
@@ -359,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                     child: const Text('Objetivos Diarios', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                   Text('${state.totalCalories.toInt()} / $calorieGoal kcal', style: const TextStyle(color: Colors.white54, fontSize: 12)),
@@ -429,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
@@ -437,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.restaurant_menu, color: Theme.of(context).colorScheme.primary, size: 34),
@@ -451,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 6),
           Text(
             'Haz una foto de tu plato y la IA calculará las calorías y macros por ti.',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, height: 1.4),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, height: 1.4),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 18),
@@ -506,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
@@ -603,7 +603,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: (meal.confidenceScore > 0.7 ? Colors.green : Colors.orange).withOpacity(0.2),
+                  color: (meal.confidenceScore > 0.7 ? Colors.green : Colors.orange).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text('Confianza: ${(meal.confidenceScore * 100).toInt()}%',
@@ -618,7 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () { Navigator.pop(ctx); _showDeleteMealDialog(meal); },
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('Eliminar'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red.withOpacity(0.2), foregroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red.withValues(alpha: 0.2), foregroundColor: Colors.red),
                   ),
                 ),
                 const SizedBox(width: 12),

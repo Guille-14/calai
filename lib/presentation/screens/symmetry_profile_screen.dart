@@ -78,15 +78,15 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            progress.currentRank.color.withOpacity(0.2),
-            progress.currentRank.color.withOpacity(0.05),
+            progress.currentRank.color.withValues(alpha: 0.2),
+            progress.currentRank.color.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: progress.currentRank.color.withOpacity(0.4),
+          color: progress.currentRank.color.withValues(alpha: 0.4),
           width: 2,
         ),
       ),
@@ -100,14 +100,14 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
               gradient: LinearGradient(
                 colors: [
                   progress.currentRank.color,
-                  progress.currentRank.color.withOpacity(0.6),
+                  progress.currentRank.color.withValues(alpha: 0.6),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: progress.currentRank.color.withOpacity(0.5),
+                  color: progress.currentRank.color.withValues(alpha: 0.5),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -177,7 +177,7 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +187,7 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withOpacity(0.2),
+                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -276,7 +276,7 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,9 +311,9 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.3),
+                    color: color.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withOpacity(0.5)),
+                    border: Border.all(color: color.withValues(alpha: 0.5)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -356,7 +356,7 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +399,7 @@ class _SymmetryProfileScreenState extends State<SymmetryProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: Colors.white70, size: 20),

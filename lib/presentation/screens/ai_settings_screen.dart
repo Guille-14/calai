@@ -338,7 +338,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF34C759).withOpacity(0.2) : const Color(0xFF2C2C2E),
+            color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.2) : const Color(0xFF2C2C2E),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.transparent),
           ),
@@ -463,9 +463,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       builder: (context, _) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: (ready ? Colors.green : Colors.red).withOpacity(0.1 * _pulseAnimation.value),
+          color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.1 * _pulseAnimation.value),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: (ready ? Colors.green : Colors.red).withOpacity(0.3)),
+          border: Border.all(color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -631,7 +631,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
                         child: const Text('RECOMENDADO PARA COMIDA', style: TextStyle(color: Colors.greenAccent, fontSize: 8, fontWeight: FontWeight.bold)),
                       ),
                     ],
@@ -682,7 +682,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: const Text('👉 Obtén tu API Key gratis en: aistudio.google.com', style: TextStyle(fontSize: 12, color: Colors.blueAccent, fontWeight: FontWeight.bold)),
           ),
         ],
@@ -761,16 +761,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF34C759).withOpacity(0.1) : const Color(0xFF2C2C2E),
+          color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.1) : const Color(0xFF2C2C2E),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.deepPurpleAccent.withOpacity(0.4)),
+          border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.deepPurpleAccent.withValues(alpha: 0.4)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.computer, color: Colors.deepPurpleAccent.withOpacity(0.8), size: 16),
+                Icon(Icons.computer, color: Colors.deepPurpleAccent.withValues(alpha: 0.8), size: 16),
                 const SizedBox(width: 6),
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent, fontSize: 12)),
               ],

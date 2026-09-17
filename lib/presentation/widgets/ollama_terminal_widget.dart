@@ -234,7 +234,7 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
       case EntryType.command:
         return Colors.white;
       case EntryType.info:
-        return Colors.greenAccent.withOpacity(0.9);
+        return Colors.greenAccent.withValues(alpha: 0.9);
       case EntryType.error:
         return Colors.redAccent;
     }

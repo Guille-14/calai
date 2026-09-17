@@ -180,7 +180,7 @@ class _SymmetryNavigatorState extends State<SymmetryNavigator> {
         tileColor: const Color(0xFF141414),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: CircleAvatar(
-          backgroundColor: const Color(0xFF00C853).withOpacity(0.15),
+          backgroundColor: const Color(0xFF00C853).withValues(alpha: 0.15),
           child: Icon(icon, color: const Color(0xFF00C853)),
         ),
         title: Text(label,

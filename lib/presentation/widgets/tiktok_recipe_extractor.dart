@@ -111,7 +111,7 @@ class _TikTokRecipeExtractorState extends State<TikTokRecipeExtractor> {
             hintText: 'Pega aquí la descripción del video de TikTok...',
             hintStyle: const TextStyle(color: Colors.white38),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,

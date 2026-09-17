@@ -79,7 +79,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       Text(
         'JERARQUÍA DE RANGOS',
         style: TextStyle(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           fontSize: 12,
           fontWeight: FontWeight.w800,
           letterSpacing: 2,
@@ -104,7 +104,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: current.color.withOpacity(0.5), width: 1.5),
+        border: Border.all(color: current.color.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         children: [
@@ -113,7 +113,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
             height: 84,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: current.color.withOpacity(0.15),
+              color: current.color.withValues(alpha: 0.15),
               border: Border.all(color: current.color, width: 2.5),
             ),
             child: Center(
@@ -148,7 +148,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
             child: LinearProgressIndicator(
               value: progress.rankProgress,
               minHeight: 10,
-              backgroundColor: Colors.white.withOpacity(0.08),
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(current.color),
             ),
           ),
@@ -170,10 +170,10 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isCurrent ? rank.color.withOpacity(0.12) : _card,
+        color: isCurrent ? rank.color.withValues(alpha: 0.12) : _card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isCurrent ? rank.color : Colors.white.withOpacity(0.06),
+          color: isCurrent ? rank.color : Colors.white.withValues(alpha: 0.06),
           width: isCurrent ? 1.5 : 1,
         ),
       ),
@@ -185,8 +185,8 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: achieved
-                  ? rank.color.withOpacity(0.2)
-                  : Colors.white.withOpacity(0.05),
+                  ? rank.color.withValues(alpha: 0.2)
+                  : Colors.white.withValues(alpha: 0.05),
             ),
             child: Icon(
               achieved ? Icons.verified : Icons.lock_outline,
@@ -215,7 +215,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _accent.withOpacity(0.2),
+                          color: _accent.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -236,7 +236,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
                   'Nivel ${rank.level} · desde ${_formatXP(rank.minXP)} XP',
                   style: TextStyle(
                     color:
-                        achieved ? Colors.white54 : Colors.white.withOpacity(0.25),
+                        achieved ? Colors.white54 : Colors.white.withValues(alpha: 0.25),
                     fontSize: 11,
                   ),
                 ),
@@ -286,7 +286,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
         ),
       ],
     );

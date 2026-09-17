@@ -72,7 +72,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
           Icon(
             Icons.history,
             size: 80,
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -144,15 +144,15 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            progress.currentRank.color.withOpacity(0.15),
-            progress.currentRank.color.withOpacity(0.05),
+            progress.currentRank.color.withValues(alpha: 0.15),
+            progress.currentRank.color.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: progress.currentRank.color.withOpacity(0.3),
+          color: progress.currentRank.color.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -247,7 +247,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +265,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withOpacity(0.2),
+                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

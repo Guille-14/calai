@@ -169,7 +169,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                     image: _imageFile != null
                         ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
                         : null,
@@ -178,9 +178,9 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
                       ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.camera_alt, size: 50, color: Colors.white.withOpacity(0.3)),
+                            Icon(Icons.camera_alt, size: 50, color: Colors.white.withValues(alpha: 0.3)),
                             const SizedBox(height: 10),
-                            Text('Añadir imagen', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+                            Text('Añadir imagen', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                           ],
                         )
                       : null,
