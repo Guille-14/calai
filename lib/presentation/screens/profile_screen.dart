@@ -1,0 +1,1083 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/theme/app_constants.dart';
+import '../../core/symmetry/symmetry_progression_service.dart';
+import '../../core/symmetry/symmetry_rank_system.dart';
+import '../../core/symmetry/macro_bridge.dart';
+import '../../core/utils/workout_calories.dart';
+import '../../data/local/preference_manager.dart';
+import '../../data/models/user_data.dart';
+import '../../data/services/ollama_service.dart';
+import '../../data/services/notification_service.dart';
+import '../../main.dart';
+import 'ai_settings_screen.dart';
+
+/// Perfil unificado (la fusión CalAI + Symmetry).
+///
+/// Antes eran dos pantallas separadas por el switcher de modos:
+/// - settings_screen.dart  (datos personales, objetivos, idioma,
+///   notificaciones, estado de Ollama)
+/// - symmetry_profile_screen.dart (rango/XP, proteína, estado muscular,
+///   reset de Symmetry)
+///
+/// Ahora es UNA sola pantalla con todas las secciones, porque hay una sola
+/// app. El contenido se conserva textualmente de las dos originales.
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  // ---- de settings_screen ----
+  UserData? _userData;
+  bool _ollamaAvailable = false;
+  String _selectedLanguage = 'Español';
+  bool _notificationsEnabled = true;
+  final _notificationService = NotificationService();
+
+  // ---- de symmetry_profile_screen ----
+  final SymmetryProgressionService _symmetryService =
+      SymmetryProgressionService();
+  final MacroBridge _macroBridge = MacroBridge();
+
+  // ---- nuevo: feedback entrenamiento -> nutrición ----
+  bool _creditWorkoutCalories = false;
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final prefManager = PreferenceManager(prefs);
+    final userData = prefManager.getUserData();
+
+    final ollama = OllamaService();
+    await ollama.initialize();
+    final available = await ollama.isServerAvailable();
+
+    // Idioma: main.dart lee 'language_code' ('es'/'en'). Antes este ajuste
+    // guardaba 'app_language' con el nombre completo y no tenía efecto.
+    final savedCode = prefs.getString('language_code') ?? 'es';
+    final savedLang = savedCode == 'en' ? 'English' : 'Español';
+    final notifEnabled = await _notificationService.isEnabled();
+
+    await _symmetryService.initialize();
+    await _macroBridge.initialize();
+    _creditWorkoutCalories = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
+
+    if (mounted) {
+      setState(() {
+        _userData = userData;
+        _ollamaAvailable = available;
+        _selectedLanguage = savedLang;
+        _notificationsEnabled = notifEnabled;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleCreditWorkoutCalories(bool value) async {
+    setState(() => _creditWorkoutCalories = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kCreditWorkoutCaloriesKey, value);
+  }
+
+  // --------------------------------------------------------------------
+  // Lógica de settings_screen (conservada)
+  // --------------------------------------------------------------------
+
+  Future<void> _updateUserData(UserData newData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final prefManager = PreferenceManager(prefs);
+    await prefManager.saveUserData(newData);
+    if (mounted) {
+      setState(() => _userData = newData);
+    }
+  }
+
+  Future<void> _showEditDialog(String field, String title, String currentValue,
+      TextInputType keyboardType) async {
+    final controller = TextEditingController(text: currentValue);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Ingresa $title',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            enabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: AppColors.accentCalories)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Guardar',
+                style: TextStyle(color: AppColors.accentCalories)),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (result != null && result.isNotEmpty && _userData != null) {
+      UserData updated;
+      switch (field) {
+        case 'weight':
+          updated = _userData!
+              .copyWith(weight: double.tryParse(result) ?? _userData!.weight);
+          break;
+        case 'height':
+          updated = _userData!
+              .copyWith(height: double.tryParse(result) ?? _userData!.height);
+          break;
+        case 'age':
+          updated =
+              _userData!.copyWith(age: int.tryParse(result) ?? _userData!.age);
+          break;
+        case 'gender':
+          updated = _userData!.copyWith(gender: result);
+          break;
+        default:
+          return;
+      }
+      _updateUserData(updated);
+    }
+  }
+
+  Future<void> _showLanguageDialog() async {
+    // Solo los idiomas realmente traducidos en AppTranslations (en/es).
+    const languages = ['Español', 'English'];
+    const codeByLanguage = {'Español': 'es', 'English': 'en'};
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Seleccionar Idioma',
+            style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: languages
+              .map((lang) => ListTile(
+                    title:
+                        Text(lang, style: const TextStyle(color: Colors.white)),
+                    trailing: _selectedLanguage == lang
+                        ? const Icon(Icons.check,
+                            color: AppColors.accentCalories)
+                        : null,
+                    onTap: () => Navigator.pop(ctx, lang),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final code = codeByLanguage[result] ?? 'es';
+      await prefs.setString('app_language', result);
+      await prefs.setString('language_code', code);
+      if (mounted) {
+        setState(() => _selectedLanguage = result);
+        // Aplica el cambio al instante sin reiniciar la app.
+        LocaleNotifier.updateLocale(Locale(code));
+      }
+    }
+  }
+
+  Future<void> _showGenderDialog() async {
+    final genders = ['Masculino', 'Femenino', 'Otro', 'No especificado'];
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Seleccionar Género',
+            style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: genders
+              .map((g) => ListTile(
+                    title: Text(g, style: const TextStyle(color: Colors.white)),
+                    trailing: _userData?.gender == g
+                        ? const Icon(Icons.check,
+                            color: AppColors.accentCalories)
+                        : null,
+                    onTap: () => Navigator.pop(ctx, g),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+
+    if (result != null && _userData != null) {
+      final updated = _userData!.copyWith(gender: result);
+      _updateUserData(updated);
+    }
+  }
+
+  void _showNotificationSettingsDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Configuración de Notificaciones',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 24),
+                _buildNotifSwitch(
+                    'Recordatorios de comidas',
+                    'Recibe recordatorios para registrar tus comidas',
+                    true,
+                    (v) {}),
+                _buildNotifSwitch(
+                    'Alertas de objetivos',
+                    'Notificaciones cuando alcances tus metas diarias',
+                    true,
+                    (v) {}),
+                _buildNotifSwitch(
+                    'Resumen semanal',
+                    'Recibe un resumen de tu progreso cada semana',
+                    true,
+                    (v) {}),
+                _buildNotifSwitch(
+                    'Mensajes motivacionales',
+                    'Mensajes diarios para mantener la motivación',
+                    true,
+                    (v) {}),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _notificationService.requestPermissions();
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentCalories,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Permitir Notificaciones',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showReminderTimesDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Horario de Recordatorios',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Los recordatorios se envían a las 08:00, 13:00 y 19:00',
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar',
+                style: TextStyle(color: AppColors.accentCalories)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------
+  // Lógica de symmetry_profile_screen (conservada)
+  // --------------------------------------------------------------------
+
+  void _showProteinGoalDialog() {
+    final controller = TextEditingController(
+      text: _macroBridge.proteinGoal.toInt().toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Objetivo de Proteína',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            suffixText: 'g',
+            suffixStyle: const TextStyle(color: Colors.white54),
+            filled: true,
+            fillColor: Colors.black,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final goal = double.tryParse(controller.text);
+              if (goal != null) {
+                _symmetryService.setProteinGoal(goal);
+                Navigator.pop(context);
+                _loadData();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00C853),
+            ),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    ).then((_) => controller.dispose());
+  }
+
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          '¿Restablecer progreso?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Esta acción eliminará todo tu progreso de Symmetry, incluyendo XP, rangos e historial.',
+          style: TextStyle(color: Colors.white54),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _symmetryService.reset();
+              Navigator.pop(context);
+              _loadData();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Restablecer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------
+  // UI
+  // --------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(child: CircularProgressIndicator()));
+    }
+
+    final progress = _symmetryService.getProgress();
+    final heatMap = _symmetryService.getMuscleHeatMap();
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('Perfil',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildRankCard(progress),
+          const SizedBox(height: 20),
+          _buildProteinCard(),
+          const SizedBox(height: 20),
+          _buildHeatMapCard(heatMap),
+          const SizedBox(height: 24),
+          _buildOllamaCard(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('INFORMACIÓN PERSONAL'),
+          _buildSettingsGroup([
+            _buildEditableTile(Icons.monitor_weight_outlined, 'Peso',
+                '${_userData?.weight ?? 0} kg',
+                () => _showEditDialog('weight', 'Peso',
+                    '${_userData?.weight ?? 0}', TextInputType.number)),
+            _buildEditableTile(Icons.height_outlined, 'Altura',
+                '${_userData?.height ?? 0} cm',
+                () => _showEditDialog('height', 'Altura',
+                    '${_userData?.height ?? 0}', TextInputType.number)),
+            _buildEditableTile(Icons.cake_outlined, 'Edad',
+                '${_userData?.age ?? 0} años',
+                () => _showEditDialog('age', 'Edad', '${_userData?.age ?? 0}',
+                    TextInputType.number)),
+            _buildEditableTile(Icons.wc_outlined, 'Género',
+                _userData?.gender ?? 'No especificado',
+                () => _showGenderDialog()),
+          ]),
+          const SizedBox(height: 24),
+          _buildSectionHeader('OBJETIVOS'),
+          _buildSettingsGroup([
+            _buildActionTile(Icons.flag_outlined, 'Objetivo',
+                _userData?.goal ?? 'Mantener peso'),
+            _buildActionTile(Icons.local_fire_department_outlined,
+                'Calorías diarias',
+                '${_userData?.estimatedCalories ?? 0} kcal'),
+          ]),
+          const SizedBox(height: 24),
+          _buildSectionHeader('ENTRENO'),
+          _buildSettingsGroup([
+            ListTile(
+              leading: const Icon(Icons.bolt_outlined, color: Colors.white54),
+              title: const Text('Creditar calorías quemadas',
+                  style: TextStyle(color: Colors.white, fontSize: 15)),
+              subtitle: const Text(
+                  'Resta el gasto estimado de cada entrenamiento del '
+                  'objetivo diario (desactivado por defecto)',
+                  style: TextStyle(color: Colors.white38, fontSize: 12)),
+              trailing: Switch(
+                value: _creditWorkoutCalories,
+                onChanged: _toggleCreditWorkoutCalories,
+                activeThumbColor: AppColors.accentCalories,
+              ),
+            ),
+          ]),
+          const SizedBox(height: 24),
+          _buildSectionHeader('APLICACIÓN'),
+          _buildSettingsGroup([
+            _buildTapTile(Icons.language_outlined, 'Idioma', _selectedLanguage,
+                _showLanguageDialog),
+            _buildNotificationTile(),
+          ]),
+          const SizedBox(height: 24),
+          _buildSectionHeader('NOTIFICACIONES'),
+          _buildNotificationSettings(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('ZONA DE PELIGRO'),
+          _buildSettingsGroup([
+            _buildSettingsItem(
+              icon: Icons.refresh,
+              title: 'Restablecer progreso de Symmetry',
+              subtitle: 'Borrar XP, rangos e historial de entrenamiento',
+              onTap: () => _showResetDialog(),
+            ),
+          ]),
+          const SizedBox(height: 32),
+          Center(
+            child: Text(
+              'v1.1.0 - Fusión CalAI + Symmetry',
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // ---- widgets de symmetry_profile_screen ----
+
+  Widget _buildRankCard(SymmetryProgress progress) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            progress.currentRank.color.withValues(alpha: 0.2),
+            progress.currentRank.color.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: progress.currentRank.color.withValues(alpha: 0.4),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  progress.currentRank.color,
+                  progress.currentRank.color.withValues(alpha: 0.6),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: progress.currentRank.color.withValues(alpha: 0.5),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.shield, color: Colors.white, size: 50),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            progress.currentRank.displayName,
+            style: TextStyle(
+              color: progress.currentRank.color,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Nivel ${progress.currentRank.level}',
+            style: const TextStyle(color: Colors.white54),
+          ),
+          const SizedBox(height: 20),
+          LinearProgressIndicator(
+            value: progress.rankProgress,
+            color: progress.currentRank.color,
+            backgroundColor: Colors.white12,
+            minHeight: 8,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${progress.totalXP.toStringAsFixed(0)} XP',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              if (progress.currentRank.nextRank != null)
+                Text(
+                  '${progress.currentRank.nextRank!.displayName}',
+                  style: TextStyle(
+                    color: progress.currentRank.nextRank!.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProteinCard() {
+    final proteinGoal = _macroBridge.proteinGoal;
+    final currentProtein = _macroBridge.dailyProtein;
+    final progress = _macroBridge.proteinProgress;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.restaurant,
+                  color: Color(0xFF00C853),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Meta de Proteína',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (_macroBridge.metProteinGoal)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'x1.2',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white54, size: 18),
+                onPressed: () => _showProteinGoalDialog(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${currentProtein.toStringAsFixed(0)}g',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '/ ${proteinGoal.toStringAsFixed(0)}g',
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: progress,
+            color: _macroBridge.metProteinGoal
+                ? const Color(0xFF00C853)
+                : const Color(0xFFFFD700),
+            backgroundColor: Colors.white12,
+            minHeight: 8,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _macroBridge.getProteinStatusMessage(),
+            style: TextStyle(
+              color: _macroBridge.metProteinGoal
+                  ? const Color(0xFF00C853)
+                  : Colors.white54,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeatMapCard(Map<String, double> heatMap) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.map, color: Color(0xFFFF6B6B)),
+              SizedBox(width: 8),
+              Text(
+                'Estado Muscular',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (heatMap.isEmpty)
+            const Text(
+              'Completa entrenamientos para ver el estado muscular',
+              style: TextStyle(color: Colors.white54),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: heatMap.entries.map((entry) {
+                final color = _getFatigueColor(entry.value);
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        entry.key,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Color _getFatigueColor(double fatigue) {
+    if (fatigue < 30) return Colors.green;
+    if (fatigue < 60) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _buildSettingsItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.white70, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(subtitle,
+          style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+      onTap: onTap,
+    );
+  }
+
+  // ---- widgets de settings_screen ----
+
+  Widget _buildOllamaCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: _ollamaAvailable
+                ? AppColors.accentCalories.withValues(alpha: 0.2)
+                : Colors.red.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: (_ollamaAvailable ? AppColors.accentCalories : Colors.red)
+                  .withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _ollamaAvailable
+                  ? Icons.cloud_done_outlined
+                  : Icons.cloud_off_outlined,
+              color: _ollamaAvailable ? AppColors.accentCalories : Colors.red,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _ollamaAvailable
+                      ? 'IA Local Conectada'
+                      : 'IA Local Desconectada',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _ollamaAvailable
+                      ? 'Ollama está listo'
+                      : 'Verifica conexión Tailscale',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AiSettingsScreen())),
+            child: Text('CONFIGURAR',
+                style: TextStyle(
+                    color: AppColors.accentCalories,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1),
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroup(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        children: children.asMap().entries.map((entry) {
+          final showDivider = entry.key < children.length - 1;
+          return Column(
+            children: [
+              entry.value,
+              if (showDivider)
+                Divider(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    height: 1,
+                    indent: 56),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildActionTile(IconData icon, String title, String value) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      title: Text(title,
+          style: const TextStyle(color: Colors.white, fontSize: 15)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.4), fontSize: 14)),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right,
+              color: Colors.white.withValues(alpha: 0.2), size: 18),
+        ],
+      ),
+      onTap: () {},
+    );
+  }
+
+  Widget _buildEditableTile(
+      IconData icon, String title, String value, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      title: Text(title,
+          style: const TextStyle(color: Colors.white, fontSize: 15)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  color: AppColors.accentCalories,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(width: 4),
+          Icon(Icons.edit, color: Colors.white.withValues(alpha: 0.3), size: 16),
+        ],
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildTapTile(
+      IconData icon, String title, String value, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 22),
+      title: Text(title,
+          style: const TextStyle(color: Colors.white, fontSize: 15)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  color: AppColors.accentCalories, fontSize: 14)),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right,
+              color: Colors.white.withValues(alpha: 0.2), size: 18),
+        ],
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildNotificationTile() {
+    return ListTile(
+      leading: const Icon(Icons.notifications_outlined,
+          color: Colors.white54, size: 22),
+      title: const Text('Notificaciones',
+          style: TextStyle(color: Colors.white, fontSize: 15)),
+      trailing: Switch(
+        value: _notificationsEnabled,
+        onChanged: (value) async {
+          await _notificationService.setEnabled(value);
+          setState(() => _notificationsEnabled = value);
+        },
+        activeThumbColor: AppColors.accentCalories,
+      ),
+      onTap: () => _showNotificationSettingsDialog(),
+    );
+  }
+
+  Widget _buildNotifSwitch(
+      String title, String subtitle, bool value, Function(bool) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(color: Colors.white, fontSize: 15)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 12)),
+              ],
+            ),
+          ),
+          Switch(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: AppColors.accentCalories),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationSettings() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.schedule, color: Colors.white54),
+            title: const Text('Horario de recordatorios',
+                style: TextStyle(color: Colors.white)),
+            subtitle: const Text('08:00, 13:00, 19:00',
+                style: TextStyle(color: Colors.white38)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+            onTap: _showReminderTimesDialog,
+          ),
+          const Divider(color: Colors.white12, height: 1, indent: 56),
+          ListTile(
+            leading: const Icon(Icons.more_time, color: Colors.white54),
+            title: const Text('Horas silenciosas',
+                style: TextStyle(color: Colors.white)),
+            subtitle: const Text('22:00 - 08:00',
+                style: TextStyle(color: Colors.white38)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+}

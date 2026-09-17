@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../screens/recipe_home_screen.dart';
-import '../screens/symmetry_navigator.dart';
 import '../screens/scan_food_screen.dart';
+import '../screens/symmetry_history_screen.dart';
+import '../screens/symmetry_ranks_screen.dart';
+import '../screens/openrouter_diagnostics_screen.dart';
 
+/// Drawer lateral (solo pantalla de Inicio).
+///
+/// La fusión eliminó "Modo HEAVY" (SymmetryNavigator): el entrenamiento ya
+/// es la pestaña "Entrenar" del MainNavigator, no un modo aparte. El drawer
+/// conserva las entradas secundarias reales: recetas, escaneo y las
+/// pantallas de entrenamiento que no tienen pestaña propia (historial y
+/// rangos) más el diagnóstico de IA.
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
@@ -53,24 +62,6 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: Icon(Icons.fitness_center, color: colors.secondary),
-            title: const Text('Modo HEAVY', style: TextStyle(color: Colors.white)),
-            onTap: () {
-              // Entrada directa al modo HEAVY real (SymmetryNavigator).
-              // Antes abría SymmetryDashboardScreen, un cluster con imports
-              // rotos que impedía compilar la app.
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SymmetryNavigator(
-                    onExitSymmetry: () => Navigator.pop(context),
-                  ),
-                ),
-              );
-            },
-          ),
-          ListTile(
             leading: Icon(Icons.menu_book, color: colors.secondary),
             title: const Text('Recetas', style: TextStyle(color: Colors.white)),
             onTap: () {
@@ -83,15 +74,51 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.camera_alt, color: colors.secondary),
-            title: const Text('Escanear Comida', style: TextStyle(color: Colors.white)),
+            title:
+                const Text('Escanear Comida', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
-              // Usa ScanFoodScreen (la pantalla de escaneo de la navegación
-              // principal). Antes apuntaba a FoodScannerScreen, una segunda
-              // implementación duplicada que se eliminó.
+              // ScanFoodScreen es la misma pantalla que la pestaña
+              // "Escanear" del MainNavigator.
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ScanFoodScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: colors.secondary),
+            title: const Text('Historial de entrenamientos',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const SymmetryHistoryScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.emoji_events, color: colors.secondary),
+            title: const Text('Rangos', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SymmetryRanksScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.psychology, color: colors.secondary),
+            title: const Text('Diagnóstico IA', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const OpenRouterDiagnosticsScreen()),
               );
             },
           ),

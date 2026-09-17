@@ -255,6 +255,42 @@ class SymmetryProgressionService {
     _weeklyXP = 0;
   }
 
+  /// Racha de disciplina: días CONSECUTIVOS con al menos 1 comida
+  /// registrada (food_entries) Y al menos 1 entrenamiento completado
+  /// (workout_sessions). Independiente de la racha solo-entrenamiento
+  /// (streakDays), que es la que da el multiplicador de XP.
+  ///
+  /// Se cuenta hacia atrás desde hoy; si hoy aún no cumple (normal a
+  /// media jornada), la racha se evalúa desde ayer hacia atrás.
+  Future<int> getDisciplineStreak() async {
+    final db = DatabaseService();
+    var date = DateTime.now();
+    if (!await _dayDisciplined(db, date)) {
+      date = date.subtract(const Duration(days: 1));
+    }
+    int streak = 0;
+    // Tope de seguridad (10 años) contra datos corruptos que impidan
+    // alcanzar un día sin condición.
+    for (int i = 0; i < 3650; i++) {
+      if (await _dayDisciplined(db, date)) {
+        streak++;
+        date = date.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  Future<bool> _dayDisciplined(DatabaseService db, DateTime date) async {
+    try {
+      return await db.hasFoodOnDate(date) && await db.hasWorkoutOnDate(date);
+    } catch (e) {
+      debugPrint('Symmetry: error consultando racha de disciplina: $e');
+      return false;
+    }
+  }
+
   SymmetryProgress getProgress() {
     ensureFreshPeriods();
     final currentRank = SymmetryRank.fromXP(_totalXP);

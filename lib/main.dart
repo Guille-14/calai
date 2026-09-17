@@ -18,8 +18,8 @@ import 'data/services/image_storage_service.dart';
 import 'presentation/cubit/food_log_cubit.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
-import 'presentation/screens/app_switcher_screen.dart';
-import 'presentation/screens/settings_screen.dart';
+import 'presentation/screens/main_navigator.dart';
+import 'presentation/screens/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -183,14 +183,16 @@ class _LocaleNotifierState extends State<LocaleNotifier> {
             const Locale('es'),
           ],
           theme: AppTheme.darkTheme,
+          // Una sola app: el MainNavigator (5 pestañas). Antes había un
+          // AppSwitcherScreen que bifurcaba en dos modos con dos navegadores.
           home: widget.showOnboarding
               ? const OnboardingScreen()
-              : const AppSwitcherScreen(),
+              : const MainNavigator(),
           routes: {
-            '/main': (context) => const AppSwitcherScreen(),
+            '/main': (context) => const MainNavigator(),
             '/home': (context) => const HomeScreen(),
             '/onboarding': (context) => const OnboardingScreen(),
-            '/settings': (context) => const SettingsScreen(),
+            '/settings': (context) => const ProfileScreen(),
           },
         ),
       ),

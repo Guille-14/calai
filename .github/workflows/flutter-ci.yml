@@ -54,6 +54,20 @@ jobs:
           python3 .github/scripts/ci_annotate.py --mode analyze || true
           cat analyze_human.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
+      # La salida real del analyzer como artefacto (los logs crudos del
+      # runner y las summaries no siempre son accesibles vía API con el
+      # token de la sesión; el artefacto SÍ se puede descargar).
+      - name: Upload analyze logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-logs
+          path: |
+            analyze_human.txt
+            analyze_machine.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
+
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
         if: hashFiles('test/**') != ''
@@ -66,6 +80,15 @@ jobs:
           flutter test > test_human.txt 2>&1 || true
           python3 .github/scripts/ci_annotate.py --mode tail --file test_human.txt || true
           tail -n 40 test_human.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Upload test logs
+        if: always() && hashFiles('test/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: test_human.txt
+          if-no-files-found: ignore
+          retention-days: 7
 
   build-apk:
     name: Build APK (release)

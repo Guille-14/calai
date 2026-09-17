@@ -5,6 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/symmetry/symmetry_progression_service.dart';
+import '../../core/symmetry/symmetry_rank_system.dart';
+import '../../core/symmetry/macro_bridge.dart';
+import '../../core/utils/date_key.dart';
+import '../../core/utils/workout_calories.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/services/google_fit_service.dart';
 import '../../data/services/image_storage_service.dart';
@@ -36,6 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSyncing = false;
   String _lastSync = 'Sincronizar ahora';
 
+  // Datos de Symmetry para el dashboard (la fusión: nutrición +
+  // entrenamiento en un solo panel).
+  final SymmetryProgressionService _symmetryService =
+      SymmetryProgressionService();
+  final MacroBridge _macroBridge = MacroBridge();
+  SymmetryProgress? _symmetryProgress;
+  int _disciplineStreak = 0;
+  String _proteinStatus = '';
+  /// kcal creditadas hoy por entrenamientos (toggle opcional, default off).
+  double _calorieAdjustment = 0;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +70,42 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
       final userData =
           PreferenceManager(prefs).getUserData();
+
+      // Panel Symmetry: rango/XP, rachas y estado de proteína.
+      SymmetryProgress? progress;
+      int disciplineStreak = 0;
+      String proteinStatus = '';
+      try {
+        await _symmetryService.initialize();
+        await _macroBridge.initialize();
+        progress = _symmetryService.getProgress();
+        disciplineStreak = await _symmetryService.getDisciplineStreak();
+        proteinStatus = _macroBridge.getProteinStatusMessage();
+      } catch (e) {
+        // Symmetry no debe tumbar el dashboard de comida.
+        debugPrint('Home: error cargando Symmetry: $e');
+      }
+
+      // Calorías creditadas por entrenamiento (solo si el usuario activó el
+      // toggle en Perfil; default OFF). Ajuste por día: la pref
+      // calorie_adjustment_YYYY-MM-DD acumula las sesiones del día.
+      double adjustment = 0;
+      final creditEnabled = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
+      if (creditEnabled) {
+        final key =
+            kCalorieAdjustmentKeyPrefix + formatDateKey(DateTime.now());
+        adjustment = prefs.getDouble(key) ?? 0;
+      }
+
+      if (mounted) {
+        setState(() {
+          _symmetryProgress = progress;
+          _disciplineStreak = disciplineStreak;
+          _proteinStatus = proteinStatus;
+          _calorieAdjustment = adjustment;
+        });
+      }
+
       if (userData != null && mounted) {
         setState(() {
           if (userData.estimatedCalories > 0) {
@@ -68,6 +120,11 @@ class _HomeScreenState extends State<HomeScreen> {
       // Se mantienen los valores por defecto
     }
   }
+
+  /// Objetivo calórico efectivo: la meta del perfil menos lo creditado por
+  /// entrenamiento hoy (nunca por debajo de 0).
+  int get _effectiveCalorieGoal =>
+      (_calorieGoal - _calorieAdjustment).round().clamp(0, _calorieGoal);
 
   Future<void> _checkFitStatus() async {
     final connected = await _fitService.checkAuthorization();
@@ -102,9 +159,15 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: const AppDrawer(),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: BlocBuilder<FoodLogCubit, FoodLogState>(
-          builder: (context, foodState) {
-            return RefreshIndicator(
+        // Cuando el registro de comidas cambia (añadir/borrar), el panel
+        // Symmetry se refresca: la racha de disciplina depende de si hay
+        // comida registrada ese día.
+        child: BlocListener<FoodLogCubit, FoodLogState>(
+          listenWhen: (a, b) => a.meals.length != b.meals.length,
+          listener: (context, state) => _loadGoals(),
+          child: BlocBuilder<FoodLogCubit, FoodLogState>(
+            builder: (context, foodState) {
+              return RefreshIndicator(
               onRefresh: _syncHealthData,
               backgroundColor: Theme.of(context).colorScheme.surface,
               color: Theme.of(context).colorScheme.primary,
@@ -120,6 +183,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildWaterCard(foodState.waterGlasses),
                     const SizedBox(height: 16),
                     _buildGoalsCard(foodState),
+                    const SizedBox(height: 16),
+                    _buildSymmetryCard(),
                     if (foodState.meals.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       _buildMealsSection(foodState),
@@ -132,7 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             );
-          },
+            },
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -342,7 +408,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGoalsCard(FoodLogState state) {
-    final calorieGoal = _calorieGoal;
+    // Con el toggle de "creditar calorías quemadas" activo, el objetivo
+    // mostrado es la meta del perfil menos lo creditado por entrenamiento.
+    final calorieGoal = _effectiveCalorieGoal;
     return Column(
       children: [
         Container(
@@ -362,7 +430,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                     child: const Text('Objetivos Diarios', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
-                  Text('${state.totalCalories.toInt()} / $calorieGoal kcal', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('${state.totalCalories.toInt()} / $calorieGoal kcal', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      if (_calorieAdjustment > 0)
+                        Text(
+                          'incluye -${_calorieAdjustment.toInt()} kcal de entrenamiento',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10),
+                        ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -418,6 +496,93 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Panel Symmetry en el dashboard: rango/XP, racha de entrenamiento,
+  /// racha de disciplina (comida + entreno) y estado de proteína.
+  /// La fusión hace visibles el progreso de entrenamiento y la nutrición
+  /// juntos, sin cambiar de "modo".
+  Widget _buildSymmetryCard() {
+    final progress = _symmetryProgress;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.shield, color: Color(0xFF00C853), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Symmetry',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (progress != null)
+                Text(
+                  progress.currentRank.displayName,
+                  style: TextStyle(
+                    color: progress.currentRank.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              else
+                const Text('Iniciando...', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildSymmetryStat(
+                'XP total',
+                progress?.totalXP.toStringAsFixed(0) ?? '—',
+                Icons.star,
+                Colors.amber,
+              ),
+              _buildSymmetryStat(
+                'Racha entreno',
+                '${progress?.streakDays.toInt() ?? 0}d',
+                Icons.local_fire_department,
+                Colors.orange,
+              ),
+              _buildSymmetryStat(
+                'Racha disciplina',
+                '$_disciplineStreakd',
+                Icons.check_circle,
+                const Color(0xFF00C853),
+              ),
+            ],
+          ),
+          if (_proteinStatus.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              _proteinStatus,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSymmetryStat(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 9)),
+        ],
+      ),
     );
   }
 

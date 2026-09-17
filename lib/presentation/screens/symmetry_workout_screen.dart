@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
-import '../../core/symmetry/health_connect_bridge.dart';
+import '../../core/utils/date_key.dart';
+import '../../core/utils/workout_calories.dart';
+import '../../data/local/preference_manager.dart';
 import '../../data/services/food_service.dart';
 import '../widgets/hevy_sync_button_widget.dart';
 
@@ -805,6 +808,12 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
       exercises: _sessionExercises,
     );
 
+    // Feedback entrenamiento -> nutrición (DESACTIVADO por defecto): si el
+    // usuario lo activó en Perfil, se credita el gasto estimado del
+    // entrenamiento en el presupuesto calórico del día
+    // (pref calorie_adjustment_YYYY-MM-DD, lo aplica Home).
+    await _creditWorkoutCaloriesIfEnabled(durationMinutes);
+
     if (mounted) {
       showDialog(
         context: context,
@@ -862,6 +871,31 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
           ],
         ),
       );
+    }
+  }
+
+  /// Si el toggle 'creditar calorías quemadas' está activo, suma las kcal
+  /// estimadas (fórmula MET, ver core/utils/workout_calories.dart) al
+  /// ajuste calórico de hoy. El peso se toma del perfil (fallback 75 kg).
+  /// Nunca rompe el flujo de finalización del entrenamiento.
+  Future<void> _creditWorkoutCaloriesIfEnabled(int durationMinutes) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
+      if (!enabled) return;
+
+      // Sin perfil, la estimación usa el fallback de 75 kg.
+      final weight = PreferenceManager(prefs).getUserData()?.weight ?? 75;
+      final kcal = estimateWorkoutCalories(
+        minutes: durationMinutes,
+        weightKg: weight,
+      );
+      if (kcal <= 0) return;
+
+      final key = kCalorieAdjustmentKeyPrefix + formatDateKey(DateTime.now());
+      await prefs.setDouble(key, (prefs.getDouble(key) ?? 0) + kcal);
+    } catch (e) {
+      debugPrint('Symmetry: error creditando calorías de entrenamiento: $e');
     }
   }
 }
