@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/ai/ai_provider_kind.dart';
 import '../../core/security/api_key_store.dart';
 import 'ollama_service.dart';
 import 'google_ai_service.dart';
@@ -32,9 +33,9 @@ class AiGateway {
 
   static String get model {
     switch (_activeProvider) {
-      case 'google':
+      case AiProviderKind.google:
         return _googleService.selectedModel;
-      case 'openrouter':
+      case AiProviderKind.openRouter:
         return _openrouterModel;
       default:
         return _ollamaService.selectedModel;
@@ -43,17 +44,18 @@ class AiGateway {
 
   static String? get apiKey {
     switch (_activeProvider) {
-      case 'google':
+      case AiProviderKind.google:
         return _googleService.apiKey;
-      case 'openrouter':
+      case AiProviderKind.openRouter:
         return _openrouterApiKey.isEmpty ? null : _openrouterApiKey;
       default:
         return 'ollama';
     }
   }
 
-  static String _activeProvider = 'ollama';
-  static String get activeProvider => _activeProvider;
+  static AiProviderKind _activeProvider = AiProviderKind.ollama;
+  static String get activeProvider => _activeProvider.id;
+  static AiProviderKind get activeProviderKind => _activeProvider;
 
   static String _openrouterApiKey = '';
   static String _openrouterModel = 'google/gemini-2.5-flash';
@@ -84,11 +86,13 @@ class AiGateway {
           await ApiKeyStore.get(id: 'openrouter', envFallback: envKey);
 
       if (savedProvider != null && savedProvider.isNotEmpty) {
-        _activeProvider = savedProvider;
+        _activeProvider = AiProviderKind.fromId(savedProvider);
       } else {
         // Sin elección explícita del usuario: usar OpenRouter si hay clave
         // disponible (almacenamiento seguro o .env); si no, Ollama.
-        _activeProvider = _openrouterApiKey.isNotEmpty ? 'openrouter' : 'ollama';
+        _activeProvider = _openrouterApiKey.isNotEmpty
+            ? AiProviderKind.openRouter
+            : AiProviderKind.ollama;
       }
 
       final envModel = _env('OPENROUTER_MODEL');
@@ -99,7 +103,7 @@ class AiGateway {
       await _googleService.initialize();
 
       _isInitialized = true;
-      debugPrint('AiGateway: Inicializado. Proveedor: $_activeProvider');
+      debugPrint('AiGateway: Inicializado. Proveedor: ${_activeProvider.id}');
     } catch (e) {
       _isInitialized = true;
       debugPrint('AiGateway: Error inicializando: $e');
@@ -107,18 +111,18 @@ class AiGateway {
   }
 
   static Future<void> setProvider(String provider) async {
-    _activeProvider = provider;
+    _activeProvider = AiProviderKind.fromId(provider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_providerPref, provider);
-    debugPrint('AiGateway: Proveedor cambiado a $provider');
+    debugPrint('AiGateway: Proveedor cambiado a ${_activeProvider.id}');
   }
 
   static void setModel(String m) {
     switch (_activeProvider) {
-      case 'google':
+      case AiProviderKind.google:
         _googleService.updateModel(m);
         break;
-      case 'openrouter':
+      case AiProviderKind.openRouter:
         _openrouterModel = m;
         unawaited(_saveOpenrouterConfig());
         break;
@@ -129,16 +133,16 @@ class AiGateway {
 
   static void setApiKey(String k) {
     switch (_activeProvider) {
-      case 'google':
+      case AiProviderKind.google:
         unawaited(_googleService.updateApiKey(k));
         break;
-      case 'openrouter':
+      case AiProviderKind.openRouter:
         _openrouterApiKey = k.trim();
         unawaited(_saveOpenrouterConfig());
         break;
       default:
         debugPrint(
-            'AiGateway: el proveedor "$_activeProvider" no usa API key; se ignora la clave recibida');
+            'AiGateway: el proveedor "${_activeProvider.id}" no usa API key; se ignora la clave recibida');
     }
   }
 
@@ -256,7 +260,7 @@ producto y estima la ración visible. Devuelve únicamente el objeto JSON pedido
 por el esquema, sin texto adicional. Los valores nutricionales son para la
 ración visible, no por 100 g.''';
 
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final available = await _googleService.isModelAvailable();
         if (available == false) {
           return FoodAnalysisResult.error(
@@ -275,7 +279,7 @@ ración visible, no por 100 g.''';
 
       final String responseText;
       final String? error;
-      if (_activeProvider == 'openrouter') {
+      if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(
           prompt: prompt,
           imageBase64: base64Image,
@@ -378,7 +382,7 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
       bool isSuccess;
       String? error;
 
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final resp = await _googleService.generateResponseWithImage(
           prompt: prompt,
           imageBase64: base64Image,
@@ -387,7 +391,7 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
         isSuccess = resp.isSuccess;
         responseText = resp.text;
         error = resp.error;
-      } else if (_activeProvider == 'openrouter') {
+      } else if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(
           prompt: prompt,
           imageBase64: base64Image,
@@ -439,7 +443,7 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
       bool isSuccess;
       String? error;
 
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final resp = await _googleService.generateResponse(
           prompt: prompt,
           responseSchema: GoogleAiService.foodResponseSchema,
@@ -447,7 +451,7 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
         isSuccess = resp.isSuccess;
         responseText = resp.text;
         error = resp.error;
-      } else if (_activeProvider == 'openrouter') {
+      } else if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(
           prompt: prompt,
           structuredJson: true,
@@ -496,10 +500,10 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
           : '';
       final prompt = 'Eres asesor nutricional experto. Responde en espanol.\n${ctxStr}Usuario: $userMessage';
       
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final resp = await _googleService.generateResponse(prompt: prompt);
         return resp.isSuccess ? resp.text : 'Error Google: ${resp.error}';
-      } else if (_activeProvider == 'openrouter') {
+      } else if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(prompt: prompt);
         return resp.isSuccess ? resp.text : 'Error OpenRouter: ${resp.error}';
       } else {
@@ -521,10 +525,10 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
           0, (sum, e) => sum + ((e['calories'] as num?)?.toInt() ?? 0));
       final prompt = 'Resumen de $totalCal calorias hoy. Feedback breve (2 frases):';
       
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final resp = await _googleService.generateResponse(prompt: prompt);
         return resp.isSuccess ? resp.text : 'Resumen no disponible';
-      } else if (_activeProvider == 'openrouter') {
+      } else if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(prompt: prompt);
         return resp.isSuccess ? resp.text : 'Resumen no disponible';
       } else {
@@ -542,10 +546,10 @@ Si un ejercicio no tiene peso, pon 0. Asegúrate de capturar bien todo lo que ve
   static Future<bool> testConnection() async {
     if (!_isInitialized) await initFromPrefs();
     try {
-      if (_activeProvider == 'google') {
+      if (_activeProvider == AiProviderKind.google) {
         final resp = await _googleService.generateResponse(prompt: 'ping');
         return resp.isSuccess;
-      } else if (_activeProvider == 'openrouter') {
+      } else if (_activeProvider == AiProviderKind.openRouter) {
         final resp = await _openrouterGenerate(prompt: 'ping');
         return resp.isSuccess;
       } else {
