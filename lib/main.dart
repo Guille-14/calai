@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_translations.dart';
 import 'data/repositories/food_repository.dart';
-import 'data/services/food_service.dart';
+import 'data/services/ai_gateway.dart';
 import 'data/services/database_service.dart';
 import 'data/services/external_food_service.dart';
 import 'data/services/notification_service.dart';
@@ -58,7 +58,7 @@ Future<void> _bootstrap() async {
   final String languageCode = prefs.getString('language_code') ?? 'es';
   final Locale appLocale = Locale(languageCode);
 
-  // FoodService se autoconfigura de forma perezosa desde preferencias y
+  // AiGateway se autoconfigura de forma perezosa desde preferencias y
   // (.env). La IA y las notificaciones no deben retrasar el primer frame.
   final databaseService = DatabaseService();
   final imageStorageService = ImageStorageService();
@@ -97,7 +97,7 @@ Future<void> _bootstrap() async {
   unawaited(() async {
     try {
       await Future.wait([
-        FoodService.initFromPrefs(),
+        AiGateway.initFromPrefs(),
         notificationService.scheduleSmartNotifications(),
       ]);
     } catch (error) {

@@ -8,7 +8,7 @@ import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/workout_calories.dart';
 import '../../data/local/preference_manager.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 import '../widgets/hevy_sync_button_widget.dart';
 
 class SymmetryWorkoutScreen extends StatefulWidget {
@@ -560,7 +560,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
     );
 
     final bytes = await xfile.readAsBytes();
-    final result = await FoodService.analyzeSymmetryRoutineFromBytes(bytes, _selectedMuscleGroup);
+    final result = await AiGateway.analyzeSymmetryRoutineFromBytes(bytes, _selectedMuscleGroup);
 
     if (!mounted) return;
     Navigator.pop(context); // close loader

@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/utils/app_translations.dart';
 import '../../data/models/food_item.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 import '../cubit/food_log_cubit.dart';
 import '../widgets/ai_analysis_progress.dart';
 import 'openrouter_diagnostics_screen.dart';
@@ -181,7 +181,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       if (!mounted) return;
       setState(() => _analysisStage = AiAnalysisStage.analyzing);
       final result =
-          await FoodService.analyzeFoodImageFromBytes(_selectedImageBytes!);
+          await AiGateway.analyzeFoodImageFromBytes(_selectedImageBytes!);
 
       if (!mounted) return;
       setState(() {
@@ -237,7 +237,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           : foodData.confidence == 'medium'
               ? 0.7
               : 0.5,
-      aiModel: FoodService.model,
+      aiModel: AiGateway.model,
     );
 
     if (!mounted) return;
@@ -338,7 +338,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                         const Icon(Icons.auto_awesome,
                             color: AppColors.accent, size: 16),
                         const SizedBox(width: 6),
-                        Text('IA: ${FoodService.model}',
+                        Text('IA: ${AiGateway.model}',
                             style: const TextStyle(
                                 color: AppColors.textSecondary, fontSize: 11)),
                       ],
@@ -655,7 +655,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'AI: ${FoodService.model.split('/').last}',
+                'AI: ${AiGateway.model.split('/').last}',
                 style: TextStyle(
                   color: AppColors.textPrimary.withValues(alpha: 0.7),
                   fontSize: 12,
@@ -774,7 +774,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   }
 
   Widget _buildLoadingOverlay() {
-    final provider = switch (FoodService.activeProvider) {
+    final provider = switch (AiGateway.activeProvider) {
       'google' => 'Gemini',
       'openrouter' => 'OpenRouter',
       _ => 'Ollama',
@@ -785,7 +785,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         child: AiAnalysisProgress(
           stage: _analysisStage,
           provider: provider,
-          model: FoodService.model.split('/').last,
+          model: AiGateway.model.split('/').last,
         ),
       ),
     );

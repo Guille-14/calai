@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
 import '../../models/food_entry.dart';
-import '../services/food_service.dart';
+import '../services/ai_gateway.dart';
 import '../services/database_service.dart';
 import '../services/external_food_service.dart';
 import '../services/image_storage_service.dart';
@@ -134,7 +134,7 @@ class FoodRepository {
   Future<Either<String, FoodItem>> detectFoodFromImage(
       Uint8List imageBytes) async {
     try {
-      final result = await FoodService.analyzeFoodImageFromBytes(imageBytes);
+      final result = await AiGateway.analyzeFoodImageFromBytes(imageBytes);
 
       if (result.isError) {
         return Left(result.errorMessage ?? 'Error en el análisis');
@@ -197,7 +197,7 @@ class FoodRepository {
 
     try {
       final result =
-          await FoodService.estimateCaloriesFromText(normalizedDescription);
+          await AiGateway.estimateCaloriesFromText(normalizedDescription);
       if (result.isError) {
         final cached = await _readCachedAiFood(normalizedDescription);
         return cached == null
@@ -409,7 +409,7 @@ class FoodRepository {
 
   Future<ProductModel?> _getAiFoodData(String query) async {
     try {
-      final result = await FoodService.estimateCaloriesFromText(query);
+      final result = await AiGateway.estimateCaloriesFromText(query);
 
       if (result.isError) {
         return null;
@@ -449,7 +449,7 @@ class FoodRepository {
               })
           .toList();
 
-      return await FoodService.generateNutritionSummary(entries);
+      return await AiGateway.generateNutritionSummary(entries);
     } catch (e) {
       return null;
     }

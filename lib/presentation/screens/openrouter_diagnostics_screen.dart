@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/utils/app_translations.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 
 class OpenRouterDiagnosticsScreen extends StatefulWidget {
   const OpenRouterDiagnosticsScreen({super.key});
@@ -38,8 +38,8 @@ class _OpenRouterDiagnosticsScreenState
       _logs = 'Starting OpenRouter diagnostics...\n';
     });
 
-    _addLog('Model: ${FoodService.model}');
-    final apiKey = FoodService.apiKey ?? '';
+    _addLog('Model: ${AiGateway.model}');
+    final apiKey = AiGateway.apiKey ?? '';
     // Solo longitud y últimos 4 caracteres: antes mostraba los 10 primeros
     // caracteres de la key en el log visible en pantalla.
     if (apiKey.isNotEmpty) {
@@ -51,7 +51,7 @@ class _OpenRouterDiagnosticsScreenState
     _addLog('');
 
     _addLog('Step 1: Testing connection to OpenRouter...');
-    final connected = await FoodService.testConnection();
+    final connected = await AiGateway.testConnection();
 
     setState(() {
       _isConnected = connected;
@@ -196,7 +196,7 @@ class _OpenRouterDiagnosticsScreenState
 
   Widget _buildConfigurationCard() {
     final t = AppTranslations.of(context);
-    final hasKey = (FoodService.apiKey ?? '').isNotEmpty;
+    final hasKey = (AiGateway.apiKey ?? '').isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -211,7 +211,7 @@ class _OpenRouterDiagnosticsScreenState
           const SizedBox(height: 16),
           _buildConfigRow(t.translate('provider'), 'OpenRouter'),
           const SizedBox(height: 12),
-          _buildConfigRow(t.translate('model'), FoodService.model),
+          _buildConfigRow(t.translate('model'), AiGateway.model),
           const SizedBox(height: 12),
           _buildConfigRow(
               t.translate('api_key'),
@@ -310,7 +310,7 @@ class _OpenRouterDiagnosticsScreenState
 
   Widget _buildInstructionsCard() {
     final t = AppTranslations.of(context);
-    final hasKey = (FoodService.apiKey ?? '').isNotEmpty;
+    final hasKey = (AiGateway.apiKey ?? '').isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/recipe_model.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 import '../../data/services/recipe_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -33,9 +33,9 @@ class _TikTokRecipeExtractorState extends State<TikTokRecipeExtractor> {
 
     try {
       // Antes usaba AiOrchestrator sin ningún adapter registrado: fallaba
-      // siempre con "Ningún modelo configurado". Ahora usa FoodService,
+      // siempre con "Ningún modelo configurado". Ahora usa AiGateway,
       // que sí tiene proveedor activo (OpenRouter/Gemini/Ollama).
-      final responseText = await FoodService.chatCompletion(
+      final responseText = await AiGateway.chatCompletion(
         'Convierte el siguiente texto de una receta de red social en JSON. '
         'Si faltan cantidades exactas, estima valores de porción estándar y '
         'calcula los macros a partir de los ingredientes. El nombre debe ser '

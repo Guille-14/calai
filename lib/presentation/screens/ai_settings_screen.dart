@@ -2,7 +2,7 @@ import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
 import '../../data/services/google_ai_service.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 import '../widgets/ollama_terminal_widget.dart';
 
 /// Screen for AI selection and configuration (Ollama & Google Gemini)
@@ -60,13 +60,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Future<void> _initializeSettings() async {
     try {
-      await FoodService.initFromPrefs();
+      await AiGateway.initFromPrefs();
       await _ollamaService.initialize();
       await _googleService.initialize();
 
       if (mounted) {
         setState(() {
-          _activeProvider = FoodService.activeProvider;
+          _activeProvider = AiGateway.activeProvider;
           _servers = _ollamaService.servers;
           _selectedServerId = _ollamaService.activeServer?.id;
           _urlController.text = _ollamaService.baseUrl;
@@ -111,7 +111,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   }
 
   Future<void> _changeProvider(String provider) async {
-    await FoodService.setProvider(provider);
+    await AiGateway.setProvider(provider);
     setState(() {
       _activeProvider = provider;
       _responseTimeMs = 0; // Reset response time on switch

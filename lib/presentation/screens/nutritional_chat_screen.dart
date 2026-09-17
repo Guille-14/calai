@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
 import '../../core/utils/app_translations.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
-import '../../data/services/food_service.dart';
+import '../../data/services/ai_gateway.dart';
 
 class _ChatMessage {
   final String id;
@@ -71,9 +71,9 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
 
   Future<void> _initializeAndLoad() async {
     try {
-      await FoodService.initFromPrefs();
+      await AiGateway.initFromPrefs();
     } catch (e) {
-      debugPrint('FoodService init error: $e');
+      debugPrint('AiGateway init error: $e');
     }
     try {
       await _symmetry.initialize();
@@ -159,7 +159,7 @@ class _NutritionalChatScreenState extends State<NutritionalChatScreen> {
       final contextStr = 'Contexto Físico Hoy: Has ganado ${stats.dailyXP.toStringAsFixed(0)} XP. Nivel: ${stats.currentRank.displayName}. Rango completado: ${(stats.rankProgress*100).toStringAsFixed(1)}%.';
       history.insert(0, contextStr);
 
-      final response = await FoodService.chatCompletion(
+      final response = await AiGateway.chatCompletion(
         text,
         context: history,
       );
