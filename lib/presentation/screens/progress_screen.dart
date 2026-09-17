@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
+import '../../core/utils/date_key.dart';
 import '../cubit/food_log_cubit.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/services/image_storage_service.dart';
@@ -66,7 +67,7 @@ class _ProgressScreenState extends State<ProgressScreen>
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       if (data != null) {
@@ -91,7 +92,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       final date =
           DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
       final dayKey = DateTime(date.year, date.month, date.day);
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       double dayTotal = 0;
@@ -117,7 +118,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     for (int i = 0; i < 30; i++) {
       final date =
           DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-      final key = 'food_log_${date.toIso8601String().split('T')[0]}';
+      final key = 'food_log_${formatDateKey(date)}';
       final data = sharedPrefs.getString(key);
 
       if (data != null) {
@@ -200,7 +201,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,7 +217,7 @@ class _ProgressScreenState extends State<ProgressScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: AppColors.accentCalories.withOpacity(0.2),
+                    color: AppColors.accentCalories.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8)),
                 child: Text('${_calorieGoal.toInt()} kcal',
                     style: const TextStyle(
@@ -251,7 +252,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: _calorieGoal * 1.5,
-                          color: Colors.white.withOpacity(0.03),
+                          color: Colors.white.withValues(alpha: 0.03),
                         ),
                       ),
                     ],
@@ -309,8 +310,8 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalInterval: _calorieGoal,
                   getDrawingHorizontalLine: (value) => FlLine(
                     color: value == _calorieGoal
-                        ? Colors.green.withOpacity(0.5)
-                        : Colors.white.withOpacity(0.03),
+                        ? Colors.green.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.03),
                     strokeWidth: value == _calorieGoal ? 1 : 0.5,
                     dashArray: value == _calorieGoal ? [5, 5] : null,
                   ),
@@ -320,7 +321,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalLines: [
                     HorizontalLine(
                         y: _calorieGoal,
-                        color: Colors.green.withOpacity(0.5),
+                        color: Colors.green.withValues(alpha: 0.5),
                         strokeWidth: 1,
                         dashArray: [5, 5],
                         label: HorizontalLineLabel(
@@ -405,14 +406,14 @@ class _ProgressScreenState extends State<ProgressScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 20),
           ),
@@ -442,9 +443,9 @@ class _ProgressScreenState extends State<ProgressScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -519,7 +520,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -662,9 +663,9 @@ class _ProgressScreenState extends State<ProgressScreen>
                         height: 40,
                         decoration: BoxDecoration(
                           color: totalCalories > _calorieGoal
-                              ? Colors.red.withOpacity(0.2)
+                              ? Colors.red.withValues(alpha: 0.2)
                               : (totalCalories > 0
-                                  ? AppColors.accentCalories.withOpacity(0.2)
+                                  ? AppColors.accentCalories.withValues(alpha: 0.2)
                                   : Colors.white10),
                           borderRadius: BorderRadius.circular(8),
                         ),

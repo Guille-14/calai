@@ -247,14 +247,6 @@ class SymmetryProgressionService {
     await _macroBridge.setProteinGoal(grams);
   }
 
-  Future<void> syncProteinFromFoodLog(
-      double totalProtein, DateTime date) async {
-    await _macroBridge.syncFromFoodLog(
-      totalProtein: totalProtein,
-      date: date,
-    );
-  }
-
   Map<String, double> getMuscleHeatMap() {
     return _fatigueMap.getHeatMap();
   }

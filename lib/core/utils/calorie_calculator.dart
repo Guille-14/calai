@@ -1,6 +1,13 @@
 class CalorieCalculator {
   /// Calculates the Basal Metabolic Rate (BMR) and estimated daily calorie needs
-  /// using the Mifflin-St Jeor Equation
+  /// using the Mifflin-St Jeor equation (1990):
+  ///   Hombres:  BMR = 10*peso(kg) + 6.25*altura(cm) - 5*edad + 5
+  ///   Mujeres:  BMR = 10*peso(kg) + 6.25*altura(cm) - 5*edad - 161
+  ///   Otro:     promedio de ambas fórmulas.
+  ///
+  /// Antes este método usaba Harris-Benedict revisada (1984) a pesar del
+  /// comentario que decía Mifflin-St Jeor; la fórmula implementada no
+  /// coincidía con la documentada.
   static int fallbackEstimateCalories({
     required double weight, // in kg
     required double height, // in cm
@@ -10,15 +17,15 @@ class CalorieCalculator {
   }) {
     double bmr;
 
-    // Calculate BMR using Mifflin-St Jeor Equation
+    // Calculate BMR using the Mifflin-St Jeor equation
     if (gender == 'Male') {
-      bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
     } else if (gender == 'Female') {
-      bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
     } else {
       // Average BMR for other genders
-      double maleBmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
-      double femaleBmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+      double maleBmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+      double femaleBmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
       bmr = (maleBmr + femaleBmr) / 2;
     }
 

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/symmetry/macro_bridge.dart';
+import '../../core/utils/date_key.dart';
 import '../../data/models/food_item.dart';
 import '../../data/repositories/food_repository.dart';
 
@@ -121,7 +122,13 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     }
   }
 
-  /// No debe romper el registro de comida si el bridge falla.
+  /// ÚNICO punto de sincronización proteína → Symmetry (multiplicador x1.2).
+  /// Se ejecuta cada vez que se carga un registro diario (hoy u otro día) y
+  /// no debe romper el registro de comida si el bridge falla.
+  ///
+  /// Antes existía también SymmetryProgressionService.syncProteinFromFoodLog,
+  /// un segundo camino muerto que nadie llamaba; se eliminó para que solo
+  /// quede este (FoodLogCubit → MacroBridge).
   void _syncProteinToMacroBridge(double totalProtein, DateTime date) {
     try {
       final macro = MacroBridge();
@@ -133,13 +140,13 @@ class FoodLogCubit extends Cubit<FoodLogState> {
 
   Future<int> _loadWaterGlasses(DateTime date) async {
     final prefs = await _getPrefs;
-    final key = '$_waterKey${date.toIso8601String().split('T')[0]}';
+    final key = '$_waterKey${formatDateKey(date)}';
     return prefs.getInt(key) ?? 0;
   }
 
   Future<void> _saveWaterGlasses(DateTime date, int glasses) async {
     final prefs = await _getPrefs;
-    final key = '$_waterKey${date.toIso8601String().split('T')[0]}';
+    final key = '$_waterKey${formatDateKey(date)}';
     await prefs.setInt(key, glasses);
   }
 

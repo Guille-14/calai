@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/date_key.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
 import '../../models/food_entry.dart';
@@ -27,7 +28,7 @@ class FoodRepository {
   );
 
   Future<List<FoodItem>> getDailyFoodLog(DateTime date) async {
-    final String key = 'food_log_${date.toIso8601String().split('T')[0]}';
+    final String key = 'food_log_${formatDateKey(date)}';
     final String? storedData = _prefs.getString(key);
 
     if (storedData != null) {
@@ -38,8 +39,7 @@ class FoodRepository {
   }
 
   Future<void> addFoodItem(FoodItem item) async {
-    final String key =
-        'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    final String key = 'food_log_${formatDateKey(item.timestamp)}';
     List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
     currentLog.add(item);
 
@@ -162,8 +162,7 @@ class FoodRepository {
   }
 
   Future<void> deleteFoodItem(FoodItem item) async {
-    final String key =
-        'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    final String key = 'food_log_${formatDateKey(item.timestamp)}';
     List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
     currentLog.removeWhere((existingItem) => existingItem.id == item.id);
 
@@ -174,8 +173,7 @@ class FoodRepository {
   }
 
   Future<void> updateFoodItem(FoodItem item) async {
-    final String key =
-        'food_log_${item.timestamp.toIso8601String().split('T')[0]}';
+    final String key = 'food_log_${formatDateKey(item.timestamp)}';
     List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
 
     final index =
