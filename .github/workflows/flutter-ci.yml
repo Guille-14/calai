@@ -18,6 +18,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# El token GITHUB_TOKEN de Actions necesita `contents: write` para poder
+# publicar los logs en la rama ci-logs al fallar (sin permissions: explícito
+# solo tiene read y el push no funciona).
+permissions:
+  contents: write
+  checks: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -87,9 +94,12 @@ jobs:
           git config user.email "ci-logs@calai"
           git add -A
           git commit -q -m "CI logs run $GITHUB_RUN_ID"
-          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs \
-            && echo "ci-logs: publicado run $GITHUB_RUN_ID" \
-            || echo "ci-logs: no se pudo publicar (sin permisos?)"
+          if git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs; then
+            echo "ci-logs: publicado run $GITHUB_RUN_ID"
+          else
+            echo "ci-logs: fallo el push; se intenta otra vez sin -f"
+            git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs || echo "ci-logs: sin publicar (ver log)"
+          fi
 
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
@@ -125,9 +135,12 @@ jobs:
           git config user.email "ci-logs@calai"
           git add -A
           git commit -q -m "CI test logs run $GITHUB_RUN_ID"
-          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs \
-            && echo "ci-logs: publicado run $GITHUB_RUN_ID" \
-            || echo "ci-logs: no se pudo publicar (sin permisos?)"
+          if git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs; then
+            echo "ci-logs: publicado run $GITHUB_RUN_ID"
+          else
+            echo "ci-logs: fallo el push; se intenta otra vez sin -f"
+            git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-logs || echo "ci-logs: sin publicar (ver log)"
+          fi
 
   build-apk:
     name: Build APK (release)
