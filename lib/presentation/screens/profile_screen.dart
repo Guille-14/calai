@@ -535,8 +535,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(child: CircularProgressIndicator()));
+        backgroundColor: AppColors.background,
+        body: ScreenSkeleton(cards: 5),
+      );
     }
 
     final progress = _symmetryService.getProgress();

@@ -121,8 +121,9 @@ class _ProgressScreenState extends State<ProgressScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(child: CircularProgressIndicator()));
+        backgroundColor: AppColors.background,
+        body: ScreenSkeleton(cards: 4),
+      );
     }
 
     return Scaffold(
