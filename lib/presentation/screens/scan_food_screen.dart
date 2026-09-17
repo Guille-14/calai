@@ -213,7 +213,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       protein: foodData.protein,
       carbs: foodData.carbs,
       fat: foodData.fat,
-      sugar: 0,
+      sugar: foodData.sugar,
       quantity: 100,
       timestamp: DateTime.now(),
       ingredients: ingredients,
@@ -712,6 +712,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     protein: data.protein,
                     carbs: data.carbs,
                     fat: data.fat,
+                    sugar: data.sugar,
                     confidence: data.confidence,
                   );
                 });

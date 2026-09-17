@@ -36,9 +36,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   // Google states
   bool _googleAvailable = false;
-  String _selectedGoogleModel = 'gemini-1.5-flash';
+  String _selectedGoogleModel = GoogleAiService.defaultModel;
   List<String> _googleModels = [];
   bool _loadingGoogleModels = false;
+  bool _googleModelUnavailable = false;
+  bool _googleCatalogChecked = false;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -96,9 +98,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         if (ollamaAvailable) {
           _loadInstalledModels();
         }
-        if (googleAvailable) {
-          _loadGoogleModels();
-        }
+        // El catálogo se consulta al abrir Ajustes IA, no solo después de
+        // un ping exitoso: así se detectan modelos retirados antes de escanear.
+        _loadGoogleModels();
       }
     } catch (e) {
       if (mounted) {
@@ -158,16 +160,32 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Future<void> _loadGoogleModels() async {
     if (_loadingGoogleModels) return;
-    setState(() {
-      _loadingGoogleModels = true;
-      _googleModels = [];
-    });
-    final models = await _googleService.getAvailableModels();
     if (mounted) {
       setState(() {
-        _googleModels = models;
-        _loadingGoogleModels = false;
+        _loadingGoogleModels = true;
+        _googleModelUnavailable = false;
       });
+    }
+    final models = await _googleService.getAvailableModels();
+    if (!mounted) return;
+    if (models.isNotEmpty &&
+        !models.contains(GoogleAiService.defaultModel)) {
+      models.insert(0, GoogleAiService.defaultModel);
+    }
+
+    final unavailable = models.isNotEmpty &&
+        !models.contains(_selectedGoogleModel);
+    setState(() {
+      _googleModels = models;
+      _loadingGoogleModels = false;
+      _googleCatalogChecked = true;
+      _googleModelUnavailable = unavailable;
+    });
+    if (unavailable) {
+      _showSnackBar(
+        'El modelo configurado ya no está disponible, elige uno de la lista actual',
+        AppColors.error,
+      );
     }
   }
 
@@ -263,7 +281,10 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       setState(() => _selectedModel = model);
     } else {
       await _googleService.updateModel(model);
-      setState(() => _selectedGoogleModel = model);
+      setState(() {
+        _selectedGoogleModel = model;
+        _googleModelUnavailable = false;
+      });
     }
     _showSnackBar('Modelo: $model', AppColors.accent);
   }
@@ -601,21 +622,44 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   }
 
   Widget _buildGoogleModelSection() {
-    final List<String> ms = _googleModels.isNotEmpty ? _googleModels : [
-      'gemini-2.0-flash',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b'
-    ];
+    final List<String> ms = _googleModels.isNotEmpty
+        ? _googleModels
+        : [GoogleAiService.defaultModel];
 
-    // Recomendación oficial para escanear comida
-    const String bestForFood = 'gemini-1.5-flash';
+    // El alias latest evita que la recomendación caduque con una versión.
+    const String bestForFood = GoogleAiService.defaultModel;
 
     return _section(
       icon: Icons.psychology,
       title: 'Modelo Gemini',
       child: Column(
         children: [
+          if (_googleModelUnavailable)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+              ),
+              child: const Text(
+                'El modelo configurado ya no está disponible, elige uno de la lista actual',
+                style: TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+            ),
+          if (_googleCatalogChecked &&
+              _googleService.apiKey.isNotEmpty &&
+              _googleModels.isEmpty &&
+              !_googleModelUnavailable)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No se pudo comprobar el catálogo ahora. Pulsa Actualizar modelos antes de escanear.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
           if (_loadingGoogleModels)
             const Padding(
               padding: EdgeInsets.all(20),
