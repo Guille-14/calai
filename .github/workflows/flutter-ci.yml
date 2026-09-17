@@ -63,6 +63,17 @@ jobs:
         run: |
           flutter analyze --no-pub --machine > analyze_machine.jsonl 2>&1 || true
           python3 .github/scripts/ci_annotate.py --mode analyze || true
+          # Mantiene el diagnóstico visible incluso cuando GitHub no expone
+          # el log crudo del runner a la API de la sesión.
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('analyze_human.txt').read_text(errors='replace')[-60000:]
+          if text.strip() and 'No issues found!' not in text:
+              encoded = (text.replace('%', '%25')
+                         .replace('\r', '%0D')
+                         .replace('\n', '%0A'))
+              print('::error file=.github/workflows/flutter-ci.yml,line=1::' + encoded)
+          PY
           cat analyze_human.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 
       # La salida real del analyzer como artefacto (los logs crudos del
