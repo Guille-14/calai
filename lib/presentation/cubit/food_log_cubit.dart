@@ -82,6 +82,10 @@ class FoodLogCubit extends Cubit<FoodLogState> {
 
   FoodLogCubit(this._repository) : super(const FoodLogState());
 
+  /// Punto de acceso al repositorio para las pantallas que necesitan
+  /// consultas por rango (Progreso) sin duplicar la instancia.
+  FoodRepository get repository => _repository;
+
   Future<SharedPreferences> get _getPrefs async {
     _prefs ??= await SharedPreferences.getInstance();
     return _prefs!;

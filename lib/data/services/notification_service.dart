@@ -1,12 +1,10 @@
-import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import '../../core/utils/date_key.dart';
-import '../models/food_item.dart';
+import 'database_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -330,15 +328,15 @@ class NotificationService {
   Future<void> analyzeAndNotify() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    final todayKey = 'food_log_${formatDateKey(now)}';
 
-    final data = prefs.getString(todayKey);
-    if (data == null) return;
+    // El registro diario ya vive en SQLite (tabla food_entries, indexada
+    // por fecha): se lee vía DatabaseService en vez de la clave
+    // food_log_ de SharedPreferences.
+    final rows = await DatabaseService().getFoodEntriesBetween(now, now);
+    if (rows.isEmpty) return;
 
-    final List<dynamic> jsonList = json.decode(data);
-    final meals = jsonList.map((j) => FoodItem.fromJson(j)).toList();
-
-    final totalCalories = meals.fold(0.0, (sum, m) => sum + m.calories);
+    final totalCalories = rows.fold(
+        0.0, (sum, r) => sum + ((r['calories'] as num?)?.toDouble() ?? 0));
     final goal = prefs.getDouble('calorie_goal') ?? 2000;
 
     if (totalCalories >= goal * 0.9 && totalCalories <= goal * 1.1) {

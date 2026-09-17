@@ -1,5 +1,9 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../data/services/database_service.dart';
 import 'symmetry_rank_system.dart';
 import 'health_connect_bridge.dart';
 import 'macro_bridge.dart';
@@ -35,14 +39,56 @@ class SymmetryProgressionService {
   int get streakDays => _streakDays;
   bool get isInitialized => _isInitialized;
 
+  static const String _migratedWorkoutsKey = 'migrated_workouts_v1';
+
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     await _healthBridge.loadFromStorage();
     await _macroBridge.initialize();
     await _loadFromStorage();
+    await _migrateWorkoutSessions();
     ensureFreshPeriods();
     _isInitialized = true;
+  }
+
+  /// Migración one-shot: el historial de sesiones vivía solo en el JSON de
+  /// HealthConnectBridge (máx. 30 sesiones, sin índice). Se copia a
+  /// workout_sessions para que sea consultable y permita rachas cruzadas
+  /// (comida + entrenamiento).
+  Future<void> _migrateWorkoutSessions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_migratedWorkoutsKey) ?? false) return;
+
+      final db = DatabaseService();
+      final existing = await db.countWorkoutSessions();
+      if (existing > 0) {
+        await prefs.setBool(_migratedWorkoutsKey, true);
+        return;
+      }
+      if (_healthBridge.recentWorkouts.isEmpty) {
+        await prefs.setBool(_migratedWorkoutsKey, true);
+        return;
+      }
+
+      for (final session in _healthBridge.recentWorkouts) {
+        await db.insertWorkoutSession(
+          date: session.date,
+          totalTonnage: session.totalTonnage,
+          durationMinutes: session.durationMinutes,
+          muscleGroupTonnage: session.muscleGroupTonnage,
+          // Historial legado: el XP exacto de entonces no se conservó.
+          xpEarned: 0.0,
+        );
+      }
+      await prefs.setBool(_migratedWorkoutsKey, true);
+      debugPrint(
+          'Symmetry: ${_healthBridge.recentWorkouts.length} sesiones migradas a SQLite');
+    } catch (e) {
+      // La migración no debe romper el arranque; se reintenta la próxima vez.
+      debugPrint('Symmetry: error migrando sesiones a SQLite: $e');
+    }
   }
 
   /// Reinicia el XP diario/semanal cuando cambia el día/semana.
@@ -136,6 +182,23 @@ class SymmetryProgressionService {
     final earnedXP = _calculateXPGain(tonnage);
     final multiplier = _macroBridge.proteinMultiplier;
     final effectiveXP = earnedXP * multiplier;
+
+    // Historial consultable en SQLite (workout_sessions). El JSON del bridge
+    // sigue guardando los contadores, pero la sesión persiste de forma
+    // indexada por fecha.
+    try {
+      await DatabaseService().insertWorkoutSession(
+        date: session.date,
+        totalTonnage: tonnage,
+        durationMinutes: durationMinutes,
+        muscleGroupTonnage: session.muscleGroupTonnage,
+        xpEarned: effectiveXP,
+      );
+    } catch (e) {
+      // Si la persistencia de la sesión falla, el XP no se pierde (los
+      // contadores se guardan justo debajo); solo falta la fila en SQLite.
+      debugPrint('Symmetry: no se pudo persistir la sesión en SQLite: $e');
+    }
 
     _totalXP += effectiveXP;
     _dailyXP += effectiveXP;

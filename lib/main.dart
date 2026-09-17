@@ -86,6 +86,16 @@ Future<void> _bootstrap() async {
     imageStorageService,
   );
 
+  // Migración one-shot: registro de comidas desde SharedPreferences
+  // (food_log_YYYY-MM-DD) a la tabla SQLite food_entries. No debe perderse
+  // ninguna comida ya registrada; si falla, se reintenta en el próximo
+  // arranque (la marca se escribe al final).
+  try {
+    await foodRepository.migrateFoodLogFromPrefs();
+  } catch (e) {
+    debugPrint('main: error migrando food_log a SQLite: $e');
+  }
+
   runApp(
     LocaleNotifier(
       initialLocale: appLocale,

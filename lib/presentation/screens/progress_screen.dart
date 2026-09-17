@@ -1,13 +1,12 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
-import '../../core/utils/date_key.dart';
 import '../cubit/food_log_cubit.dart';
 import '../../data/local/preference_manager.dart';
+import '../../data/repositories/food_repository.dart';
 import '../../data/services/image_storage_service.dart';
 import '../../data/models/food_item.dart';
 
@@ -59,76 +58,59 @@ class _ProgressScreenState extends State<ProgressScreen>
     }
   }
 
+  FoodRepository get _repository => context.read<FoodLogCubit>().repository;
+
+  /// Mes visible en UNA sola consulta SQL indexada por timestamp
+  /// (antes: ~30 lecturas de SharedPreferences día a día).
   Future<void> _loadMonthData() async {
-    final Map<DateTime, List<FoodItem>> monthData = {};
     final daysInMonth =
         DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
-    final sharedPrefs = await SharedPreferences.getInstance();
+    final monthStart = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final monthEnd =
+        DateTime(_focusedMonth.year, _focusedMonth.month, daysInMonth);
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
-      final key = 'food_log_${formatDateKey(date)}';
-      final data = sharedPrefs.getString(key);
+    final meals = await _repository.getFoodLogForRange(monthStart, monthEnd);
 
-      if (data != null) {
-        final List<dynamic> jsonList = json.decode(data);
-        monthData[date] = jsonList.map((j) => FoodItem.fromJson(j)).toList();
-      }
+    final Map<DateTime, List<FoodItem>> monthData = {};
+    for (final meal in meals) {
+      final dayKey = DateTime(
+          meal.timestamp.year, meal.timestamp.month, meal.timestamp.day);
+      monthData.putIfAbsent(dayKey, () => []).add(meal);
     }
 
     _monthFoodData = monthData;
   }
 
-  /// Totales de los últimos 7 días leyendo directamente de preferencias.
-  /// El gráfico anterior usaba `_monthFoodData` (solo el mes visible), así que
-  /// los días de la semana que caían en el mes anterior mostraban 0 kcal;
-  /// además tenía un `data.then()` cuyo resultado se descartaba.
+  /// Totales de los últimos 7 días con una consulta de rango única
+  /// (antes: 7 lecturas de SharedPreferences; el gráfico anterior usaba
+  /// `_monthFoodData`, que solo cubría el mes visible, así que los días de
+  /// la semana que caían en el mes anterior mostraban 0 kcal).
   Future<void> _loadWeeklyTotals() async {
-    final Map<DateTime, double> totals = {};
     final now = DateTime.now();
-    final sharedPrefs = await SharedPreferences.getInstance();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(const Duration(days: 6));
 
+    final meals = await _repository.getFoodLogForRange(weekStart, today);
+
+    final Map<DateTime, double> totals = {};
+    for (final meal in meals) {
+      final dayKey = DateTime(
+          meal.timestamp.year, meal.timestamp.month, meal.timestamp.day);
+      totals[dayKey] = (totals[dayKey] ?? 0) + meal.calories;
+    }
+    // Los días sin datos aparecen explícitos en 0 para el gráfico.
     for (int i = 6; i >= 0; i--) {
-      final date =
-          DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-      final dayKey = DateTime(date.year, date.month, date.day);
-      final key = 'food_log_${formatDateKey(date)}';
-      final data = sharedPrefs.getString(key);
-
-      double dayTotal = 0;
-      if (data != null) {
-        try {
-          final List<dynamic> jsonList = json.decode(data);
-          for (final item in jsonList) {
-            dayTotal += FoodItem.fromJson(item).calories;
-          }
-        } catch (_) {}
-      }
-      totals[dayKey] = dayTotal;
+      final dayKey = today.subtract(Duration(days: i));
+      totals.putIfAbsent(dayKey, () => 0.0);
     }
 
     _weeklyTotals = totals;
   }
 
+  /// Las 20 comidas más recientes con una consulta LIMIT indexada
+  /// (antes: bucle de 30 días sobre SharedPreferences).
   Future<void> _loadRecentMeals() async {
-    final List<FoodItem> allMeals = [];
-    final now = DateTime.now();
-    final sharedPrefs = await SharedPreferences.getInstance();
-
-    for (int i = 0; i < 30; i++) {
-      final date =
-          DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-      final key = 'food_log_${formatDateKey(date)}';
-      final data = sharedPrefs.getString(key);
-
-      if (data != null) {
-        final List<dynamic> jsonList = json.decode(data);
-        final meals = jsonList.map((j) => FoodItem.fromJson(j)).toList();
-        allMeals.addAll(meals);
-      }
-    }
-
-    _recentMeals = allMeals.take(20).toList();
+    _recentMeals = await _repository.getRecentFoodEntries(20);
   }
 
   @override

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/utils/date_key.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
 import '../../models/food_entry.dart';
@@ -27,26 +27,90 @@ class FoodRepository {
     this._imageStorageService,
   );
 
-  Future<List<FoodItem>> getDailyFoodLog(DateTime date) async {
-    final String key = 'food_log_${formatDateKey(date)}';
-    final String? storedData = _prefs.getString(key);
+  // ------------------------------------------------------------------
+  // Registro diario de comidas en SQLite (tabla food_entries).
+  //
+  // Antes todo vivía en SharedPreferences como JSON por día
+  // (food_log_YYYY-MM-DD): nada indexado, bucles de ~30 claves por
+  // pantalla y sin forma de cruzar los datos con los de entrenamiento.
+  // Las firmas públicas se mantienen para no romper a FoodLogCubit ni a
+  // progress_screen.
+  // ------------------------------------------------------------------
 
-    if (storedData != null) {
-      final List<dynamic> jsonList = json.decode(storedData);
-      return jsonList.map((json) => FoodItem.fromJson(json)).toList();
+  static Map<String, dynamic> _foodItemToRow(FoodItem item) => {
+        'id': item.id,
+        'name': item.name,
+        'calories': item.calories,
+        'protein': item.protein,
+        'carbs': item.carbs,
+        'fat': item.fat,
+        'sugar': item.sugar,
+        'quantity': item.quantity,
+        'unit': item.unit == FoodUnit.milliliters ? 'ml' : 'g',
+        'timestamp': item.timestamp.millisecondsSinceEpoch,
+        'image_url': item.imageUrl,
+        'confidence_score': item.confidenceScore,
+        'ai_model': item.aiModel,
+        'ingredients':
+            jsonEncode(item.ingredients.map((i) => i.toJson()).toList()),
+      };
+
+  static FoodItem _rowToFoodItem(Map<String, dynamic> row) {
+    List<Ingredient> ingredients = const [];
+    final rawIngredients = row['ingredients'] as String?;
+    if (rawIngredients != null && rawIngredients.isNotEmpty) {
+      try {
+        ingredients = (jsonDecode(rawIngredients) as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Ingredient.fromJson(e))
+            .toList();
+      } catch (_) {
+        // JSON de ingredientes corrupto: se conserva el resto del registro
+      }
     }
-    return [];
+    return FoodItem(
+      id: row['id'] as String? ?? '',
+      name: row['name'] as String? ?? '',
+      calories: (row['calories'] as num?)?.toDouble() ?? 0.0,
+      protein: (row['protein'] as num?)?.toDouble() ?? 0.0,
+      carbs: (row['carbs'] as num?)?.toDouble() ?? 0.0,
+      fat: (row['fat'] as num?)?.toDouble() ?? 0.0,
+      sugar: (row['sugar'] as num?)?.toDouble() ?? 0.0,
+      quantity: (row['quantity'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: row['image_url'] as String?,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(row['timestamp'] as int),
+      ingredients: ingredients,
+      unit: (row['unit'] as String? ?? 'g') == 'ml'
+          ? FoodUnit.milliliters
+          : FoodUnit.grams,
+      confidenceScore: (row['confidence_score'] as num?)?.toDouble(),
+      aiModel: row['ai_model'] as String?,
+    );
+  }
+
+  Future<List<FoodItem>> getDailyFoodLog(DateTime date) async {
+    final rows = await _databaseService.getFoodEntriesBetween(date, date);
+    return rows.map(_rowToFoodItem).toList();
+  }
+
+  /// Comidas de un rango de fechas (para Progreso: mes visible, semana, etc.).
+  Future<List<FoodItem>> getFoodLogForRange(
+    DateTime startInclusive,
+    DateTime endInclusive,
+  ) async {
+    final rows =
+        await _databaseService.getFoodEntriesBetween(startInclusive, endInclusive);
+    return rows.map(_rowToFoodItem).toList();
+  }
+
+  /// Últimas [limit] comidas registradas, cualquiera que sea su fecha.
+  Future<List<FoodItem>> getRecentFoodEntries(int limit) async {
+    final rows = await _databaseService.getRecentFoodEntries(limit);
+    return rows.map(_rowToFoodItem).toList();
   }
 
   Future<void> addFoodItem(FoodItem item) async {
-    final String key = 'food_log_${formatDateKey(item.timestamp)}';
-    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
-    currentLog.add(item);
-
-    await _prefs.setString(
-      key,
-      json.encode(currentLog.map((item) => item.toJson()).toList()),
-    );
+    await _databaseService.insertFoodEntry(_foodItemToRow(item));
   }
 
   /// Convierte la confianza textual de la IA ('high'/'medium'/'low' o numérica)
@@ -162,47 +226,75 @@ class FoodRepository {
   }
 
   Future<void> deleteFoodItem(FoodItem item) async {
-    final String key = 'food_log_${formatDateKey(item.timestamp)}';
-    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
-    currentLog.removeWhere((existingItem) => existingItem.id == item.id);
-
-    await _prefs.setString(
-      key,
-      json.encode(currentLog.map((item) => item.toJson()).toList()),
-    );
+    await _databaseService.deleteFoodEntry(item.id);
   }
 
+  /// Upsert por id: si la comida existe se reemplaza (puede moverse de día
+  /// si el timestamp cambió); si no existe se inserta.
   Future<void> updateFoodItem(FoodItem item) async {
-    final String key = 'food_log_${formatDateKey(item.timestamp)}';
-    List<FoodItem> currentLog = await getDailyFoodLog(item.timestamp);
+    await _databaseService.insertFoodEntry(_foodItemToRow(item));
+  }
 
-    final index =
-        currentLog.indexWhere((existingItem) => existingItem.id == item.id);
+  // ------------------------------------------------------------------
+  // Migración one-shot: SharedPreferences (food_log_YYYY-MM-DD) -> SQLite
+  // ------------------------------------------------------------------
 
-    if (index == -1) {
-      final allKeys = _prefs.getKeys().where((k) => k.startsWith('food_log_'));
-      for (final k in allKeys) {
-        final data = _prefs.getString(k);
-        if (data != null) {
-          final List<dynamic> jsonList = json.decode(data);
-          final items = jsonList.map((j) => FoodItem.fromJson(j)).toList();
-          final existingIndex = items.indexWhere((e) => e.id == item.id);
-          if (existingIndex != -1) {
-            items[existingIndex] = item;
-            await _prefs.setString(
-                k, json.encode(items.map((i) => i.toJson()).toList()));
-            return;
-          }
-        }
-      }
+  static const String _migratedFoodLogKey = 'migrated_food_log_v1';
+
+  /// Importa a food_entries todas las claves food_log_* de SharedPreferences.
+  ///
+  /// Reglas (no debe perderse ni una comida ya registrada):
+  /// - Si la tabla ya tiene datos, se da por migrada y solo se marca.
+  /// - La importación va en una sola transacción; las claves de
+  ///   SharedPreferences solo se borran si su importación fue exitosa.
+  /// - La marca migrated_food_log_v1 se escribe AL FINAL; si algo falla,
+  ///   se reintenta en el siguiente arranque.
+  Future<void> migrateFoodLogFromPrefs() async {
+    if (_prefs.getBool(_migratedFoodLogKey) ?? false) return;
+
+    final existing = await _databaseService.countFoodEntries();
+    if (existing > 0) {
+      await _prefs.setBool(_migratedFoodLogKey, true);
       return;
     }
 
-    currentLog[index] = item;
-    await _prefs.setString(
-      key,
-      json.encode(currentLog.map((item) => item.toJson()).toList()),
-    );
+    final keys =
+        _prefs.getKeys().where((k) => k.startsWith('food_log_')).toList();
+    if (keys.isEmpty) {
+      await _prefs.setBool(_migratedFoodLogKey, true);
+      return;
+    }
+
+    final rows = <Map<String, dynamic>>[];
+    final migratedKeys = <String>[];
+    for (final key in keys) {
+      final data = _prefs.getString(key);
+      if (data == null) continue;
+      try {
+        final List<dynamic> jsonList = json.decode(data);
+        for (final j in jsonList) {
+          final item = FoodItem.fromJson(j as Map<String, dynamic>);
+          rows.add(_foodItemToRow(item));
+        }
+        migratedKeys.add(key);
+      } catch (e) {
+        // Una clave corrupta no aborta la migración: se queda en prefs y
+        // se reporta para no borrar datos ilegibles.
+        debugPrint('migrateFoodLogFromPrefs: no se pudo leer $key: $e');
+      }
+    }
+
+    if (rows.isNotEmpty) {
+      await _databaseService.insertFoodEntries(rows);
+    }
+    if (migratedKeys.isNotEmpty) {
+      for (final key in migratedKeys) {
+        await _prefs.remove(key);
+      }
+    }
+    await _prefs.setBool(_migratedFoodLogKey, true);
+    debugPrint(
+        'migrateFoodLogFromPrefs: ${rows.length} comidas migradas a SQLite');
   }
 
   Future<Either<String, List<ProductModel>>> getFoodData(String query) async {
