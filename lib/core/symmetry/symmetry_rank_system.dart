@@ -5,14 +5,14 @@ import '../theme/app_theme.dart';
 enum SymmetryRank {
   iron(0, 'Hierro', 0, 500, AppColors.textSecondary, Icons.circle_outlined),
   bronze(1, 'Bronce', 500, 2000, AppColors.accentMuted, Icons.shield_outlined),
-  silver(2, 'Plata', 2000, 5000, AppColors.accentStrong, Icons.star_outline),
-  gold(3, 'Oro', 5000, 12000, AppColors.accent, Icons.military_tech_outlined),
-  platinum(4, 'Platino', 12000, 30000, AppColors.accentStrong, Icons.verified_outlined),
-  emerald(5, 'Esmeralda', 30000, 70000, AppColors.accent, Icons.diamond_outlined),
-  diamond(6, 'Diamante', 70000, 150000, AppColors.accentStrong, Icons.auto_awesome_outlined),
-  master(7, 'Maestro', 150000, 300000, AppColors.accent, Icons.workspace_premium_outlined),
-  champion(8, 'Campeón', 300000, 600000, AppColors.accentStrong, Icons.emoji_events_outlined),
-  symmetric(9, 'Simétrico', 600000, double.infinity, AppColors.accent, Icons.all_inclusive);
+  silver(2, 'Plata', 2000, 4000, AppColors.accentStrong, Icons.star_outline),
+  gold(3, 'Oro', 4000, 5000, AppColors.accent, Icons.military_tech_outlined),
+  platinum(4, 'Platino', 5000, 12000, AppColors.accentStrong, Icons.verified_outlined),
+  emerald(5, 'Esmeralda', 12000, 30000, AppColors.accent, Icons.diamond_outlined),
+  diamond(6, 'Diamante', 30000, 70000, AppColors.accentStrong, Icons.auto_awesome_outlined),
+  master(7, 'Maestro', 70000, 150000, AppColors.accent, Icons.workspace_premium_outlined),
+  champion(8, 'Campeón', 150000, 300000, AppColors.accentStrong, Icons.emoji_events_outlined),
+  symmetric(9, 'Simétrico', 300000, double.infinity, AppColors.accent, Icons.all_inclusive);
 
   final int level;
   final String displayName;
