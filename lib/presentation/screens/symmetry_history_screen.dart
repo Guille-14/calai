@@ -2,6 +2,7 @@ import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
+import '../../core/utils/date_key.dart';
 import '../../core/symmetry/health_connect_bridge.dart';
 
 class SymmetryHistoryScreen extends StatefulWidget {
@@ -307,18 +308,5 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays == 0) {
-      return 'Hoy';
-    } else if (diff.inDays == 1) {
-      return 'Ayer';
-    } else if (diff.inDays < 7) {
-      return 'Hace ${diff.inDays} días';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+  String _formatDate(DateTime date) => formatDateKey(date);
 }

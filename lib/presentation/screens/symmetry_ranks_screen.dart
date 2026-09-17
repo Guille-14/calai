@@ -190,7 +190,7 @@ class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
                   : Colors.white.withValues(alpha: 0.05),
             ),
             child: Icon(
-              achieved ? Icons.verified : Icons.lock_outline,
+              achieved ? rank.icon : Icons.lock_outline,
               size: 20,
               color: achieved ? rank.color : Colors.white24,
             ),

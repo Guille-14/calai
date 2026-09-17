@@ -536,18 +536,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            progress.currentRank.color.withValues(alpha: 0.2),
-            progress.currentRank.color.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: progress.currentRank.color.withValues(alpha: 0.4),
-          width: 2,
+          width: 1,
         ),
       ),
       child: Column(
@@ -557,24 +550,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  progress.currentRank.color,
-                  progress.currentRank.color.withValues(alpha: 0.6),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: progress.currentRank.color.withValues(alpha: 0.5),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+              color: progress.currentRank.color.withValues(alpha: 0.14),
+              border: Border.all(color: progress.currentRank.color, width: 2),
             ),
-            child: const Center(
-              child: Icon(Icons.shield, color: Colors.white, size: 50),
+            child: Center(
+              child: Icon(progress.currentRank.icon,
+                  color: progress.currentRank.color, size: 42),
             ),
           ),
           const SizedBox(height: 16),
@@ -805,9 +786,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Color _getFatigueColor(double fatigue) {
-    if (fatigue < 30) return AppColors.accent;
-    if (fatigue < 60) return AppColors.accent;
-    return AppColors.error;
+    // Heatmap monocromo: el nivel se lee por intensidad, no por un color
+    // diferente para recuperado, normal, fatigado o agotado.
+    final intensity = (fatigue / 100).clamp(0.08, 1.0);
+    return Color.lerp(AppColors.accentSubtle, AppColors.accentStrong, intensity)!;
   }
 
   Widget _buildSettingsItem({
