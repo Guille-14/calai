@@ -160,8 +160,12 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk "$ASSET"
           echo "RELEASE_ASSET=$ASSET" >> "$GITHUB_ENV"
           SHA=$(sha256sum "$ASSET" | awk '{print $1}')
-          printf 'APK de CalAI para descargar.\\n\\nCommit: `%s`\\nSHA-256: `%s`\\n' \\
-            "${GITHUB_SHA:0:7}" "$SHA" > release-notes.md
+          cat > release-notes.md <<EOF
+          APK de CalAI para descargar.
+
+          Commit: \`${GITHUB_SHA:0:7}\`
+          SHA-256: \`${SHA}\`
+          EOF
 
       - name: Publish versioned APK Release
         if: success()
