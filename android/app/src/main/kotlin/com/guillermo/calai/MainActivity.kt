@@ -1,4 +1,4 @@
-package com.example.ai_calorie_tracker
+package com.guillermo.calai
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

@@ -6,7 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ai_calorie_tracker"
+    // Paquete propio (antes com.example.ai_calorie_tracker). MainActivity.kt
+    // vive en com/guillermo/calai/ para que coincida con el namespace.
+    namespace = "com.guillermo.calai"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,8 +23,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.ai_calorie_tracker"
+        applicationId = "com.guillermo.calai"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
@@ -34,8 +35,15 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // FIRMA DEBUG A PROPOSITO (no es un olvido):
+            // El APK de release se firma con la clave de debug porque es
+            // una instalacion PERSONAL (AAB/APK lateral, sin Play Store).
+            // Si en algun momento se va a publicar en la Play Store, hay que
+            // generar un keystore propio y sustituir esto por:
+            //   signingConfig = signingConfigs.release
+            // con las credenciales del keystore en android/key.properties.
+            // Mientras tanto NO generar un keystore nuevo: al no haber
+            // actualizaciones previas, firmar de debug no rompe nada.
             signingConfig = signingConfigs.debug
         }
     }
