@@ -18,6 +18,7 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
   final RecipeService _recipeService = RecipeService();
   List<RecipeModel> _recipes = [];
   bool _isLoading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -26,12 +27,25 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
   }
 
   Future<void> _loadRecipes() async {
-    setState(() => _isLoading = true);
-    final recipes = await _recipeService.getAllRecipes();
-    setState(() {
-      _recipes = recipes;
-      _isLoading = false;
+    if (mounted) setState(() {
+      _isLoading = true;
+      _loadError = null;
     });
+    try {
+      final recipes = await _recipeService.getAllRecipes();
+      if (!mounted) return;
+      setState(() {
+        _recipes = recipes;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError = 'No se pudieron cargar las recetas';
+      });
+      debugPrint('RecipeHome: error cargando recetas: $error');
+    }
   }
 
   void _showTikTokExtractor() {
@@ -91,11 +105,13 @@ IconButton(
             ),
           ],
       ),
-      body: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: AppColors.accent))
-        : _recipes.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
+      body: _isLoading
+        ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+        : _loadError != null
+          ? _buildLoadError()
+          : _recipes.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
               padding: const EdgeInsets.all(20),
               itemCount: _recipes.length,
               itemBuilder: (context, index) {
@@ -113,6 +129,25 @@ IconButton(
         },
         backgroundColor: theme.colorScheme.primary,
         child: const Icon(Icons.add, color: AppColors.background),
+      ),
+    );
+  }
+
+  Widget _buildLoadError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_outlined, color: AppColors.error, size: 48),
+          const SizedBox(height: 12),
+          Text(_loadError!, style: const TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _loadRecipes,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+          ),
+        ],
       ),
     );
   }
