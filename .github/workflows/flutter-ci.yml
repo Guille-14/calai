@@ -230,9 +230,10 @@ jobs:
               + os.environ.get("GITHUB_RUN_ID", "?")
               + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
           )
+          run_id = os.environ.get("GITHUB_RUN_ID", "?")
           payload = {
-              "tag_name": "ci-debug-test",
-              "name": "CI test debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
+              "tag_name": "ci-debug-test-" + run_id,
+              "name": "CI test debug (run " + run_id + ")",
               "draft": True,
               "target_commitish": os.environ.get("GITHUB_SHA", ""),
               "body": (header + body)[:900000],
@@ -240,16 +241,16 @@ jobs:
           req = urllib.request.Request(
               "https://api.github.com/repos/"
               + os.environ.get("GITHUB_REPOSITORY", "")
-              + "/releases/tags/ci-debug-test",
+              + "/releases",
               data=json.dumps(payload).encode(),
-              method="PUT",
+              method="POST",
           )
           req.add_header("Authorization", "Bearer " + token)
           req.add_header("Accept", "application/vnd.github+json")
           req.add_header("Content-Type", "application/json")
           try:
               with urllib.request.urlopen(req) as r:
-                  print("release ci-debug-test actualizada:", r.status)
+                  print("release de test creada:", r.status)
           except Exception as e:
               print("no se pudo publicar la release ci-debug-test:", e)
           PYEOF
