@@ -215,7 +215,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               ),
               _buildStatItem(
                 label: 'Entrenos',
-                value: '${_workouts.length}',
+                value: _workouts.length.toString(),
                 icon: Icons.fitness_center_outlined,
               ),
               _buildStatItem(

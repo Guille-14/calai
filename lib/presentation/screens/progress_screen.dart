@@ -22,7 +22,6 @@ class _ProgressScreenState extends State<ProgressScreen>
   DateTime _focusedMonth = DateTime.now();
   double _calorieGoal = 2000;
   late AnimationController _animationController;
-  late Animation<double> _animation;
   Map<DateTime, List<FoodItem>> _monthFoodData = {};
   Map<DateTime, double> _weeklyTotals = {};
   List<FoodItem> _recentMeals = [];
@@ -35,8 +34,6 @@ class _ProgressScreenState extends State<ProgressScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _animation = CurvedAnimation(
-        parent: _animationController, curve: Curves.easeOutCubic);
     _animationController.forward();
     _loadData();
   }

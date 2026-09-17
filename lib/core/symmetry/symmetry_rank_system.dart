@@ -55,7 +55,7 @@ enum SymmetryRank {
               'name': rank.displayName,
               'level': rank.level,
               'minXP': rank.minXP,
-              'color': rank.color.value,
+              'color': rank.color.toARGB32(),
             })
         .toList();
   }

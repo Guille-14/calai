@@ -23,7 +23,6 @@ class OpenRouterDiagnosticsScreen extends StatefulWidget {
 class _OpenRouterDiagnosticsScreenState
     extends State<OpenRouterDiagnosticsScreen> {
   bool _isChecking = false;
-  String _connectionStatus = 'Not checked';
   bool _isConnected = false;
   String _logs = '';
 
@@ -56,7 +55,6 @@ class _OpenRouterDiagnosticsScreenState
 
     setState(() {
       _isConnected = connected;
-      _connectionStatus = connected ? 'Connected' : 'Failed';
     });
 
     _addLog(connected ? '✓ Connection successful!' : '✗ Connection failed');

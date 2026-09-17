@@ -255,16 +255,6 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     }
   }
 
-  Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
-      _showSnackBar('Introduce URL', AppColors.accent);
-      return;
-    }
-    await _ollamaService.updateBaseUrl(url);
-    _showSnackBar('URL guardada', AppColors.accent);
-  }
-
   Future<void> _saveGoogleKey() async {
     final key = _googleApiKeyController.text.trim();
     if (key.isEmpty) {
@@ -340,8 +330,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         url: urlController.text.trim().replaceAll(RegExp(r'/+$'), ''),
         type: selectedType,
       );
-      if (existingServer != null) await _ollamaService.updateServer(newServer);
-      else await _ollamaService.addServer(newServer);
+      if (existingServer != null) {
+        await _ollamaService.updateServer(newServer);
+      } else {
+        await _ollamaService.addServer(newServer);
+      }
       setState(() => _servers = _ollamaService.servers);
     }
   }
@@ -559,7 +552,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Column(
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedServerId,
+            initialValue: _selectedServerId,
             items: _servers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 13)))).toList(),
             onChanged: _onServerChanged,
             decoration: const InputDecoration(filled: true, fillColor: AppColors.elevatedCardBackground, border: InputBorder.none),
@@ -689,7 +682,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                 trailing: _selectedGoogleModel == m ? const Icon(Icons.check_circle, color: AppColors.accent) : const Icon(Icons.circle_outlined, color: Colors.white24),
                 onTap: () => _selectModel(m),
               );
-            }).toList(),
+            }),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _loadGoogleModels,
@@ -756,7 +749,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               title: Text(m, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
               trailing: _selectedModel == m ? const Icon(Icons.check, color: AppColors.accent) : null,
               onTap: () => _selectModel(m)
-            )).toList(),
+            )),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _loadInstalledModels,
@@ -843,6 +836,4 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _buildTerminalSection() {
     return _section(icon: Icons.terminal, title: 'Terminal', child: const OllamaTerminalWidget());
   }
-
-  Widget _buildInfoItem(IconData icon, String title, String description) => const SizedBox(); // Placeholder to fix potential calls
 }

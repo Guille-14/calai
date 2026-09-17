@@ -9,10 +9,10 @@ class HevySyncButtonWidget extends StatefulWidget {
   final bool showLabel;
 
   const HevySyncButtonWidget({
-    Key? key,
+    super.key,
     this.onSyncComplete,
     this.showLabel = true,
-  }) : super(key: key);
+  });
 
   @override
   State<HevySyncButtonWidget> createState() => _HevySyncButtonWidgetState();

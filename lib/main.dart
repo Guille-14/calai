@@ -76,10 +76,8 @@ Future<void> _bootstrap() async {
   final databaseService = DatabaseService();
   final imageStorageService = ImageStorageService();
 
-  final foodService = FoodService();
   final externalFoodService = ExternalFoodService();
   final foodRepository = FoodRepository(
-    foodService,
     prefs,
     databaseService,
     externalFoodService,

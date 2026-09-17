@@ -5,7 +5,7 @@ import '../../core/symmetry/symmetry_workout_ledger.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 
 class HevySyncScreen extends StatefulWidget {
-  const HevySyncScreen({Key? key}) : super(key: key);
+  const HevySyncScreen({super.key});
 
   @override
   State<HevySyncScreen> createState() => _HevySyncScreenState();
@@ -19,7 +19,6 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
   bool _isLoading = false;
   String? _statusMessage;
   int? _workoutsImported;
-  int? _totalWorkouts;
   DateTime? _lastSync;
   bool _hasPermissions = false;
   bool _isSyncing = false;

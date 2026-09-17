@@ -35,7 +35,7 @@ class MacroBridge {
       // (p. ej. 'daily_protein_2026-9-6'). Si hoy existe una clave legacy,
       // se mueve al formato canónico para no perder el valor del día.
       final legacyKey =
-          _dailyProteinKey + '${today.year}-${today.month}-${today.day}';
+          '${_dailyProteinKey}${today.year}-${today.month}-${today.day}';
       final legacyProtein = prefs.getDouble(legacyKey);
       if (legacyProtein != null) {
         storedProtein = legacyProtein;

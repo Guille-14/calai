@@ -125,7 +125,6 @@ class HevyAutoSyncService {
         ? DateTime.fromMillisecondsSinceEpoch(lastSyncMs)
         : null;
 
-    final now = DateTime.now();
     String? nextSync;
     if (lastSync != null) {
       nextSync = lastSync

@@ -63,7 +63,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
       if (_imageFile != null) {
         // Guardar la imagen localmente dentro de la app
         final appDirectory = await getApplicationDocumentsDirectory(); // Necesito importar path_provider
-        final fileName = Uuid().v4() + '.png';
+        final fileName = '${Uuid().v4()}.png';
         final localImage = await _imageFile!.copy('${appDirectory.path}/$fileName');
         imagePath = localImage.path;
       }

@@ -272,7 +272,7 @@ class GoogleFitService {
     final duration = point.dateTo.difference(point.dateFrom).inMinutes;
     final safeDuration = duration < 0 ? 0 : duration;
     final activity = point.value is WorkoutHealthValue
-        ? (point.value as WorkoutHealthValue).workoutActivityType?.toString() ?? 'Workout'
+        ? (point.value as WorkoutHealthValue).workoutActivityType.toString()
         : 'Workout';
     final source = _sourceFor(point.sourceName);
     final externalId =

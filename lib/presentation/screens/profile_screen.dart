@@ -736,7 +736,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               if (progress.currentRank.nextRank != null)
                 Text(
-                  '${progress.currentRank.nextRank!.displayName}',
+                  progress.currentRank.nextRank!.displayName,
                   style: TextStyle(
                     color: progress.currentRank.nextRank!.color,
                     fontSize: 12,

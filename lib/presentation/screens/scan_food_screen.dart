@@ -22,7 +22,6 @@ class ScanFoodScreen extends StatefulWidget {
 
 class _ScanFoodScreenState extends State<ScanFoodScreen>
     with TickerProviderStateMixin {
-  final FoodService _foodService = FoodService();
   final ImagePicker _imagePicker = ImagePicker();
 
   Uint8List? _selectedImageBytes;
@@ -32,7 +31,6 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   FoodAnalysisResult? _analysisResult;
 
   late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -42,9 +40,6 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
   }
 
   @override
