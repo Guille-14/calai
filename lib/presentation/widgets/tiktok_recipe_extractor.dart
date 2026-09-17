@@ -129,7 +129,7 @@ class _TikTokRecipeExtractorState extends State<TikTokRecipeExtractor> {
             label: Text(_isLoading ? 'Procesando...' : 'Extraer con IA', 
               style: const TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryAccent,
+                backgroundColor: AppColors.accent,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),

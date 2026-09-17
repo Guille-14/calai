@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/app_translations.dart';
@@ -53,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _showValidationError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+      SnackBar(content: Text(msg), backgroundColor: AppColors.error.shade700),
     );
   }
 
@@ -217,7 +218,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         DropdownButton<String>(
           value: activityLevel,
           isExpanded: true,
-          dropdownColor: const Color(0xFF1C1C1E),
+          dropdownColor: AppColors.elevatedCardBackground,
           style: const TextStyle(color: Colors.white),
           iconEnabledColor: Colors.white,
           items: activityLevelDescriptions.entries
@@ -233,7 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           entry.value,
                           style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                              const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -251,11 +252,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final t = AppTranslations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       appBar: _currentPage == 0
           ? AppBar(
-              backgroundColor: const Color(0xFF000000),
+              backgroundColor: AppColors.background,
               elevation: 0,
               automaticallyImplyLeading: false,
               actions: [
@@ -324,7 +325,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             DropdownButton<String>(
               value: gender,
               isExpanded: true,
-              dropdownColor: const Color(0xFF1C1C1E),
+              dropdownColor: AppColors.elevatedCardBackground,
               style: const TextStyle(color: Colors.white),
               iconEnabledColor: Colors.white,
               items: ['Male', 'Female', 'Other']
@@ -344,7 +345,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             DropdownButton<String>(
               value: userGoal,
               isExpanded: true,
-              dropdownColor: const Color(0xFF1C1C1E),
+              dropdownColor: AppColors.elevatedCardBackground,
               style: const TextStyle(color: Colors.white),
               iconEnabledColor: Colors.white,
               items: ['Weight Loss', 'Maintenance', 'Muscle Gain']
@@ -387,7 +388,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: ElevatedButton(
                     onPressed: _nextPage,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF000000),
+                      backgroundColor: AppColors.background,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
@@ -479,7 +480,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4A90D9).withValues(alpha: 0.15),
+                    color: AppColors.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -488,7 +489,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         t.translate('your_daily_target'),
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF4A90D9),
+                          color: AppColors.accent,
                         ),
                       ),
                       SizedBox(height: 4),

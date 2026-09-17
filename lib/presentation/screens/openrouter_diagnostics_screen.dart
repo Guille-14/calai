@@ -131,10 +131,10 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _isConnected ? Colors.green.shade50 : Colors.orange.shade50,
+        color: _isConnected ? AppColors.accent.shade50 : AppColors.accent.shade50,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isConnected ? Colors.green : Colors.orange,
+          color: _isConnected ? AppColors.accent : AppColors.accent,
           width: 2,
         ),
       ),
@@ -145,13 +145,13 @@ class _OpenRouterDiagnosticsScreenState
             height: 60,
             decoration: BoxDecoration(
               color:
-                  _isConnected ? Colors.green.shade100 : Colors.orange.shade100,
+                  _isConnected ? AppColors.accent.shade100 : AppColors.accent.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               _isConnected ? Icons.check : Icons.warning,
               size: 32,
-              color: _isConnected ? Colors.green : Colors.orange,
+              color: _isConnected ? AppColors.accent : AppColors.accent,
             ),
           ),
           const SizedBox(width: 16),
@@ -167,8 +167,8 @@ class _OpenRouterDiagnosticsScreenState
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _isConnected
-                        ? Colors.green.shade700
-                        : Colors.orange.shade700,
+                        ? AppColors.accent.shade700
+                        : AppColors.accent.shade700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -178,8 +178,8 @@ class _OpenRouterDiagnosticsScreenState
                       : t.translate('failed'),
                   style: TextStyle(
                     color: _isConnected
-                        ? Colors.green.shade600
-                        : Colors.orange.shade600,
+                        ? AppColors.accent.shade600
+                        : AppColors.accent.shade600,
                   ),
                 ),
               ],
@@ -202,7 +202,7 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.soft,
       ),
@@ -244,7 +244,7 @@ class _OpenRouterDiagnosticsScreenState
             value,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: value.contains('NOT') ? Colors.red : Colors.green,
+              color: value.contains('NOT') ? AppColors.error : AppColors.accent,
             ),
           ),
         ),
@@ -257,7 +257,7 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade900,
+        color: AppColors.textSecondary.shade900,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -265,12 +265,12 @@ class _OpenRouterDiagnosticsScreenState
         children: [
           Row(
             children: [
-              const Icon(Icons.terminal, color: Colors.green, size: 20),
+              const Icon(Icons.terminal, color: AppColors.accent, size: 20),
               const SizedBox(width: 8),
               Text(
                 t.translate('logs'),
                 style: const TextStyle(
-                  color: Colors.green,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -281,7 +281,7 @@ class _OpenRouterDiagnosticsScreenState
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.green,
+                    color: AppColors.accent,
                   ),
                 ),
             ],
@@ -298,7 +298,7 @@ class _OpenRouterDiagnosticsScreenState
               child: Text(
                 _logs,
                 style: const TextStyle(
-                  color: Color(0xFF81C784),
+                  color: AppColors.accent,
                   fontFamily: 'monospace',
                   fontSize: 12,
                 ),
@@ -316,7 +316,7 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.soft,
       ),
@@ -363,14 +363,14 @@ class _OpenRouterDiagnosticsScreenState
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: AppColors.accentCalories.withValues(alpha: 0.1),
+              color: AppColors.accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 number,
                 style: TextStyle(
-                  color: AppColors.accentCalories,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.bold,
                   fontSize: number.length > 1 ? 10 : 12,
                 ),

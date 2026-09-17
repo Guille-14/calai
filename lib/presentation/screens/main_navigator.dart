@@ -46,7 +46,7 @@ class _MainNavigatorState extends State<MainNavigator> {
           ),
           Container(
             decoration: const BoxDecoration(
-              color: Color(0xFF141414),
+              color: AppColors.cardBackground,
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: SafeArea(
@@ -54,7 +54,7 @@ class _MainNavigatorState extends State<MainNavigator> {
               child: BottomNavigationBar(
                 type: BottomNavigationBarType.fixed,
                 currentIndex: _currentIndex,
-                selectedItemColor: AppColors.primaryAccent,
+                selectedItemColor: AppColors.accent,
                 unselectedItemColor: Colors.white54,
                 selectedLabelStyle: const TextStyle(
                     fontSize: 11, fontWeight: FontWeight.w600),

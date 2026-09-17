@@ -146,8 +146,8 @@ class _ProgressScreenState extends State<ProgressScreen>
         builder: (context, state) {
           return RefreshIndicator(
             onRefresh: _loadData,
-            color: AppColors.accentCalories,
-            backgroundColor: const Color(0xFF111111),
+            color: AppColors.accent,
+            backgroundColor: AppColors.cardBackground,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               physics: const AlwaysScrollableScrollPhysics(),
@@ -181,7 +181,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -199,11 +199,11 @@ class _ProgressScreenState extends State<ProgressScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: AppColors.accentCalories.withValues(alpha: 0.2),
+                    color: AppColors.accent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8)),
                 child: Text('${_calorieGoal.toInt()} kcal',
                     style: const TextStyle(
-                        color: AppColors.accentCalories,
+                        color: AppColors.accent,
                         fontSize: 11,
                         fontWeight: FontWeight.bold)),
               ),
@@ -224,9 +224,9 @@ class _ProgressScreenState extends State<ProgressScreen>
                       BarChartRodData(
                         toY: entry.value,
                         color: entry.value > _calorieGoal
-                            ? Colors.red
+                            ? AppColors.error
                             : (isToday
-                                ? AppColors.accentCalories
+                                ? AppColors.accent
                                 : Colors.white38),
                         width: 20,
                         borderRadius: const BorderRadius.vertical(
@@ -257,7 +257,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                           child: Text(days[value.toInt() % 7],
                               style: TextStyle(
                                   color: isToday
-                                      ? AppColors.accentCalories
+                                      ? AppColors.accent
                                       : Colors.white24,
                                   fontSize: 11,
                                   fontWeight: isToday
@@ -292,7 +292,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalInterval: _calorieGoal,
                   getDrawingHorizontalLine: (value) => FlLine(
                     color: value == _calorieGoal
-                        ? Colors.green.withValues(alpha: 0.5)
+                        ? AppColors.accent.withValues(alpha: 0.5)
                         : Colors.white.withValues(alpha: 0.03),
                     strokeWidth: value == _calorieGoal ? 1 : 0.5,
                     dashArray: value == _calorieGoal ? [5, 5] : null,
@@ -303,14 +303,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                   horizontalLines: [
                     HorizontalLine(
                         y: _calorieGoal,
-                        color: Colors.green.withValues(alpha: 0.5),
+                        color: AppColors.accent.withValues(alpha: 0.5),
                         strokeWidth: 1,
                         dashArray: [5, 5],
                         label: HorizontalLineLabel(
                             show: true,
                             labelResolver: (_) => 'Objetivo',
                             style: const TextStyle(
-                                color: Colors.green, fontSize: 10))),
+                                color: AppColors.accent, fontSize: 10))),
                   ],
                 ),
               ),
@@ -339,11 +339,11 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildSummaryCard('Hoy', '${todayCalories.toInt()} kcal',
-                    AppColors.accentCalories, Icons.local_fire_department)),
+                    AppColors.accent, Icons.local_fire_department)),
             const SizedBox(width: 12),
             Expanded(
                 child: _buildSummaryCard('Comidas', '${todayMeals.length}',
-                    AppColors.accentCarbs, Icons.restaurant)),
+                    AppColors.accent, Icons.restaurant)),
           ],
         ),
         const SizedBox(height: 12),
@@ -351,15 +351,15 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildMacroCard(
-                    'Proteína', '${todayProtein.toInt()}g', Colors.green)),
+                    'Proteína', '${todayProtein.toInt()}g', AppColors.accent)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildMacroCard(
-                    'Carbs', '${todayCarbs.toInt()}g', Colors.blue)),
+                    'Carbs', '${todayCarbs.toInt()}g', AppColors.accent)),
             const SizedBox(width: 8),
             Expanded(
                 child: _buildMacroCard(
-                    'Grasa', '${todayFat.toInt()}g', Colors.orange)),
+                    'Grasa', '${todayFat.toInt()}g', AppColors.accent)),
           ],
         ),
         const SizedBox(height: 12),
@@ -367,13 +367,13 @@ class _ProgressScreenState extends State<ProgressScreen>
           children: [
             Expanded(
                 child: _buildSummaryCard('Días Registrados', '$daysWithMeals',
-                    Colors.purple, Icons.calendar_today)),
+                    AppColors.accent, Icons.calendar_today)),
             const SizedBox(width: 12),
             Expanded(
                 child: _buildSummaryCard(
                     'Promedio',
                     '${_calculateAverage()} kcal',
-                    Colors.cyan,
+                    AppColors.accent,
                     Icons.analytics)),
           ],
         ),
@@ -386,7 +386,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -468,7 +468,7 @@ class _ProgressScreenState extends State<ProgressScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF111111),
+              color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Center(
@@ -500,7 +500,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -645,9 +645,9 @@ class _ProgressScreenState extends State<ProgressScreen>
                         height: 40,
                         decoration: BoxDecoration(
                           color: totalCalories > _calorieGoal
-                              ? Colors.red.withValues(alpha: 0.2)
+                              ? AppColors.error.withValues(alpha: 0.2)
                               : (totalCalories > 0
-                                  ? AppColors.accentCalories.withValues(alpha: 0.2)
+                                  ? AppColors.accent.withValues(alpha: 0.2)
                                   : Colors.white10),
                           borderRadius: BorderRadius.circular(8),
                         ),

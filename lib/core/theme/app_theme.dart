@@ -1,53 +1,25 @@
 import 'package:flutter/material.dart';
 
+/// Tokens visuales únicos de CalAI.
+///
+/// La interfaz usa una base casi negra, dos superficies, tres niveles de
+/// texto y un único acento naranja. Las variantes del acento son únicamente
+/// cambios de opacidad/luminosidad, nunca colores semánticos adicionales.
 class AppColors {
-  // Paleta Midnight-Sunset
-  static const Color background = Color(0xFF0A0A0A);
-  static const Color cardBackground = Color(0xFF161618);
-  static const Color primaryAccent = Color(0xFFFF6600); // Naranja Neón
-  static const Color secondaryAccent = Color(0xFF00D9FF); // Cian Neón
-  
+  static const Color background = Color(0xFF0B0B0C);
+  static const Color cardBackground = Color(0xFF151517);
+  static const Color elevatedCardBackground = Color(0xFF1D1D20);
+
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFA0A0A0);
-  static const Color textTertiary = Color(0xFF707070);
-  
-  // Acentos funcionales
-  static const Color proteinColor = Color(0xFF00C853);
-  static const Color carbsColor = Color(0xFFFFD700);
-  static const Color fatColor = Color(0xFFFF6600);
-  static const Color caloriesColor = Color(0xFFFF6600);
-  static const Color divider = Color(0xFF1C1C1E);
+  static const Color textSecondary = Color(0xFFA9A9AD);
+  static const Color textTertiary = Color(0xFF6F6F75);
 
-  // Rank Colors
-  static const Color rankIron = Color(0xFF6C757D);
-  static const Color rankBronze = Color(0xFFCD7F32);
-  static const Color rankSilver = Color(0xFFC0C0C0);
-  static const Color rankGold = Color(0xFFFFD700);
-  static const Color rankPlatinum = Color(0xFFE5E4E2);
-  static const Color rankEmerald = Color(0xFF39FF14);
-  static const Color rankDiamond = Color(0xFFB9F2FF);
-  static const Color rankMaster = Color(0xFF9D00FF);
-  static const Color rankChampion = Color(0xFFFF0040);
-  static const Color rankSymmetric = Color(0xFFFFD700);
-
-  // Fatigue Heatmap Colors
-  static const Color muscleRecovered = Color(0xFF00D9FF);
-  static const Color muscleNormal = Color(0xFF39FF14);
-  static const Color muscleFatigued = Color(0xFFFF6600);
-  static const Color muscleExhausted = Color(0xFFFF0040);
-
-  // Paleta del antiguo modo HEAVY, recuperada con la reintegración de la
-  // sincronización con Hevy (HevySyncScreen / HevySyncButtonWidget la
-  // referenciaban y no existía en la paleta actual, así que esos archivos
-  // no compilaban).
-  static const Color neonGreen = Color(0xFF00C853);
-  static const Color neonCyan = Color(0xFF00D9FF);
-  static const Color neonRed = Color(0xFFFF5252);
-  static const Color neonOrange = Color(0xFFFF9500);
-  static const Color neonPurple = Color(0xFFBF5AF2);
-  static const Color neonMagenta = Color(0xFFFF2D95);
-  static const Color rpgDark = Color(0xFF0A0A0A);
-  static const Color rpgCardDark = Color(0xFF141414);
+  static const Color accent = Color(0xFFFF6B35);
+  static const Color accentStrong = Color(0xFFFF8A5C);
+  static const Color accentMuted = Color(0x99FF6B35);
+  static const Color accentSubtle = Color(0x33FF6B35);
+  static const Color error = Color(0xFFFF5C5C);
+  static const Color divider = Color(0xFF29292D);
 }
 
 class AppTheme {
@@ -56,13 +28,16 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.background,
-      primaryColor: AppColors.primaryAccent,
+      primaryColor: AppColors.accent,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryAccent,
-        secondary: AppColors.secondaryAccent,
+        primary: AppColors.accent,
+        onPrimary: AppColors.background,
+        secondary: AppColors.accent,
+        onSecondary: AppColors.background,
         surface: AppColors.cardBackground,
-        error: Color(0xFFFF0040),
-        background: AppColors.background,
+        onSurface: AppColors.textPrimary,
+        error: AppColors.error,
+        onError: AppColors.textPrimary,
       ),
       fontFamily: 'Inter',
       textTheme: const TextTheme(
@@ -155,21 +130,22 @@ class AppTheme {
         labelSmall: TextStyle(
           fontFamily: 'Inter',
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: AppColors.textTertiary,
-          letterSpacing: 0.5,
+          letterSpacing: 0.8,
         ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
         ),
         margin: EdgeInsets.zero,
       ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
+        scrolledUnderElevation: 0,
         backgroundColor: AppColors.background,
         centerTitle: false,
         titleTextStyle: TextStyle(
@@ -183,7 +159,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: AppColors.primaryAccent,
+          backgroundColor: AppColors.accent,
           foregroundColor: AppColors.background,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -191,15 +167,33 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.accent,
+          side: const BorderSide(color: AppColors.accentMuted),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         elevation: 0,
-        backgroundColor: AppColors.primaryAccent,
+        backgroundColor: AppColors.accent,
         foregroundColor: AppColors.background,
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        elevation: 0,
+        backgroundColor: AppColors.background,
+        indicatorColor: AppColors.accentSubtle,
+        surfaceTintColor: Colors.transparent,
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(fontFamily: 'Inter', fontSize: 11),
+        ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         elevation: 0,
         backgroundColor: AppColors.background,
-        selectedItemColor: AppColors.primaryAccent,
+        selectedItemColor: AppColors.accent,
         unselectedItemColor: AppColors.textTertiary,
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
@@ -222,29 +216,16 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primaryAccent, width: 2),
+          borderSide: const BorderSide(color: AppColors.accent, width: 2),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.accent,
+        linearTrackColor: AppColors.accentSubtle,
+      ),
+      iconTheme: const IconThemeData(color: AppColors.textSecondary),
     );
   }
-
-  static BoxShadow get softShadow => BoxShadow(
-        color: Colors.black.withValues(alpha: 0.04),
-        blurRadius: 20,
-        offset: const Offset(0, 4),
-      );
-
-  static BoxShadow get mediumShadow => BoxShadow(
-        color: Colors.black.withValues(alpha: 0.08),
-        blurRadius: 24,
-        offset: const Offset(0, 8),
-      );
-
-  static BoxShadow get strongShadow => BoxShadow(
-        color: Colors.black.withValues(alpha: 0.12),
-        blurRadius: 32,
-        offset: const Offset(0, 12),
-      );
 }

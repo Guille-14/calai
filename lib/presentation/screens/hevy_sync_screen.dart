@@ -122,11 +122,11 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: AppColors.rpgCardDark,
+        backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(
-            color: AppColors.neonGreen,
+            color: AppColors.accent,
             width: 2,
           ),
         ),
@@ -140,15 +140,15 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.neonGreen.withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   border: Border.all(
-                    color: AppColors.neonGreen,
+                    color: AppColors.accent,
                     width: 2,
                   ),
                 ),
                 child: const Icon(
                   Icons.check_circle,
-                  color: AppColors.neonGreen,
+                  color: AppColors.accent,
                   size: 50,
                 ),
               ),
@@ -158,7 +158,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.neonGreen,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(height: 12),
@@ -174,7 +174,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonGreen,
+                  backgroundColor: AppColors.accent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -184,7 +184,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 child: const Text(
                   'Continuar',
                   style: TextStyle(
-                    color: AppColors.rpgDark,
+                    color: AppColors.background,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -201,11 +201,11 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.rpgDark,
+        backgroundColor: AppColors.background,
         title: const Text(
           'Sincronizar con Hevy',
           style: TextStyle(
-            color: AppColors.neonGreen,
+            color: AppColors.accent,
             fontWeight: FontWeight.w800,
             letterSpacing: 1,
           ),
@@ -213,14 +213,14 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.neonGreen),
+          icon: const Icon(Icons.arrow_back, color: AppColors.accent),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                color: AppColors.neonGreen,
+                color: AppColors.accent,
               ),
             )
           : SingleChildScrollView(
@@ -261,10 +261,10 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: _hasPermissions
-            ? AppColors.neonGreen.withValues(alpha: 0.1)
-            : AppColors.neonRed.withValues(alpha: 0.1),
+            ? AppColors.accent.withValues(alpha: 0.1)
+            : AppColors.error.withValues(alpha: 0.1),
         border: Border.all(
-          color: _hasPermissions ? AppColors.neonGreen : AppColors.neonRed,
+          color: _hasPermissions ? AppColors.accent : AppColors.error,
           width: 2,
         ),
       ),
@@ -276,7 +276,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
             children: [
               Icon(
                 _hasPermissions ? Icons.check_circle : Icons.error,
-                color: _hasPermissions ? AppColors.neonGreen : AppColors.neonRed,
+                color: _hasPermissions ? AppColors.accent : AppColors.error,
                 size: 32,
               ),
               const SizedBox(width: 12),
@@ -292,8 +292,8 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: _hasPermissions
-                            ? AppColors.neonGreen
-                            : AppColors.neonRed,
+                            ? AppColors.accent
+                            : AppColors.error,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -318,9 +318,9 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.rpgCardDark,
+        color: AppColors.cardBackground,
         border: Border.all(
-          color: AppColors.neonCyan.withValues(alpha: 0.3),
+          color: AppColors.accent.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -334,7 +334,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: AppColors.neonCyan,
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -344,7 +344,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.neonCyan,
+                  color: AppColors.accent,
                   letterSpacing: 1,
                 ),
               ),
@@ -376,7 +376,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.neonCyan, size: 20),
+        Icon(icon, color: AppColors.accent, size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -412,8 +412,8 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
       child: ElevatedButton.icon(
         onPressed: _isSyncing ? null : _syncWithHevy,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.neonGreen,
-          disabledBackgroundColor: AppColors.neonGreen.withValues(alpha: 0.5),
+          backgroundColor: AppColors.accent,
+          disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -427,7 +427,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor:
-                      const AlwaysStoppedAnimation<Color>(AppColors.rpgDark),
+                      const AlwaysStoppedAnimation<Color>(AppColors.background),
                 ),
               )
             : const Icon(Icons.cloud_sync),
@@ -436,7 +436,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: AppColors.rpgDark,
+            color: AppColors.background,
             letterSpacing: 1,
           ),
         ),
@@ -455,9 +455,9 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.rpgCardDark,
+        color: AppColors.cardBackground,
         border: Border.all(
-          color: AppColors.neonPurple.withValues(alpha: 0.3),
+          color: AppColors.accent.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -471,7 +471,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: AppColors.neonPurple,
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -481,7 +481,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.neonPurple,
+                  color: AppColors.accent,
                   letterSpacing: 1,
                 ),
               ),
@@ -513,9 +513,9 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.rpgCardDark,
+        color: AppColors.cardBackground,
         border: Border.all(
-          color: AppColors.neonOrange.withValues(alpha: 0.3),
+          color: AppColors.accent.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -529,7 +529,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: AppColors.neonOrange,
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -539,7 +539,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.neonOrange,
+                  color: AppColors.accent,
                   letterSpacing: 1,
                 ),
               ),
@@ -552,17 +552,17 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
               _buildStatBox(
                 'Entrenamientos',
                 '$_workoutsImported',
-                AppColors.neonGreen,
+                AppColors.accent,
               ),
               _buildStatBox(
                 'Rango',
                 '30 días',
-                AppColors.neonCyan,
+                AppColors.accent,
               ),
               _buildStatBox(
                 'Estado',
                 '✓ OK',
-                AppColors.neonOrange,
+                AppColors.accent,
               ),
             ],
           ),
@@ -599,9 +599,9 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: AppColors.rpgDark,
+        color: AppColors.background,
         border: Border.all(
-          color: AppColors.neonMagenta.withValues(alpha: 0.2),
+          color: AppColors.accent.withValues(alpha: 0.2),
           width: 1.5,
         ),
       ),
@@ -615,7 +615,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: AppColors.neonMagenta,
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -625,7 +625,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.neonMagenta,
+                  color: AppColors.accent,
                   letterSpacing: 1,
                 ),
               ),
@@ -669,9 +669,9 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.neonMagenta.withValues(alpha: 0.2),
+            color: AppColors.accent.withValues(alpha: 0.2),
             border: Border.all(
-              color: AppColors.neonMagenta,
+              color: AppColors.accent,
               width: 1,
             ),
           ),
@@ -681,7 +681,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
-                color: AppColors.neonMagenta,
+                color: AppColors.accent,
               ),
             ),
           ),

@@ -103,10 +103,10 @@ class RecipeDetailScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildMacro('Kcal', recipe.calories.toString(), AppColors.caloriesColor),
-          _buildMacro('Proteína', '${recipe.protein}g', AppColors.proteinColor),
-          _buildMacro('Carbos', '${recipe.carbs}g', AppColors.carbsColor),
-          _buildMacro('Grasas', '${recipe.fat}g', AppColors.fatColor),
+          _buildMacro('Kcal', recipe.calories.toString(), AppColors.accent),
+          _buildMacro('Proteína', '${recipe.protein}g', AppColors.accent),
+          _buildMacro('Carbos', '${recipe.carbs}g', AppColors.accent),
+          _buildMacro('Grasas', '${recipe.fat}g', AppColors.accent),
         ],
       ),
     );
@@ -136,7 +136,7 @@ class RecipeDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          const Icon(Icons.circle, size: 6, color: AppColors.primaryAccent),
+          const Icon(Icons.circle, size: 6, color: AppColors.accent),
           const SizedBox(width: 12),
           Expanded(child: Text(text, style: const TextStyle(color: Colors.white70))),
         ],

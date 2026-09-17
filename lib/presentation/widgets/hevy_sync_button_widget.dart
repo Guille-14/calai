@@ -64,7 +64,7 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('✓ Sincronizados $count entrenamientos'),
-              backgroundColor: AppColors.neonGreen,
+              backgroundColor: AppColors.accent,
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
             ),
@@ -81,7 +81,7 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppColors.neonRed,
+            backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
           ),
@@ -112,20 +112,20 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.neonGreen.withValues(alpha: 0.2),
-                AppColors.neonCyan.withValues(alpha: 0.1),
+                AppColors.accent.withValues(alpha: 0.2),
+                AppColors.accent.withValues(alpha: 0.1),
               ],
             ),
             border: Border.all(
               color: _isSyncing
-                  ? AppColors.neonGreen
-                  : AppColors.neonGreen.withValues(alpha: 0.5),
+                  ? AppColors.accent
+                  : AppColors.accent.withValues(alpha: 0.5),
               width: 2,
             ),
             boxShadow: _isSyncing
                 ? [
                     BoxShadow(
-                      color: AppColors.neonGreen.withValues(alpha: 0.6),
+                      color: AppColors.accent.withValues(alpha: 0.6),
                       blurRadius: 12,
                       spreadRadius: 1,
                     ),
@@ -138,7 +138,7 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
             children: [
               Icon(
                 _isSyncing ? Icons.cloud_sync : Icons.cloud_download_outlined,
-                color: AppColors.neonGreen,
+                color: AppColors.accent,
                 size: 18,
               ),
               if (widget.showLabel) ...[
@@ -148,7 +148,7 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.neonGreen,
+                    color: AppColors.accent,
                   ),
                 ),
               ],

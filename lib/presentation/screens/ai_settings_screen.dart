@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
 import '../../data/services/google_ai_service.dart';
@@ -102,7 +103,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar('Error inicializando: $e', Colors.red);
+        _showSnackBar('Error inicializando: $e', AppColors.error);
       }
     }
   }
@@ -113,20 +114,20 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       _activeProvider = provider;
       _responseTimeMs = 0; // Reset response time on switch
     });
-    
+
     // Auto-load models if they are empty
     if (provider == 'ollama' && _installedModels.isEmpty) {
       _loadInstalledModels();
     } else if (provider == 'google' && _googleModels.isEmpty) {
       _loadGoogleModels();
     }
-    
-    _showSnackBar('Proveedor: ${provider.toUpperCase()}', const Color(0xFF34C759));
+
+    _showSnackBar('Proveedor: ${provider.toUpperCase()}', AppColors.accent);
   }
 
   Future<void> _onServerChanged(String? serverId) async {
     if (serverId == null) return;
-    
+
     // Clear models immediately to avoid showing old ones
     setState(() {
       _installedModels = [];
@@ -181,7 +182,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         // FAST CHECK: Use isServerAvailable which uses /api/tags
         final isAvailable = await _ollamaService.isServerAvailable();
         stopwatch.stop();
-        
+
         if (mounted) {
           if (isAvailable) {
             setState(() {
@@ -189,16 +190,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               _responseTimeMs = stopwatch.elapsedMilliseconds;
             });
             _loadInstalledModels();
-            _showSnackBar('✅ Ollama OK (${_responseTimeMs}ms)', Colors.green);
+            _showSnackBar('✅ Ollama OK (${_responseTimeMs}ms)', AppColors.accent);
           } else {
             setState(() => _ollamaAvailable = false);
-            _showSnackBar('❌ Ollama: Servidor no disponible', Colors.red);
+            _showSnackBar('❌ Ollama: Servidor no disponible', AppColors.error);
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _ollamaAvailable = false);
-          _showSnackBar('❌ Error Ollama: $e', Colors.red);
+          _showSnackBar('❌ Error Ollama: $e', AppColors.error);
         }
       }
     } else {
@@ -216,16 +217,16 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               _responseTimeMs = stopwatch.elapsedMilliseconds;
             });
             _loadGoogleModels();
-            _showSnackBar('✅ Google OK (${_responseTimeMs}ms)', Colors.green);
+            _showSnackBar('✅ Google OK (${_responseTimeMs}ms)', AppColors.accent);
           } else {
             setState(() => _googleAvailable = false);
-            _showSnackBar('❌ Google: ${response.error}', Colors.red);
+            _showSnackBar('❌ Google: ${response.error}', AppColors.error);
           }
         }
       } catch (e) {
         if (mounted) {
           setState(() => _googleAvailable = false);
-          _showSnackBar('❌ Error Google: $e', Colors.red);
+          _showSnackBar('❌ Error Google: $e', AppColors.error);
         }
       }
     }
@@ -239,21 +240,21 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Future<void> _saveUrl() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) {
-      _showSnackBar('Introduce URL', Colors.orange);
+      _showSnackBar('Introduce URL', AppColors.accent);
       return;
     }
     await _ollamaService.updateBaseUrl(url);
-    _showSnackBar('URL guardada', const Color(0xFF34C759));
+    _showSnackBar('URL guardada', AppColors.accent);
   }
 
   Future<void> _saveGoogleKey() async {
     final key = _googleApiKeyController.text.trim();
     if (key.isEmpty) {
-      _showSnackBar('Introduce API Key', Colors.orange);
+      _showSnackBar('Introduce API Key', AppColors.accent);
       return;
     }
     await _googleService.updateApiKey(key);
-    _showSnackBar('Key guardada', const Color(0xFF34C759));
+    _showSnackBar('Key guardada', AppColors.accent);
   }
 
   Future<void> _selectModel(String model) async {
@@ -264,7 +265,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       await _googleService.updateModel(model);
       setState(() => _selectedGoogleModel = model);
     }
-    _showSnackBar('Modelo: $model', const Color(0xFF34C759));
+    _showSnackBar('Modelo: $model', AppColors.accent);
   }
 
   Future<void> _addOrEditServer({OllamaServer? existingServer}) async {
@@ -276,7 +277,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1C1C1E),
+          backgroundColor: AppColors.elevatedCardBackground,
           title: Text(existingServer != null ? 'Editar Servidor' : 'Añadir Servidor', style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
@@ -338,9 +339,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.2) : const Color(0xFF2C2C2E),
+            color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : AppColors.elevatedCardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.transparent),
+            border: Border.all(color: isSelected ? AppColors.accent : Colors.transparent),
           ),
           child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 12)),
         ),
@@ -352,11 +353,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('¿Eliminar servidor?', style: TextStyle(color: Colors.white)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Sí')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.error), child: const Text('Sí')),
         ],
       ),
     );
@@ -391,7 +392,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       return Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(title: const Text('Inteligencia Artificial')),
-        body: const Center(child: CircularProgressIndicator(color: Color(0xFF34C759))),
+        body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
 
@@ -421,7 +422,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _buildProviderSelector() {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0xFF1C1C1E), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: AppColors.elevatedCardBackground, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           _providerBtn('ollama', 'Ollama Local', Icons.computer),
@@ -440,7 +441,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF34C759) : Colors.transparent,
+            color: selected ? AppColors.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -463,13 +464,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       builder: (context, _) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.1 * _pulseAnimation.value),
+          color: (ready ? AppColors.accent : AppColors.error).withValues(alpha: 0.1 * _pulseAnimation.value),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: (ready ? Colors.green : Colors.red).withValues(alpha: 0.3)),
+          border: Border.all(color: (ready ? AppColors.accent : AppColors.error).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(ready ? Icons.check_circle : Icons.error, color: ready ? Colors.green : Colors.red, size: 32),
+            Icon(ready ? Icons.check_circle : Icons.error, color: ready ? AppColors.accent : AppColors.error, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -480,7 +481,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                   if (_responseTimeMs > 0)
                     Text(
                       'Ping: ${_responseTimeMs}ms',
-                      style: const TextStyle(color: Colors.greenAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: AppColors.accentStrong, fontSize: 14, fontWeight: FontWeight.bold),
                     )
                   else
                     const Text('Haz ping para ver el tiempo de respuesta.', style: TextStyle(color: Colors.white54, fontSize: 12)),
@@ -490,7 +491,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
             ElevatedButton(
               onPressed: _testingConnection ? null : _testConnection,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF34C759),
+                backgroundColor: AppColors.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
@@ -540,7 +541,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
             value: _selectedServerId,
             items: _servers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 13)))).toList(),
             onChanged: _onServerChanged,
-            decoration: const InputDecoration(filled: true, fillColor: Color(0xFF2C2C2E), border: InputBorder.none),
+            decoration: const InputDecoration(filled: true, fillColor: AppColors.elevatedCardBackground, border: InputBorder.none),
           ),
           const SizedBox(height: 8),
           Row(
@@ -551,7 +552,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                 onPressed: _selectedServerId == null
                     ? null
                     : () => _deleteServer(_selectedServerId!),
-                icon: const Icon(Icons.delete, color: Colors.red),
+                icon: const Icon(Icons.delete, color: AppColors.error),
               ),
             ],
           ),
@@ -565,7 +566,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     return _section(
       icon: Icons.model_training,
       title: 'Modelo Ollama',
-      child: Text(_selectedModel, style: const TextStyle(fontFamily: 'monospace', color: Colors.greenAccent)),
+      child: Text(_selectedModel, style: const TextStyle(fontFamily: 'monospace', color: AppColors.accentStrong)),
     );
   }
 
@@ -576,12 +577,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Column(
         children: [
           TextField(
-            controller: _googleApiKeyController, 
-            obscureText: true, 
+            controller: _googleApiKeyController,
+            obscureText: true,
             decoration: const InputDecoration(
               hintText: 'Pega tu API Key de Google aquí...',
               filled: true,
-              fillColor: Color(0xFF2C2C2E),
+              fillColor: AppColors.elevatedCardBackground,
             )
           ),
           const SizedBox(height: 12),
@@ -591,7 +592,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
               onPressed: _saveGoogleKey,
               icon: const Icon(Icons.save),
               label: const Text('Guardar API Key'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
             ),
           ),
         ],
@@ -618,7 +619,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           if (_loadingGoogleModels)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator(color: Colors.blue)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
             )
           else
             ...ms.map((m) {
@@ -631,17 +632,17 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                        child: const Text('RECOMENDADO PARA COMIDA', style: TextStyle(color: Colors.greenAccent, fontSize: 8, fontWeight: FontWeight.bold)),
+                        decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                        child: const Text('RECOMENDADO PARA COMIDA', style: TextStyle(color: AppColors.accentStrong, fontSize: 8, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ],
                 ),
                 subtitle: Text(
                   m.contains('thinking') ? 'Pensamiento avanzado' : (m.contains('pro') ? 'Máxima Precisión' : 'Más rápido y ligero'),
-                  style: TextStyle(color: m.contains('pro') ? Colors.orange : (m.contains('thinking') ? Colors.purpleAccent : Colors.tealAccent), fontSize: 11),
+                  style: TextStyle(color: m.contains('pro') ? AppColors.accent : (m.contains('thinking') ? AppColors.accent : AppColors.accentStrong), fontSize: 11),
                 ),
-                trailing: _selectedGoogleModel == m ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.circle_outlined, color: Colors.white24),
+                trailing: _selectedGoogleModel == m ? const Icon(Icons.check_circle, color: AppColors.accent) : const Icon(Icons.circle_outlined, color: Colors.white24),
                 onTap: () => _selectModel(m),
               );
             }).toList(),
@@ -659,11 +660,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Widget _section({required IconData icon, required String title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF1C1C1E), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: AppColors.elevatedCardBackground, borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Icon(icon, size: 18, color: Colors.green), const SizedBox(width: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.bold))]),
+          Row(children: [Icon(icon, size: 18, color: AppColors.accent), const SizedBox(width: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.bold))]),
           const SizedBox(height: 12),
           child,
         ],
@@ -673,8 +674,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Widget _buildGoogleInfoSection() {
     return _section(
-      icon: Icons.info, 
-      title: 'Información y Registro', 
+      icon: Icons.info,
+      title: 'Información y Registro',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -682,8 +683,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-            child: const Text('👉 Obtén tu API Key gratis en: aistudio.google.com', style: TextStyle(fontSize: 12, color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+            decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+            child: const Text('👉 Obtén tu API Key gratis en: aistudio.google.com', style: TextStyle(fontSize: 12, color: AppColors.accentStrong, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -692,14 +693,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Widget _buildInstalledModelsSection() {
     return _section(
-      icon: Icons.download_done, 
-      title: 'Modelos en Local', 
+      icon: Icons.download_done,
+      title: 'Modelos en Local',
       child: Column(
         children: [
           if (_loadingModels)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: CircularProgressIndicator(color: Colors.green)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
             )
           else if (_installedModels.isEmpty)
             const Padding(
@@ -708,8 +709,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
             )
           else
             ..._installedModels.map((m) => ListTile(
-              title: Text(m, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)), 
-              trailing: _selectedModel == m ? const Icon(Icons.check, color: Colors.green) : null, 
+              title: Text(m, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
+              trailing: _selectedModel == m ? const Icon(Icons.check, color: AppColors.accent) : null,
               onTap: () => _selectModel(m)
             )).toList(),
           const SizedBox(height: 8),
@@ -729,8 +730,8 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Widget _buildRecommendationSection() {
     return _section(
-      icon: Icons.star, 
-      title: 'Modelos Recomendados', 
+      icon: Icons.star,
+      title: 'Modelos Recomendados',
       child: Column(
         children: [
           _buildRecCard('PC Personal (Potente)', 'llama3.2-vision:11b', 'El mejor para tu RTX 3060 8GB de VRAM. Excelente visión y respuestas.'),
@@ -761,18 +762,18 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF34C759).withValues(alpha: 0.1) : const Color(0xFF2C2C2E),
+          color: isSelected ? AppColors.accent.withValues(alpha: 0.1) : AppColors.elevatedCardBackground,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? const Color(0xFF34C759) : Colors.deepPurpleAccent.withValues(alpha: 0.4)),
+          border: Border.all(color: isSelected ? AppColors.accent : AppColors.accent.withValues(alpha: 0.4)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.computer, color: Colors.deepPurpleAccent.withValues(alpha: 0.8), size: 16),
+                Icon(Icons.computer, color: AppColors.accent.withValues(alpha: 0.8), size: 16),
                 const SizedBox(width: 6),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent, fontSize: 12)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent, fontSize: 12)),
               ],
             ),
             const SizedBox(height: 6),
@@ -781,14 +782,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
                 Expanded(child: Text(model, style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
                 GestureDetector(
                   onTap: () => _selectModel(model),
-                  child: Icon(isSelected ? Icons.check_circle : Icons.copy, color: isSelected ? Colors.green : Colors.white54, size: 20),
+                  child: Icon(isSelected ? Icons.check_circle : Icons.copy, color: isSelected ? AppColors.accent : Colors.white54, size: 20),
                 )
               ]
             ),
             const SizedBox(height: 6),
             Text(desc, style: const TextStyle(fontSize: 11, color: Colors.white54)),
             const SizedBox(height: 8),
-            Text('Comando: ollama pull $model', style: const TextStyle(fontSize: 10, color: Colors.orangeAccent, fontFamily: 'monospace')),
+            Text('Comando: ollama pull $model', style: const TextStyle(fontSize: 10, color: AppColors.accentStrong, fontFamily: 'monospace')),
           ]
         )
       ),

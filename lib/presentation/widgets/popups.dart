@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/utils/app_translations.dart';
@@ -121,8 +122,8 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.green.shade400,
-                    Colors.green.shade600,
+                    AppColors.accent.shade400,
+                    AppColors.accent.shade600,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -130,7 +131,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.5),
+                    color: AppColors.accent.withValues(alpha: 0.5),
                     blurRadius: 30,
                     spreadRadius: 5,
                   ),
@@ -165,7 +166,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                       child: Icon(
                         Icons.check_circle,
                         size: 60,
-                        color: Colors.green.shade600,
+                        color: AppColors.accent.shade600,
                       ),
                     ),
                   ),
@@ -320,15 +321,15 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isGoalJustReached
-                    ? [Colors.cyan.shade400, Colors.blue.shade600]
-                    : [Colors.blue.shade400, Colors.blue.shade600],
+                    ? [AppColors.accent.shade400, AppColors.accent.shade600]
+                    : [AppColors.accent.shade400, AppColors.accent.shade600],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: (isGoalJustReached ? Colors.cyan : Colors.blue)
+                  color: (isGoalJustReached ? AppColors.accent : AppColors.accent)
                       .withValues(alpha: 0.5),
                   blurRadius: 30,
                   spreadRadius: 5,
@@ -363,7 +364,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                               ? Icons.emoji_events
                               : Icons.water_drop,
                           size: 50,
-                          color: Colors.blue.shade600,
+                          color: AppColors.accent.shade600,
                         ),
                       ),
                       if (isGoalJustReached)

@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
@@ -11,9 +12,9 @@ class SymmetryRanksScreen extends StatefulWidget {
 }
 
 class _SymmetryRanksScreenState extends State<SymmetryRanksScreen> {
-  static const Color _accent = Color(0xFF00C853);
-  static const Color _bg = Color(0xFF000000);
-  static const Color _card = Color(0xFF141414);
+  static const Color _accent = AppColors.accent;
+  static const Color _bg = AppColors.background;
+  static const Color _card = AppColors.cardBackground;
 
   final SymmetryProgressionService _service = SymmetryProgressionService();
   bool _loading = true;

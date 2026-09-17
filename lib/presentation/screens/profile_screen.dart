@@ -109,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: Text(title, style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
@@ -121,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabledBorder: const OutlineInputBorder(
                 borderSide: BorderSide(color: Colors.white24)),
             focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: AppColors.accentCalories)),
+                borderSide: BorderSide(color: AppColors.accent)),
           ),
         ),
         actions: [
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
             child: const Text('Guardar',
-                style: TextStyle(color: AppColors.accentCalories)),
+                style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -174,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Seleccionar Idioma',
             style: TextStyle(color: Colors.white)),
         content: Column(
@@ -185,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Text(lang, style: const TextStyle(color: Colors.white)),
                     trailing: _selectedLanguage == lang
                         ? const Icon(Icons.check,
-                            color: AppColors.accentCalories)
+                            color: AppColors.accent)
                         : null,
                     onTap: () => Navigator.pop(ctx, lang),
                   ))
@@ -212,7 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Seleccionar Género',
             style: TextStyle(color: Colors.white)),
         content: Column(
@@ -222,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: Text(g, style: const TextStyle(color: Colors.white)),
                     trailing: _userData?.gender == g
                         ? const Icon(Icons.check,
-                            color: AppColors.accentCalories)
+                            color: AppColors.accent)
                         : null,
                     onTap: () => Navigator.pop(ctx, g),
                   ))
@@ -240,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showNotificationSettingsDialog() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.elevatedCardBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -287,7 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentCalories,
+                      backgroundColor: AppColors.accent,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -308,7 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.elevatedCardBackground,
         title: const Text('Horario de Recordatorios',
             style: TextStyle(color: Colors.white)),
         content: const Text(
@@ -318,7 +318,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cerrar',
-                style: TextStyle(color: AppColors.accentCalories)),
+                style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -337,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Objetivo de Proteína',
@@ -373,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00C853),
+              backgroundColor: AppColors.accent,
             ),
             child: const Text('Guardar'),
           ),
@@ -386,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           '¿Restablecer progreso?',
@@ -408,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _loadData();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
             child: const Text('Restablecer'),
           ),
@@ -492,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               trailing: Switch(
                 value: _creditWorkoutCalories,
                 onChanged: _toggleCreditWorkoutCalories,
-                activeThumbColor: AppColors.accentCalories,
+                activeThumbColor: AppColors.accent,
               ),
             ),
           ]),
@@ -631,7 +631,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
@@ -643,12 +643,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.restaurant,
-                  color: Color(0xFF00C853),
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -667,7 +667,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853),
+                    color: AppColors.accent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -710,8 +710,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           LinearProgressIndicator(
             value: progress,
             color: _macroBridge.metProteinGoal
-                ? const Color(0xFF00C853)
-                : const Color(0xFFFFD700),
+                ? AppColors.accent
+                : AppColors.accent,
             backgroundColor: Colors.white12,
             minHeight: 8,
           ),
@@ -720,7 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _macroBridge.getProteinStatusMessage(),
             style: TextStyle(
               color: _macroBridge.metProteinGoal
-                  ? const Color(0xFF00C853)
+                  ? AppColors.accent
                   : Colors.white54,
               fontSize: 12,
             ),
@@ -734,7 +734,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
@@ -743,7 +743,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.map, color: Color(0xFFFF6B6B)),
+              Icon(Icons.map, color: AppColors.error),
               SizedBox(width: 8),
               Text(
                 'Estado Muscular',
@@ -805,9 +805,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Color _getFatigueColor(double fatigue) {
-    if (fatigue < 30) return Colors.green;
-    if (fatigue < 60) return Colors.orange;
-    return Colors.red;
+    if (fatigue < 30) return AppColors.accent;
+    if (fatigue < 60) return AppColors.accent;
+    return AppColors.error;
   }
 
   Widget _buildSettingsItem({
@@ -840,19 +840,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: _ollamaAvailable
-                ? AppColors.accentCalories.withValues(alpha: 0.2)
-                : Colors.red.withValues(alpha: 0.2)),
+                ? AppColors.accent.withValues(alpha: 0.2)
+                : AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: (_ollamaAvailable ? AppColors.accentCalories : Colors.red)
+              color: (_ollamaAvailable ? AppColors.accent : AppColors.error)
                   .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -860,7 +860,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _ollamaAvailable
                   ? Icons.cloud_done_outlined
                   : Icons.cloud_off_outlined,
-              color: _ollamaAvailable ? AppColors.accentCalories : Colors.red,
+              color: _ollamaAvailable ? AppColors.accent : AppColors.error,
             ),
           ),
           const SizedBox(width: 16),
@@ -891,7 +891,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(builder: (_) => const AiSettingsScreen())),
             child: Text('CONFIGURAR',
                 style: TextStyle(
-                    color: AppColors.accentCalories,
+                    color: AppColors.accent,
                     fontWeight: FontWeight.bold,
                     fontSize: 12)),
           ),
@@ -917,7 +917,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSettingsGroup(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -970,7 +970,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(value,
               style: const TextStyle(
-                  color: AppColors.accentCalories,
+                  color: AppColors.accent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
@@ -992,7 +992,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(value,
               style: const TextStyle(
-                  color: AppColors.accentCalories, fontSize: 14)),
+                  color: AppColors.accent, fontSize: 14)),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right,
               color: Colors.white.withValues(alpha: 0.2), size: 18),
@@ -1014,7 +1014,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await _notificationService.setEnabled(value);
           setState(() => _notificationsEnabled = value);
         },
-        activeThumbColor: AppColors.accentCalories,
+        activeThumbColor: AppColors.accent,
       ),
       onTap: () => _showNotificationSettingsDialog(),
     );
@@ -1042,7 +1042,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Switch(
               value: value,
               onChanged: onChanged,
-              activeThumbColor: AppColors.accentCalories),
+              activeThumbColor: AppColors.accent),
         ],
       ),
     );
@@ -1051,7 +1051,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildNotificationSettings() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),

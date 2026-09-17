@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
@@ -142,17 +143,10 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            progress.currentRank.color.withValues(alpha: 0.15),
-            progress.currentRank.color.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: progress.currentRank.color.withValues(alpha: 0.3),
+          color: progress.currentRank.color.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
@@ -245,7 +239,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
@@ -265,13 +259,13 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${workout.totalTonnage.toStringAsFixed(0)} kg',
                   style: const TextStyle(
-                    color: Color(0xFF00C853),
+                    color: AppColors.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),

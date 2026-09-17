@@ -105,7 +105,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
             children: [
               Expanded(child: Text('${entry.key + 1}. ${entry.value}', style: const TextStyle(color: Colors.white70))),
               IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
+                icon: const Icon(Icons.remove_circle_outline, color: AppColors.error),
                 onPressed: () => onRemoveItem(entry.key),
               ),
             ],
@@ -130,7 +130,7 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
               ),
             ),
                IconButton(
-                 icon: const Icon(Icons.add_circle, color: AppColors.primaryAccent),
+                 icon: const Icon(Icons.add_circle, color: AppColors.accent),
                  onPressed: () {
 
                 if (controller.text.trim().isNotEmpty) {

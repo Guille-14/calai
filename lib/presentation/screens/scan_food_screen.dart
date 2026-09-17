@@ -74,7 +74,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           bottom: MediaQuery.of(context).padding.bottom + 24,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.background,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
@@ -110,7 +110,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   child: _ImageSourceButton(
                     icon: Icons.camera_alt_rounded,
                     label: t.translate('camera'),
-                    color: AppColors.accentCalories,
+                    color: AppColors.accent,
                     onTap: () {
                       Navigator.pop(context);
                       _pickImage(ImageSource.camera);
@@ -122,7 +122,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   child: _ImageSourceButton(
                     icon: Icons.photo_library_rounded,
                     label: t.translate('gallery'),
-                    color: AppColors.royalBlue,
+                    color: AppColors.accent,
                     onTap: () {
                       Navigator.pop(context);
                       _pickImage(ImageSource.gallery);
@@ -246,7 +246,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF1C1C1E),
+            color: AppColors.elevatedCardBackground,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.all(24),
@@ -267,7 +267,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               const SizedBox(height: 20),
               Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                  const Icon(Icons.check_circle, color: AppColors.accent, size: 28),
                   const SizedBox(width: 12),
                   const Text('Alimento Escaneado',
                       style: TextStyle(
@@ -280,7 +280,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2C2C2E),
+                  color: AppColors.elevatedCardBackground,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -312,19 +312,19 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     _buildMacroRow(
                         'Calorías',
                         '${foodItem.calories.toInt()} kcal',
-                        AppColors.accentCalories),
+                        AppColors.accent),
                     _buildMacroRow('Proteína', '${foodItem.protein.toInt()}g',
-                        Colors.green),
+                        AppColors.accent),
                     _buildMacroRow('Carbohidratos',
-                        '${foodItem.carbs.toInt()}g', Colors.blue),
+                        '${foodItem.carbs.toInt()}g', AppColors.accent),
                     _buildMacroRow(
-                        'Grasa', '${foodItem.fat.toInt()}g', Colors.orange),
+                        'Grasa', '${foodItem.fat.toInt()}g', AppColors.accent),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.auto_awesome,
-                            color: Color(0xFF007AFF), size: 16),
+                            color: AppColors.accent, size: 16),
                         const SizedBox(width: 6),
                         Text('IA: ${FoodService.model}',
                             style: const TextStyle(
@@ -353,7 +353,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                       icon: const Icon(Icons.check),
                       label: const Text('Guardar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.accent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
@@ -378,8 +378,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text('Chatear con IA sobre este alimento'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF007AFF),
-                    side: const BorderSide(color: Color(0xFF007AFF)),
+                    foregroundColor: AppColors.accent,
+                    side: const BorderSide(color: AppColors.accent),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -446,7 +446,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
@@ -497,15 +497,15 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
           Container(
             padding: const EdgeInsets.all(48),
             decoration: BoxDecoration(
-              color: AppColors.accentCalories.withValues(alpha: 0.05),
+              color: AppColors.accent.withValues(alpha: 0.05),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.accentCalories.withValues(alpha: 0.2), width: 2),
+                  color: AppColors.accent.withValues(alpha: 0.2), width: 2),
             ),
             child: Icon(
               Icons.camera_alt_outlined,
               size: 80,
-              color: AppColors.accentCalories,
+              color: AppColors.accent,
             ),
           ),
           const SizedBox(height: 48),
@@ -523,7 +523,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               label: const Text('Seleccionar Imagen',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentCalories,
+                backgroundColor: AppColors.accent,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -613,7 +613,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: AppColors.accent.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -623,7 +623,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                             ? '70%'
                             : '50%',
                     style: const TextStyle(
-                      color: Colors.greenAccent,
+                      color: AppColors.accentStrong,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -653,25 +653,25 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   icon: Icons.local_fire_department,
                   label: 'Cal',
                   value: '${data.estimatedCalories}',
-                  color: AppColors.accentCalories,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.fitness_center,
                   label: 'Protein',
                   value: '${data.protein.toInt()}g',
-                  color: AppColors.accentProtein,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.bakery_dining,
                   label: 'Carbs',
                   value: '${data.carbs.toInt()}g',
-                  color: AppColors.accentCarbs,
+                  color: AppColors.accent,
                 ),
                 _NutritionChip(
                   icon: Icons.egg_alt,
                   label: 'Fat',
                   value: '${data.fat.toInt()}g',
-                  color: AppColors.accentFat,
+                  color: AppColors.accent,
                 ),
               ],
             ),
@@ -736,14 +736,14 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             children: [
               Icon(
                 Icons.error_outline,
-                color: Colors.red.shade300,
+                color: AppColors.error.shade300,
                 size: 48,
               ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage ?? 'Error analyzing image',
                 style: TextStyle(
-                  color: Colors.red.shade200,
+                  color: AppColors.error.shade200,
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
@@ -807,7 +807,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -825,7 +825,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               label: Text(t.translate('new_image')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: AppColors.accentCalories),
+                side: BorderSide(color: AppColors.accent),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -851,7 +851,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   ? t.translate('analyzing')
                   : t.translate('analyze_food')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentCalories,
+                backgroundColor: AppColors.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

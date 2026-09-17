@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
@@ -133,7 +134,7 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
     return Container(
       height: 400,
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: AppColors.elevatedCardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white12, width: 1),
       ),
@@ -147,12 +148,12 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.terminal, color: Colors.greenAccent, size: 18),
+                const Icon(Icons.terminal, color: AppColors.accentStrong, size: 18),
                 const SizedBox(width: 8),
                 const Text(
                   'OLLAMA REMOTE CONSOLE',
                   style: TextStyle(
-                    color: Colors.greenAccent,
+                    color: AppColors.accentStrong,
                     fontFamily: 'Courier',
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -165,7 +166,7 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
                     height: 12,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentStrong),
                     ),
                   ),
               ],
@@ -202,7 +203,7 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
             ),
             child: Row(
               children: [
-                const Text('>', style: TextStyle(color: Colors.greenAccent, fontFamily: 'Courier')),
+                const Text('>', style: TextStyle(color: AppColors.accentStrong, fontFamily: 'Courier')),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -234,9 +235,9 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
       case EntryType.command:
         return Colors.white;
       case EntryType.info:
-        return Colors.greenAccent.withValues(alpha: 0.9);
+        return AppColors.accentStrong.withValues(alpha: 0.9);
       case EntryType.error:
-        return Colors.redAccent;
+        return AppColors.error;
     }
   }
 }

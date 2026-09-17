@@ -85,14 +85,14 @@ class _RecipeHomeScreenState extends State<RecipeHomeScreen> {
         elevation: 0,
           actions: [
 IconButton(
-              icon: Icon(Icons.auto_awesome, color: AppColors.primaryAccent),
+              icon: Icon(Icons.auto_awesome, color: AppColors.accent),
               onPressed: _showTikTokExtractor,
               tooltip: 'Extraer de TikTok con IA',
             ),
           ],
       ),
       body: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: AppColors.primaryAccent))
+        ? Center(child: CircularProgressIndicator(color: AppColors.accent))
         : _recipes.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
