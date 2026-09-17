@@ -1,4 +1,90 @@
-# 📝 CHANGELOG: Hevy Integration
+# 📝 CHANGELOG
+
+## Version 1.1.0 (2026-09-17) - Fusión CalAI + Symmetry
+
+> Nota sobre verificación: cada fase se verifica con `flutter analyze` y
+> `flutter test` en GitHub Actions (no hay Flutter en el entorno de
+> desarrollo). El estado real de cada verificación se publica en la
+> release de debug `ci-debug` del repo (salida textual de los gates).
+> Los ✅ de abajo solo se ponen cuando el gate correspondiente pasa.
+
+### Phase 1 — fix: cálculos y sync
+- Fórmula Mifflin-St Jeor real en `CalorieCalculator` (antes decía
+  Mifflin-St Jeor pero implementaba Harris-Benedict revisada).
+- Un único camino de sync de proteína: `FoodLogCubit -> MacroBridge`
+  (se eliminó `syncProteinFromFoodLog`, que nadie llamaba).
+- Claves de fecha unificadas a `YYYY-MM-DD` con ceros
+  (`formatDateKey`), con migración de la clave legacy de macro_bridge.
+
+### Phase 2 — refactor: sin código muerto
+- Eliminada `food_scanner_screen.dart` (duplicada de `scan_food_screen`);
+  el drawer navega a `ScanFoodScreen`.
+- Reintegrada la sincronización con Hevy (Health Connect) como función
+  opcional en el flujo de entrenamiento, con los fixes que le faltaban
+  para compilar contra el código actual (API del paquete `health` 13.x y
+  paleta de colores que no existía).
+- Borrado `_dead_code_backup/` (82 archivos, ~21.000 líneas) del árbol.
+
+### Phase 3 — feat: persistencia SQLite
+- Schema v2: tablas `food_entries` (indexada por timestamp) y
+  `workout_sessions` (indexada por fecha).
+- El registro diario de comidas vive en SQLite; las 4 APIs públicas de
+  `FoodRepository` se mantienen con las mismas firmas.
+- Migración one-shot de `food_log_*` (SharedPreferences) a SQLite
+  (transacción; marca `migrated_food_log_v1`; no pierde comidas).
+- Progreso usa consultas de rango/LIMIT indexadas; las sesiones de
+  Symmetry persisten en `workout_sessions` (con backfill del historial
+  legado del HealthConnectBridge).
+- Las notificaciones de objetivos leen el total del día de SQLite.
+
+### Phase 4 — feat: seguridad
+- Claves de API (Gemini, OpenRouter) en `flutter_secure_storage` con
+  migración automática desde SharedPreferences (mover + borrar).
+- `usesCleartextTraffic=true` -> `networkSecurityConfig`: HTTPS por
+  defecto; cleartext solo localhost/127.0.0.1/`*.local`/dominios
+  Tailscale. (Android no soporta rangos CIDR: los servidores por IP se
+  añaden como IP exacta, documentado en el XML.)
+- `.env` comiteado como plantilla sin secretos (antes: listado como
+  asset pero inexistente + gitignoreado -> rompía cualquier build en
+  clone limpio).
+
+### Phase 5 — feat: la fusión
+- Un solo `MainNavigator` con 5 pestañas (Inicio · Escanear · Entrenar ·
+  Progreso · Perfil). Eliminados `app_switcher_screen`,
+  `normal_mode_navigator` y `symmetry_navigator` (no hay más "modos" ni
+  diálogos de entrada/salida).
+- Perfil unificado (settings + symmetry profile en una sola pantalla).
+- Drawer: sin "Modo HEAVY"; entradas reales (Recetas, Escanear,
+  Historial, Rangos, Diagnóstico IA).
+- Home: tarjeta Symmetry (rango/XP, racha de entreno, racha de
+  disciplina comida+entreno, estado de proteína).
+- Toggle "Creditar calorías quemadas" (default OFF): con él activo, el
+  gasto estimado de cada entrenamiento (fórmula MET) resta del
+  objetivo diario.
+
+### Phase 6 — test: suite inicial
+- `calorie_calculator_test` (Mifflin-St Jeor a mano, 3 objetivos de
+  macros), `symmetry_progression_test` (límites de rango exactos, XP
+  con/sin racha y multiplicador), `macro_bridge_test` (multiplicador,
+  formato de clave con ceros, migración legacy).
+
+### Phase 7 — chore: build
+- `applicationId`/`namespace` -> `com.guillermo.calai` (MainActivity
+  movido; el manifest usa `.MainActivity` relativo).
+- Release firmado con clave debug A PROPOSITO (instalación personal,
+  sin Play Store; comentado en build.gradle). Versión 1.1.0+4.
+
+### Phase 8 — ci: pipeline completo
+- Workflow: analyze+test en cada push/PR, build APK en main/manual/tag
+  v*, y release con APK al push de tag `v*` (softprops).
+- Canal de depuración: la salida REAL de analyze/test/build se publica
+  como releases draft `ci-debug`/`ci-debug-test`/`ci-build` (los
+  artifacts y logs crudos no eran accesibles desde el entorno de
+  trabajo).
+
+---
+
+# 📝 CHANGELOG: Hevy Integration (histórico)
 
 ## Version 1.0.0 - 2025-01-16 ✅ RELEASE
 
