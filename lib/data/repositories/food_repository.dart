@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/ai/ai_analysis_port.dart';
 import '../../models/food_entry.dart';
+import '../models/food_analysis_result.dart';
 import '../models/food_item.dart';
 import '../models/product_model.dart';
 import '../services/ai_gateway_adapter.dart';

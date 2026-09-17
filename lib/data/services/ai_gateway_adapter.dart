@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import '../../core/ai/ai_analysis_port.dart';
-import '../models/food_analysis_result.dart';
 import 'ai_gateway.dart';
 
 /// Adaptador de infraestructura para inyectar el gateway actual en casos de
