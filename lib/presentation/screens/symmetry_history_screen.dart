@@ -210,7 +210,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
             children: [
               _buildStatItem(
                 label: 'Total XP',
-                value: '${progress.totalXP.toStringAsFixed(0)}',
+                value: progress.totalXP.toStringAsFixed(0),
                 icon: Icons.stars_outlined,
               ),
               _buildStatItem(
