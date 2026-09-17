@@ -108,7 +108,7 @@ class FoodAnalysisResult {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
-  int get totalMacroGrams => (protein + carbs + fat).round();
+  int get totalMacroGrams => (protein + carbs + fat).toInt();
 
   FoodAnalysisResult copyWith({List<String>? foods}) {
     return FoodAnalysisResult(
