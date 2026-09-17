@@ -485,7 +485,7 @@ class DatabaseService {
     double? heartRateMax,
     required int heartRateSamples,
     required int workouts,
-    Map<String, double> otherMetrics = const {},
+    Map<String, dynamic> otherMetrics = const {},
     required DateTime importedAt,
   }) async {
     final db = await database;

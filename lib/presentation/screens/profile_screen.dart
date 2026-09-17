@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_constants.dart';
@@ -60,6 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   GoogleFitDailyData? _healthToday;
   HealthImportResult? _lastHealthResult;
   Map<String, int> _healthPointSources = {};
+  List<Map<String, dynamic>> _healthTodayMetricRows = [];
 
   bool _isLoading = true;
 
@@ -95,7 +98,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final healthToday = healthAuthorized
         ? await _healthService.fetchDailyData()
         : null;
-    final sourceCounts = await DatabaseService().getWorkoutSourceCounts();
+    final database = DatabaseService();
+    final sourceCounts = await database.getWorkoutSourceCounts();
+    final todayMetricRows = healthAuthorized
+        ? await database.getHealthDailyMetricsBetween(DateTime.now(), DateTime.now())
+        : <Map<String, dynamic>>[];
     final lastImportMs = prefs.getInt(GoogleFitService.lastImportedAtKey);
 
     if (mounted) {
@@ -108,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _healthConnectAuthorized = healthAuthorized;
         _healthToday = healthToday;
         _workoutSourceCounts = sourceCounts;
+        _healthTodayMetricRows = todayMetricRows;
         _lastHealthImport = lastImportMs == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch(lastImportMs);
@@ -122,8 +130,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await _healthService.importFullHistory();
     if (!mounted) return;
     if (result.isSuccess) {
-      final counts = await DatabaseService().getWorkoutSourceCounts();
+      final database = DatabaseService();
+      final counts = await database.getWorkoutSourceCounts();
       final healthToday = await _healthService.fetchDailyData();
+      final todayMetricRows = await database.getHealthDailyMetricsBetween(
+          DateTime.now(), DateTime.now());
       if (!mounted) return;
       setState(() {
         _healthSyncing = false;
@@ -131,6 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _workoutSourceCounts = counts;
         _lastHealthResult = result;
         _healthPointSources = result.sourcePointCounts;
+        _healthTodayMetricRows = todayMetricRows;
         _healthToday = healthToday;
         _lastHealthImport = result.lastImportedAt;
         _healthAvailableFrom = result.availableFrom;
@@ -630,15 +642,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _healthSourceLabel(String source) {
+    if (source == 'mifit') return 'Mi Fitness';
+    if (source == 'hevy') return 'Hevy';
+    if (source == 'symmetry_app') return 'Symmetry';
+    if (source.startsWith('health_connect:')) {
+      return source.substring('health_connect:'.length);
+    }
+    return source;
+  }
+
+  String _healthMetricLabel(String key) {
+    const labels = {
+      'FLIGHTS_CLIMBED': 'Pisos',
+      'BLOOD_OXYGEN': 'Oxígeno',
+      'BODY_FAT_PERCENTAGE': 'Grasa corporal',
+      'HEIGHT': 'Altura',
+      'LEAN_BODY_MASS': 'Masa magra',
+      'WATER': 'Agua',
+      'TOTAL_CALORIES_BURNED': 'Calorías totales',
+    };
+    return labels[key] ?? key;
+  }
+
+  Widget _buildHealthOtherMetrics() {
+    final rows = <Widget>[];
+    for (final row in _healthTodayMetricRows) {
+      final raw = row['other_metrics'];
+      if (raw is! String || raw.isEmpty) continue;
+      Map<String, dynamic> metrics;
+      try {
+        metrics = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      } catch (_) {
+        continue;
+      }
+      final source = _healthSourceLabel(row['source']?.toString() ?? 'unknown');
+      for (final entry in metrics.entries) {
+        final summary = entry.value is Map
+            ? Map<String, dynamic>.from(entry.value as Map)
+            : <String, dynamic>{'value': entry.value};
+        final value = summary['value'];
+        if (value is! num) continue;
+        final unit = summary['unit']?.toString() ?? '';
+        final records = (summary['records'] as num?)?.toInt() ?? 0;
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '${_healthMetricLabel(entry.key)}: ${value.toStringAsFixed(1)} $unit · $source · $records registros',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+            ),
+          ),
+        );
+      }
+    }
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Otros datos disponibles hoy',
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
   Widget _buildHealthConnectCard() {
     final status = !_healthConnectAvailable
         ? 'Health Connect no disponible'
         : _healthConnectAuthorized
             ? 'Conectado y autorizado'
             : 'Instalado, falta autorización';
-    final imported = (_workoutSourceCounts['mifit'] ?? 0) +
-        (_workoutSourceCounts['symmetry_app'] ?? 0) +
-        (_workoutSourceCounts['health_connect'] ?? 0);
+    final imported = _workoutSourceCounts.entries
+        .where((entry) => entry.key != 'native')
+        .fold<int>(0, (total, entry) => total + entry.value);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -683,11 +767,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           _buildHealthMetricRow(),
+          _buildHealthOtherMetrics(),
           const SizedBox(height: 8),
           Text(
             _lastHealthResult == null
                 ? 'Pulsa sincronizar para importar el histórico completo.'
-                : '${_lastHealthResult!.healthDays} días · ${_lastHealthResult!.stepsRecords} pasos · ${_lastHealthResult!.activeCaloriesRecords} calorías · ${_lastHealthResult!.weightRecords} pesos · ${_lastHealthResult!.sleepSessions} sueños · ${_lastHealthResult!.heartRateRecords} pulso',
+                : '${_lastHealthResult!.healthDays} días · ${_lastHealthResult!.stepsRecords} pasos · ${_lastHealthResult!.activeCaloriesRecords} cal. activas · ${_lastHealthResult!.totalCaloriesRecords} cal. totales · ${_lastHealthResult!.weightRecords} pesos · ${_lastHealthResult!.sleepSessions} sueños · ${_lastHealthResult!.heartRateRecords} pulso',
             style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
           ),
           if (_healthPointSources.isNotEmpty) ...[

@@ -45,6 +45,7 @@ class GoogleFitService {
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.BASAL_ENERGY_BURNED,
+    HealthDataType.TOTAL_CALORIES_BURNED,
     HealthDataType.DISTANCE_DELTA,
     HealthDataType.FLIGHTS_CLIMBED,
     HealthDataType.WORKOUT,
@@ -112,6 +113,18 @@ class GoogleFitService {
   Future<bool> _ensureAuthorization() async {
     if (await checkAuthorization()) return true;
     return requestAuthorization();
+  }
+
+  Future<bool> _ensureHistoricalAuthorization() async {
+    if (!await _ensureAuthorization()) return false;
+    try {
+      if (!await _health.isHealthDataHistoryAvailable()) return true;
+      if (await _health.isHealthDataHistoryAuthorized()) return true;
+      return await _health.requestHealthDataHistoryAuthorization();
+    } catch (e) {
+      debugPrint('GoogleFitService: no se pudo solicitar histórico: $e');
+      return false;
+    }
   }
 
   Future<bool> isHealthConnectInstalled() async {
@@ -198,9 +211,9 @@ class GoogleFitService {
     if (!Platform.isAndroid) {
       return HealthImportResult.error('Solo Android soportado');
     }
-    if (!await _ensureAuthorization()) {
+    if (!await _ensureHistoricalAuthorization()) {
       return HealthImportResult.error(
-          'No autorizado. Conecta Health Connect desde Perfil.');
+          'Health Connect no ha concedido el acceso al histórico. Abre la pantalla de permisos y activa "Datos de salud históricos".');
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -208,7 +221,10 @@ class GoogleFitService {
     final start = since ??
         (savedSince == null
             ? DateTime.now().subtract(const Duration(days: 3650))
-            : DateTime.fromMillisecondsSinceEpoch(savedSince));
+            // Re-read the tail of the previous window so a record written
+            // late by Mi Fitness cannot erase the current day's summary.
+            : DateTime.fromMillisecondsSinceEpoch(savedSince)
+                .subtract(const Duration(days: 2)));
     final end = DateTime.now();
 
     final results = await Future.wait(
@@ -316,6 +332,8 @@ class GoogleFitService {
       heartRateRecords: (byType[HealthDataType.HEART_RATE] ?? const []).length,
       stepsRecords: stepPoints.length,
       activeCaloriesRecords: activePoints.length,
+      totalCaloriesRecords:
+          (byType[HealthDataType.TOTAL_CALORIES_BURNED] ?? const []).length,
       distanceRecords: distancePoints.length,
       healthDays: accumulators.length,
       totalSteps: totalSteps.round(),
@@ -381,11 +399,65 @@ class GoogleFitService {
       case HealthDataType.LEAN_BODY_MASS:
       case HealthDataType.WATER:
       case HealthDataType.FLIGHTS_CLIMBED:
-        final key = type.toString().split('.').last;
-        item.otherMetrics[key] = (item.otherMetrics[key] ?? 0) + numeric;
+      case HealthDataType.TOTAL_CALORIES_BURNED:
+        _addOtherMetric(item, type, point, numeric);
         break;
       default:
         break;
+    }
+  }
+
+  void _addOtherMetric(
+    _DailyHealthAccumulator item,
+    HealthDataType type,
+    HealthDataPoint point,
+    double numeric,
+  ) {
+    final key = type.toString().split('.').last;
+    final previous = item.otherMetrics[key];
+    final summary = previous is Map
+        ? Map<String, dynamic>.from(previous)
+        : <String, dynamic>{};
+    final lastValueTypes = {
+      HealthDataType.BLOOD_OXYGEN,
+      HealthDataType.BODY_FAT_PERCENTAGE,
+      HealthDataType.HEIGHT,
+      HealthDataType.LEAN_BODY_MASS,
+    };
+    final previousValue = (summary['value'] as num?)?.toDouble() ?? 0;
+    summary['value'] = lastValueTypes.contains(type)
+        ? numeric
+        : previousValue + numeric;
+    summary['unit'] = _unitFor(type);
+    summary['records'] = ((summary['records'] as num?)?.toInt() ?? 0) + 1;
+    final from = summary['intervalFrom']?.toString();
+    final to = summary['intervalTo']?.toString();
+    final pointFrom = point.dateFrom.toIso8601String();
+    final pointTo = point.dateTo.toIso8601String();
+    summary['intervalFrom'] = from == null || pointFrom.compareTo(from) < 0
+        ? pointFrom
+        : from;
+    summary['intervalTo'] = to == null || pointTo.compareTo(to) > 0 ? pointTo : to;
+    item.otherMetrics[key] = summary;
+  }
+
+  String _unitFor(HealthDataType type) {
+    switch (type) {
+      case HealthDataType.BLOOD_OXYGEN:
+      case HealthDataType.BODY_FAT_PERCENTAGE:
+        return '%';
+      case HealthDataType.HEIGHT:
+        return 'm';
+      case HealthDataType.LEAN_BODY_MASS:
+        return 'kg';
+      case HealthDataType.WATER:
+        return 'L';
+      case HealthDataType.TOTAL_CALORIES_BURNED:
+        return 'kcal';
+      case HealthDataType.FLIGHTS_CLIMBED:
+        return 'pisos';
+      default:
+        return 'unidad';
     }
   }
 
@@ -446,7 +518,13 @@ class GoogleFitService {
     }
     if (source.contains('symmetry')) return 'symmetry_app';
     if (source.contains('hevy')) return 'hevy';
-    return 'health_connect';
+    final provider = sourceName.trim();
+    if (provider.isEmpty) return 'health_connect';
+    // No escondemos una aplicación desconocida bajo el genérico
+    // "health_connect": el nombre real permite distinguir proveedores que
+    // no conocemos todavía y comprobar manualmente si Symmetry publica datos.
+    final safeProvider = provider.replaceAll(RegExp(r'\s+'), '_');
+    return 'health_connect:$safeProvider';
   }
 
   String _groupFor(String activity) {
@@ -486,7 +564,7 @@ class _DailyHealthAccumulator {
   double? heartRateMax;
   int heartRateSamples = 0;
   int workouts = 0;
-  final Map<String, double> otherMetrics = {};
+  final Map<String, dynamic> otherMetrics = {};
   double _heartRateTotal = 0;
 
   _DailyHealthAccumulator({required this.date, required this.source});
@@ -511,6 +589,7 @@ class HealthImportResult {
   final int heartRateRecords;
   final int stepsRecords;
   final int activeCaloriesRecords;
+  final int totalCaloriesRecords;
   final int distanceRecords;
   final int healthDays;
   final int totalSteps;
@@ -531,6 +610,7 @@ class HealthImportResult {
     this.heartRateRecords = 0,
     this.stepsRecords = 0,
     this.activeCaloriesRecords = 0,
+    this.totalCaloriesRecords = 0,
     this.distanceRecords = 0,
     this.healthDays = 0,
     this.totalSteps = 0,

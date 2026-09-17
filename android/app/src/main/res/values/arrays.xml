@@ -3,6 +3,8 @@
     <array name="health_permissions">
         <item>android.permission.health.READ_STEPS</item>
         <item>android.permission.health.READ_ACTIVE_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_TOTAL_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_HEALTH_DATA_HISTORY</item>
         <item>android.permission.health.READ_DISTANCE</item>
         <item>android.permission.health.READ_FLOORS_CLIMBED</item>
         <item>android.permission.health.READ_HEART_RATE</item>
