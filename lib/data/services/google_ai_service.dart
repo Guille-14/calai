@@ -209,7 +209,12 @@ class GoogleAiService {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final generationConfig = <String, dynamic>{'temperature': 0.2};
+      final generationConfig = <String, dynamic>{
+        'temperature': 0.2,
+        // Las respuestas estructuradas de imágenes pueden ser largas; sin
+        // este límite Gemini puede truncar el JSON antes de cerrarlo.
+        'maxOutputTokens': 1024,
+      };
       if (responseSchema != null) {
         generationConfig['responseMimeType'] = 'application/json';
         generationConfig['responseSchema'] = responseSchema;
@@ -314,8 +319,16 @@ class GoogleAiService {
       final finishReason = firstCandidate is Map
           ? firstCandidate['finishReason']?.toString()
           : null;
+      final promptFeedback = data is Map ? data['promptFeedback'] : null;
+      final blockReason = promptFeedback is Map
+          ? promptFeedback['blockReason']?.toString()
+          : null;
+
       return GoogleAiResponse.error(
-        error: 'Google no devolvió texto${finishReason == null ? '' : ' ($finishReason)'}.',
+        error: _emptyResponseError(
+          finishReason: finishReason,
+          blockReason: blockReason,
+        ),
         model: model,
         duration: duration,
       );
@@ -335,6 +348,34 @@ class GoogleAiService {
       model: model,
       duration: duration,
     );
+  }
+
+  String _emptyResponseError({
+    String? finishReason,
+    String? blockReason,
+  }) {
+    final block = blockReason?.trim().toUpperCase();
+    final finish = finishReason?.trim().toUpperCase();
+
+    if (block != null && block.isNotEmpty && block != 'BLOCK_REASON_UNSPECIFIED') {
+      return 'Gemini bloqueó la respuesta por seguridad (motivo: $block).';
+    }
+    if (finish == 'SAFETY' ||
+        finish == 'BLOCKLIST' ||
+        finish == 'PROHIBITED_CONTENT' ||
+        finish == 'SPII') {
+      return 'Gemini bloqueó la respuesta por seguridad (motivo: $finish).';
+    }
+    if (finish == 'MAX_TOKENS') {
+      return 'Gemini cortó la respuesta por límite de tokens.';
+    }
+    if (finish == 'RECITATION') {
+      return 'Gemini bloqueó la respuesta por una coincidencia de contenido (RECITATION).';
+    }
+    if (finish != null && finish.isNotEmpty) {
+      return 'Gemini devolvió una respuesta vacía del modelo (finishReason: $finish).';
+    }
+    return 'Gemini devolvió una respuesta vacía del modelo.';
   }
 
   /// Devuelve true/false si la API contestó con catálogo y null si no se
