@@ -216,6 +216,8 @@ jobs:
       # como release draft (tag ci-debug-test).
       - name: Publish test logs as draft release (debug channel)
         if: always() && hashFiles('test/**') != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
           import json, os, urllib.request
