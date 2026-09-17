@@ -9,6 +9,7 @@ import '../../data/local/preference_manager.dart';
 import '../../data/repositories/food_repository.dart';
 import '../../data/services/image_storage_service.dart';
 import '../../data/models/food_item.dart';
+import '../widgets/app_skeleton.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});

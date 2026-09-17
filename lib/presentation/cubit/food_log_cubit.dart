@@ -79,6 +79,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   DateTime? _cachedWeeklyDataDate;
   SharedPreferences? _prefs;
   int _loadGeneration = 0;
+  Future<void> _waterWrite = Future<void>.value();
   static const String _waterKey = 'water_glasses_';
 
   FoodLogCubit(this._repository) : super(const FoodLogState());
@@ -162,23 +163,44 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     await prefs.setInt(key, glasses);
   }
 
+  /// Serializa las escrituras para que varios taps rápidos no se pierdan.
+  /// La UI se actualiza de forma optimista y la persistencia se procesa en
+  /// orden, manteniendo el contador fluido incluso con un canal lento.
+  Future<void> _enqueueWaterWrite(DateTime date, int glasses) {
+    final operation = _waterWrite.then<void>((_) {
+      return _saveWaterGlasses(date, glasses);
+    });
+    _waterWrite = operation.then<void>((_) {}, onError: (_) {});
+    return operation;
+  }
+
+  Future<void> _optimisticWaterChange(int newCount) async {
+    final previousCount = state.waterGlasses;
+    final date = state.selectedDate ?? DateTime.now();
+    if (!isClosed) emit(state.copyWith(waterGlasses: newCount));
+    try {
+      await _enqueueWaterWrite(date, newCount);
+    } catch (error) {
+      // Si no hubo otro tap posterior, revertimos; si lo hubo, no pisamos su
+      // valor optimista y dejamos que la cola termine de persistirlo.
+      if (!isClosed && state.waterGlasses == newCount) {
+        emit(state.copyWith(waterGlasses: previousCount, error: error.toString()));
+      }
+    }
+  }
+
   Future<void> addWaterGlass() async {
-    final newCount = state.waterGlasses + 1;
-    await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
-    emit(state.copyWith(waterGlasses: newCount));
+    await _optimisticWaterChange(state.waterGlasses + 1);
   }
 
   Future<void> removeWaterGlass() async {
     if (state.waterGlasses > 0) {
-      final newCount = state.waterGlasses - 1;
-      await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), newCount);
-      emit(state.copyWith(waterGlasses: newCount));
+      await _optimisticWaterChange(state.waterGlasses - 1);
     }
   }
 
   Future<void> resetWater() async {
-    await _saveWaterGlasses(state.selectedDate ?? DateTime.now(), 0);
-    emit(state.copyWith(waterGlasses: 0));
+    await _optimisticWaterChange(0);
   }
 
   Future<void> loadWeeklySummary() async {

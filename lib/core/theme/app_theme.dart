@@ -225,6 +225,23 @@ class AppTheme {
         color: AppColors.accent,
         linearTrackColor: AppColors.accentSubtle,
       ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.elevatedCardBackground,
+        contentTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          color: AppColors.textPrimary,
+          fontSize: 14,
+        ),
+        actionTextColor: AppColors.accentStrong,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.elevatedCardBackground,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+        ),
+      ),
       iconTheme: const IconThemeData(color: AppColors.textSecondary),
     );
   }

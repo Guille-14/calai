@@ -199,6 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Abrir asistente nutricional',
         onPressed: () {
           Navigator.push(context,
               MaterialPageRoute(builder: (_) => const NutritionalChatScreen()));

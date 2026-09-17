@@ -181,49 +181,105 @@ class FoodRepository {
     }
   }
 
+  static const String _aiCachePrefix = 'ai_food_cache_';
+  static const String _aiCacheIndexKey = 'ai_food_cache_index';
+  static const int _maxCachedAiFoods = 30;
+
   Future<Either<String, FoodItem>> detectFoodFromDescription(
       String description) async {
-    try {
-      final result = await FoodService.estimateCaloriesFromText(description);
+    final normalizedDescription = description.trim();
+    if (normalizedDescription.isEmpty) {
+      return const Left('Describe la comida antes de analizarla');
+    }
 
+    try {
+      final result =
+          await FoodService.estimateCaloriesFromText(normalizedDescription);
       if (result.isError) {
-        return Left(result.errorMessage ?? 'Error en el análisis');
+        final cached = await _readCachedAiFood(normalizedDescription);
+        return cached == null
+            ? Left(result.errorMessage ?? 'Error en el análisis')
+            : Right(cached);
       }
 
-      // Crear FoodEntry desde FoodAnalysisResult
-      final foodEntry = FoodEntry(
-        name: result.foods.isNotEmpty ? result.foods.first : description,
-        calories: result.estimatedCalories.toDouble(),
-        protein: result.protein,
-        carbs: result.carbs,
-        fat: result.fat,
-        confidenceScore: _confidenceToScore(result.confidence),
-        timestamp: DateTime.now(),
-      );
-
-      // Un UUID evita colisiones al registrar dos comidas rápidamente.
-      final String foodId = _uuid.v4();
-      final unit = _inferUnitFromFoodName(foodEntry.name);
-
-      final List<Ingredient> ingredients = []; // FoodEntry no tiene ingredients detallados
-
-      return Right(FoodItem(
-        id: foodId,
-        name: foodEntry.name,
-        calories: foodEntry.calories,
-        protein: foodEntry.protein,
-        carbs: foodEntry.carbs,
-        fat: foodEntry.fat,
-        sugar: 0,
-        quantity: 100,
-        timestamp: DateTime.now(),
-        ingredients: ingredients,
-        imageUrl: null,
-        unit: unit,
-        confidenceScore: foodEntry.confidenceScore,
-      ));
+      final foodItem = _foodItemFromAnalysis(result, normalizedDescription);
+      await _cacheAiFood(normalizedDescription, foodItem);
+      return Right(foodItem);
     } catch (e) {
-      return Left('Error: $e');
+      final cached = await _readCachedAiFood(normalizedDescription);
+      return cached == null ? Left('Error: $e') : Right(cached);
+    }
+  }
+
+  FoodItem _foodItemFromAnalysis(
+      FoodAnalysisResult result, String fallbackName) {
+    final name = result.foods.isNotEmpty ? result.foods.first : fallbackName;
+    return FoodItem(
+      id: _uuid.v4(),
+      name: name,
+      calories: result.estimatedCalories.toDouble(),
+      protein: result.protein,
+      carbs: result.carbs,
+      fat: result.fat,
+      sugar: result.sugar,
+      quantity: 100,
+      timestamp: DateTime.now(),
+      unit: _inferUnitFromFoodName(name),
+      confidenceScore: _confidenceToScore(result.confidence),
+    );
+  }
+
+  String _aiCacheKey(String description) {
+    var hash = 17;
+    for (final codeUnit in description.toLowerCase().codeUnits) {
+      hash = 37 * hash + codeUnit;
+    }
+    return '$_aiCachePrefix${hash.abs()}';
+  }
+
+  Future<void> _cacheAiFood(String description, FoodItem item) async {
+    try {
+      final key = _aiCacheKey(description);
+      await _prefs.setString(key, jsonEncode(item.toJson()));
+      final index = _prefs.getStringList(_aiCacheIndexKey) ?? <String>[];
+      index.remove(key);
+      index.insert(0, key);
+      while (index.length > _maxCachedAiFoods) {
+        await _prefs.remove(index.removeLast());
+      }
+      await _prefs.setStringList(_aiCacheIndexKey, index);
+    } catch (e) {
+      debugPrint('FoodRepository: no se pudo guardar caché IA: $e');
+    }
+  }
+
+  Future<FoodItem?> _readCachedAiFood(String description) async {
+    try {
+      final raw = _prefs.getString(_aiCacheKey(description));
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final cached = FoodItem.fromJson(decoded);
+      // El caché es una estimación reutilizable, no el registro de una comida.
+      // Cada uso recibe un id y timestamp nuevos para no sobrescribir comidas.
+      return FoodItem(
+        id: _uuid.v4(),
+        name: cached.name,
+        calories: cached.calories,
+        protein: cached.protein,
+        carbs: cached.carbs,
+        fat: cached.fat,
+        sugar: cached.sugar,
+        quantity: cached.quantity,
+        timestamp: DateTime.now(),
+        ingredients: cached.ingredients,
+        unit: cached.unit,
+        confidenceScore: cached.confidenceScore,
+        aiModel: cached.aiModel,
+      );
+    } catch (e) {
+      debugPrint('FoodRepository: caché IA inválida: $e');
+      return null;
     }
   }
 

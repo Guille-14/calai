@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/app_skeleton.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/recipe_model.dart';
 import '../../data/services/recipe_service.dart';

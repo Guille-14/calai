@@ -20,6 +20,7 @@ import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
 import 'presentation/screens/main_navigator.dart';
 import 'presentation/screens/profile_screen.dart';
+import 'presentation/widgets/app_error_fallback.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +28,11 @@ void main() async {
   // Red global de seguridad: ningún error asíncrono o de framework
   // debe matar la app en silencio.
   FlutterError.onError = (details) {
+    // El detalle técnico queda en los logs de desarrollo, pero nunca se
+    // muestra al usuario ni rompe el árbol de navegación.
     debugPrint('FlutterError: ${details.exception}\n${details.stack}');
   };
+  ErrorWidget.builder = (_) => const AppErrorFallback();
 
   await runZonedGuarded(() async {
     await _bootstrap();

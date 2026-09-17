@@ -16,6 +16,7 @@ import '../../data/services/google_fit_service.dart';
 import '../../data/services/database_service.dart';
 import '../../main.dart';
 import 'ai_settings_screen.dart';
+import '../widgets/app_skeleton.dart';
 
 /// Perfil unificado (la fusión CalAI + Symmetry).
 ///
