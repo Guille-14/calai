@@ -8,6 +8,7 @@ import '../cubit/food_log_cubit.dart';
 import '../../data/local/preference_manager.dart';
 import '../../data/repositories/food_repository.dart';
 import '../../data/services/image_storage_service.dart';
+import '../../data/services/google_fit_service.dart';
 import '../../data/models/food_item.dart';
 import '../widgets/async_state_view.dart';
 
@@ -31,6 +32,8 @@ class _ProgressScreenState extends State<ProgressScreen>
   bool _isLoading = true;
   String? _loadError;
   int _loadGeneration = 0;
+  final GoogleFitService _healthService = GoogleFitService.instance;
+  List<GoogleFitHistoricalDailyData> _healthHistory = const [];
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
     _animationController.forward();
     _loadData();
+    _loadHealthHistory();
   }
 
   Future<void> _loadData() async {
@@ -78,6 +82,21 @@ class _ProgressScreenState extends State<ProgressScreen>
         });
       }
     }
+  }
+
+  Future<void> _loadHealthHistory() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final history = await _healthService.fetchHistoricalDaily(
+      today.subtract(const Duration(days: 6)),
+      now,
+    );
+    if (!mounted) return;
+    setState(() => _healthHistory = history);
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([_loadData(), _loadHealthHistory()]);
   }
 
   FoodRepository get _repository => context.read<FoodLogCubit>().repository;
@@ -167,7 +186,7 @@ class _ProgressScreenState extends State<ProgressScreen>
         child: BlocBuilder<FoodLogCubit, FoodLogState>(
           builder: (context, state) {
             return RefreshIndicator(
-            onRefresh: _loadData,
+            onRefresh: _refreshAll,
             color: AppColors.accent,
             backgroundColor: AppColors.cardBackground,
             child: SingleChildScrollView(
@@ -176,6 +195,8 @@ class _ProgressScreenState extends State<ProgressScreen>
               child: Column(
                 children: [
                   _buildWeeklyChart(),
+                  const SizedBox(height: 16),
+                  _buildHealthHistoryChart(),
                   const SizedBox(height: 16),
                   _buildSummaryCards(),
                   const SizedBox(height: 16),
@@ -340,6 +361,155 @@ class _ProgressScreenState extends State<ProgressScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHealthHistoryChart() {
+    if (_healthHistory.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Actividad diaria',
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text(
+              'Conecta Health Connect para ver pasos y calorías activas por día.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final totalSteps = _healthHistory.fold<int>(
+        0, (sum, day) => sum + day.steps);
+    final totalActiveCalories = _healthHistory.fold<int>(
+        0, (sum, day) => sum + day.activeCalories);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Actividad diaria',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              Text('${totalSteps.toString()} pasos · $totalActiveCalories kcal',
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Pasos',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          const SizedBox(height: 4),
+          _buildHealthBars(
+            values: _healthHistory.map((day) => day.steps.toDouble()).toList(),
+            color: AppColors.accent,
+          ),
+          const SizedBox(height: 12),
+          const Text('Calorías activas',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          const SizedBox(height: 4),
+          _buildHealthBars(
+            values: _healthHistory
+                .map((day) => day.activeCalories.toDouble())
+                .toList(),
+            color: AppColors.accentStrong,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthBars({
+    required List<double> values,
+    required Color color,
+  }) {
+    final maxValue = values.fold<double>(1, (current, value) {
+      return value > current ? value : current;
+    });
+    return SizedBox(
+      height: 116,
+      child: BarChart(
+        BarChartData(
+          maxY: maxValue * 1.2,
+          alignment: BarChartAlignment.spaceAround,
+          barGroups: values.asMap().entries.map((entry) {
+            return BarChartGroupData(
+              x: entry.key,
+              barRods: [
+                BarChartRodData(
+                  toY: entry.value,
+                  color: color,
+                  width: 16,
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(4)),
+                ),
+              ],
+            );
+          }).toList(),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= _healthHistory.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final day = _healthHistory[index].date;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('${day.day}/${day.month}',
+                        style: const TextStyle(
+                            color: AppColors.textTertiary, fontSize: 9)),
+                  );
+                },
+              ),
+            ),
+            leftTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false)),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxValue,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: AppColors.textPrimary.withValues(alpha: 0.06),
+              strokeWidth: 1,
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+        ),
       ),
     );
   }

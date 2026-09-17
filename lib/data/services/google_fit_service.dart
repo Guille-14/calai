@@ -181,6 +181,53 @@ class GoogleFitService {
     }
   }
 
+  /// Devuelve una serie diaria de pasos y calorías activas para el rango
+  /// solicitado. A diferencia de [fetchDailyData], no reduce la consulta al
+  /// día actual ni mezcla calorías basales.
+  Future<List<GoogleFitHistoricalDailyData>> fetchHistoricalDaily(
+    DateTime start,
+    DateTime end,
+  ) async {
+    if (!Platform.isAndroid || end.isBefore(start)) return const [];
+    if (!await _ensureAuthorization()) return const [];
+
+    final firstDay = DateTime(start.year, start.month, start.day);
+    final lastDay = DateTime(end.year, end.month, end.day);
+    final points = await Future.wait([
+      _readType(HealthDataType.STEPS, start, end),
+      _readType(HealthDataType.ACTIVE_ENERGY_BURNED, start, end),
+    ]);
+
+    final totals = <DateTime, _HistoricalDailyAccumulator>{};
+    for (final point in points[0]) {
+      final day = DateTime(
+          point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+      final item = totals.putIfAbsent(day, _HistoricalDailyAccumulator.new);
+      item.steps += _extractNumericValue(point.value);
+    }
+    for (final point in points[1]) {
+      final day = DateTime(
+          point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+      final item = totals.putIfAbsent(day, _HistoricalDailyAccumulator.new);
+      item.activeCalories += _extractNumericValue(point.value);
+    }
+
+    final result = <GoogleFitHistoricalDailyData>[];
+    for (var day = firstDay;
+        !day.isAfter(lastDay);
+        day = day.add(const Duration(days: 1))) {
+      final item = totals[day];
+      result.add(
+        GoogleFitHistoricalDailyData(
+          date: day,
+          steps: item?.steps.round() ?? 0,
+          activeCalories: item?.activeCalories.round() ?? 0,
+        ),
+      );
+    }
+    return result;
+  }
+
   Future<List<HealthDataPoint>> _readType(
     HealthDataType type,
     DateTime start,
@@ -641,6 +688,23 @@ class HealthImportResult {
 
   factory HealthImportResult.error(String message) =>
       HealthImportResult(isSuccess: false, error: message);
+}
+
+class _HistoricalDailyAccumulator {
+  double steps = 0;
+  double activeCalories = 0;
+}
+
+class GoogleFitHistoricalDailyData {
+  final DateTime date;
+  final int steps;
+  final int activeCalories;
+
+  const GoogleFitHistoricalDailyData({
+    required this.date,
+    required this.steps,
+    required this.activeCalories,
+  });
 }
 
 class GoogleFitDailyData {
