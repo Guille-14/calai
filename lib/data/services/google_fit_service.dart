@@ -180,7 +180,7 @@ class GoogleFitService {
         types: [type],
       );
       // Health Connect puede entregar el mismo registro por más de un origen.
-      return Health.removeDuplicates(points);
+      return _health.removeDuplicates(points);
     } catch (e) {
       debugPrint('GoogleFitService: no se pudo leer $type: $e');
       return const [];

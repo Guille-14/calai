@@ -280,9 +280,13 @@ class GoogleAiService {
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       final candidates = data['candidates'];
-      final parts = candidates is List && candidates.isNotEmpty
-          ? candidates.first['content']?['parts']
+      final firstCandidate = candidates is List && candidates.isNotEmpty
+          ? candidates.first
           : null;
+      final contentValue = firstCandidate is Map
+          ? firstCandidate['content']
+          : null;
+      final parts = contentValue is Map ? contentValue['parts'] : null;
       final content = parts is List
           ? parts
               .map((part) => part is Map ? part['text']?.toString() ?? '' : '')
