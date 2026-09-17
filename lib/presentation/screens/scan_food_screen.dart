@@ -956,4 +956,3 @@ class _NutritionChip extends StatelessWidget {
     );
   }
 }
-}
