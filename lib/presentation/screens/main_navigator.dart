@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import 'home_screen.dart';
@@ -15,8 +16,9 @@ import 'profile_screen.dart';
 /// diálogos de confirmación. Ahora es un solo flujo:
 /// Inicio · Escanear · Entrenar · Progreso · Perfil.
 ///
-/// IndexedStack conserva el estado de cada pantalla al cambiar de pestaña
-/// (no se reconstruye la pantalla de comida al ir a entrenar, etc.).
+/// Las pestañas se montan bajo demanda y el IndexedStack conserva el estado
+/// de las que ya se visitaron (no se reconstruye una pantalla al cambiar de
+/// pestaña).
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
 
@@ -34,6 +36,19 @@ class _MainNavigatorState extends State<MainNavigator> {
     // No montamos las cinco pantallas al arrancar: Perfil y Progreso hacen
     // lecturas de SQLite/Health Connect y antes bloqueaban el primer frame.
     _screens = [const HomeScreen(), null, null, null, null];
+
+    // Instrumentación ligera para comprobar en debug que el primer frame no
+    // monta Perfil, Progreso, Entrenar ni Escanear por adelantado.
+    final startup = Stopwatch()..start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      startup.stop();
+      final mountedTabs = _screens.whereType<Widget>().length;
+      debugPrint(
+        'MainNavigator: primer frame interactivo en '
+        '${startup.elapsedMilliseconds}ms; pestañas montadas: '
+        '$mountedTabs/5',
+      );
+    });
   }
 
   Widget _screenFor(int index) {

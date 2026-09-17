@@ -22,7 +22,9 @@ class ScanFoodScreen extends StatefulWidget {
 }
 
 class _ScanFoodScreenState extends State<ScanFoodScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<ScanFoodScreen> {
+  @override
+  bool get wantKeepAlive => true;
   final ImagePicker _imagePicker = ImagePicker();
 
   Uint8List? _selectedImageBytes;
@@ -460,6 +462,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(

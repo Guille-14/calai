@@ -18,7 +18,11 @@ class SymmetryWorkoutScreen extends StatefulWidget {
   State<SymmetryWorkoutScreen> createState() => _SymmetryWorkoutScreenState();
 }
 
-class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
+class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen>
+    with AutomaticKeepAliveClientMixin<SymmetryWorkoutScreen> {
+  @override
+  bool get wantKeepAlive => true;
+
   final SymmetryProgressionService _symmetryService =
       SymmetryProgressionService();
   bool _isLoading = true;
@@ -57,6 +61,7 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.background,

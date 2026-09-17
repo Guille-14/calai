@@ -19,7 +19,9 @@ class ProgressScreen extends StatefulWidget {
 }
 
 class _ProgressScreenState extends State<ProgressScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<ProgressScreen> {
+  @override
+  bool get wantKeepAlive => true;
   DateTime _focusedMonth = DateTime.now();
   double _calorieGoal = 2000;
   late AnimationController _animationController;
@@ -141,6 +143,7 @@ class _ProgressScreenState extends State<ProgressScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
