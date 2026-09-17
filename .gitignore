@@ -15,8 +15,13 @@
 # NOTA: pubspec.lock NO se ignora: en aplicaciones (no paquetes) debe
 # versionarse para builds reproducibles.
 
-# Secretos locales (la API key no debe subirse al repo)
-.env
+# .env: ya NO se ignora. pubspec.yaml lo lista como asset, así que el build
+# falla si no existe en el repo. Se commitea una PLANTILLA sin secretos
+# (solo comentarios + nombres de variables opcionales). Las claves reales
+# se configuran en la app (almacenamiento seguro) y, si se usan, se añaden
+# en el .env LOCAL sin commitear su contenido real.
+# (antes estaba ignorado junto a un .env real con claves -> build roto en
+# CI y en clones frescos)
 
 # Datos/aplicaciones externas no pertenecientes al proyecto
 /~

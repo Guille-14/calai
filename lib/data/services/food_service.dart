@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/security/api_key_store.dart';
 import 'ollama_service.dart';
 import 'google_ai_service.dart';
 
@@ -14,7 +15,8 @@ class FoodService {
   static bool _isInitialized = false;
 
   static const String _providerPref = 'ai_provider_mode'; // 'ollama', 'google' o 'openrouter'
-  static const String _openrouterKeyPref = 'openrouter_api_key';
+  // La clave OpenRouter se guarda vía ApiKeyStore (almacenamiento seguro; la
+  // clave legacy 'openrouter_api_key' de SharedPreferences se migra sola).
   static const String _openrouterModelPref = 'openrouter_model';
   static const String _openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -61,20 +63,22 @@ class FoodService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedProvider = prefs.getString(_providerPref);
+
+      final envKey = _env('OPENROUTER_API_KEY');
+      // La clave vive en el almacenamiento seguro (migración automática
+      // desde la clave legacy openrouter_api_key de SharedPreferences).
+      _openrouterApiKey =
+          await ApiKeyStore.get(id: 'openrouter', envFallback: envKey);
+
       if (savedProvider != null && savedProvider.isNotEmpty) {
         _activeProvider = savedProvider;
       } else {
         // Sin elección explícita del usuario: usar OpenRouter si hay clave
-        // disponible (.env o preferencias); si no, Ollama.
-        final prefKey = prefs.getString(_openrouterKeyPref) ?? '';
-        final envKey = _env('OPENROUTER_API_KEY');
-        _activeProvider =
-            (prefKey.isNotEmpty || envKey.isNotEmpty) ? 'openrouter' : 'ollama';
+        // disponible (almacenamiento seguro o .env); si no, Ollama.
+        _activeProvider = _openrouterApiKey.isNotEmpty ? 'openrouter' : 'ollama';
       }
 
       final envModel = _env('OPENROUTER_MODEL');
-      _openrouterApiKey =
-          prefs.getString(_openrouterKeyPref) ?? _env('OPENROUTER_API_KEY');
       _openrouterModel = prefs.getString(_openrouterModelPref) ??
           (envModel.isNotEmpty ? envModel : 'google/gemini-2.5-flash');
 
@@ -127,8 +131,8 @@ class FoodService {
 
   static Future<void> _saveOpenrouterConfig() async {
     try {
+      await ApiKeyStore.set(id: 'openrouter', value: _openrouterApiKey);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_openrouterKeyPref, _openrouterApiKey);
       await prefs.setString(_openrouterModelPref, _openrouterModel);
     } catch (_) {}
   }

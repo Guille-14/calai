@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Política de red de CalAI.
+
+  Antes: android:usesCleartextTraffic="true" en el manifest, que permitía
+  HTTP plano a CUALQUIER destino. Ahora el base-config exige HTTPS y solo
+  estos dominios admiten cleartext:
+
+  - localhost / 127.0.0.1: Ollama corriendo en el propio dispositivo.
+  - *.local (mDNS): Ollama / servidores de la red local por hostname
+    (p. ej. ollama.home.arpa -> "ollama.local").
+
+  LIMITACIÓN IMPORTANTE: Android NO soporta rangos CIDR en
+  network_security_config. Un <domain> coincide con un host literal o con
+  un sufijo de dominio; "192.168.0.0/16" o "100.64.0.0/10" (Tailscale CGNAT)
+  NO funcionan como rangos. Si se usa un servidor por IP de la LAN o de
+  Tailscale, añadirlo AQUÍ como IP exacta (o mejor, por su hostname
+  MagicDNS de Tailscale, que entra en *.ts.net / *.tailscale.net).
+
+  Ejemplos para descomentar y adaptar a tu red:
+    <domain includeSubdomains="false">192.168.1.10</domain>
+    <domain includeSubdomains="false">100.64.12.34</domain>
+    <domain includeSubdomains="true">mi-servidor.tailnet-xxxx.ts.net</domain>
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="true">.local</domain>
+        <!-- Tailscale MagicDNS por hostname (los rangos de IP no se pueden
+             expresar; ver el comentario superior): -->
+        <domain includeSubdomains="true">.ts.net</domain>
+        <domain includeSubdomains="true">.tailscale.net</domain>
+        <!-- Añadir aquí IPs exactas de la LAN si no usan hostname:
+        <domain includeSubdomains="false">192.168.1.10</domain>
+        <domain includeSubdomains="false">10.0.0.5</domain>
+        -->
+    </domain-config>
+</network-security-config>

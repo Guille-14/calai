@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/security/api_key_store.dart';
+
 /// Respuesta estructurada de Google AI (Gemini)
 class GoogleAiResponse {
   final bool isSuccess;
@@ -55,7 +57,8 @@ class GoogleAiService {
   factory GoogleAiService() => _instance;
   GoogleAiService._internal();
 
-  static const String _apiKeyPref = 'google_ai_api_key';
+  // La clave API se guarda vía ApiKeyStore (almacenamiento seguro; la clave
+  // legacy 'google_ai_api_key' de SharedPreferences se migra sola).
   static const String _modelPref = 'google_ai_selected_model';
   static const String _defaultModel = 'gemini-1.5-flash';
 
@@ -69,15 +72,16 @@ class GoogleAiService {
   Future<void> initialize() async {
     if (_isInitialized) return;
     final prefs = await SharedPreferences.getInstance();
-    _apiKey = prefs.getString(_apiKeyPref) ?? '';
+    // La clave vive en el almacenamiento seguro (migración automática desde
+    // la clave legacy google_ai_api_key de SharedPreferences).
+    _apiKey = await ApiKeyStore.get(id: 'gemini');
     _selectedModel = prefs.getString(_modelPref) ?? _defaultModel;
     _isInitialized = true;
   }
 
   Future<void> updateApiKey(String key) async {
     _apiKey = key.trim();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_apiKeyPref, _apiKey);
+    await ApiKeyStore.set(id: 'gemini', value: _apiKey);
   }
 
   Future<void> updateModel(String model) async {
