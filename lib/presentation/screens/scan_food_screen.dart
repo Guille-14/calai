@@ -409,7 +409,8 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             ],
           ),
         ),
-      );
+      ),
+    );
     } finally {
       nameController.dispose();
     }

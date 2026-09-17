@@ -741,6 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showMealDetails(FoodItem meal) {
+    final confidence = meal.confidenceScore;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -767,20 +768,19 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildMacroDetailRow('Proteína', '${meal.protein.toInt()}', 'g', AppColors.accent),
             _buildMacroDetailRow('Carbohidratos', '${meal.carbs.toInt()}', 'g', AppColors.accent),
             _buildMacroDetailRow('Grasa', '${meal.fat.toInt()}', 'g', AppColors.accent),
-            if (meal.quantity != null) ...[
-              const Divider(color: AppColors.divider, height: 32),
-              _buildMacroDetailRow('Cantidad', '${meal.quantity.toInt()}', meal.unit?.toString().split('.').last ?? 'g', AppColors.textSecondary),
-            ],
-            if (meal.confidenceScore != null) ...[
+            const Divider(color: AppColors.divider, height: 32),
+            _buildMacroDetailRow(
+                'Cantidad', '${meal.quantity.toInt()}', meal.unit.toString().split('.').last, AppColors.textSecondary),
+            if (confidence != null) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: (meal.confidenceScore > 0.7 ? AppColors.accent : AppColors.accent).withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('Confianza: ${(meal.confidenceScore * 100).toInt()}%',
-                    style: TextStyle(color: meal.confidenceScore > 0.7 ? AppColors.accent : AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text('Confianza: ${(confidence * 100).toInt()}%',
+                    style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
             const SizedBox(height: 24),
