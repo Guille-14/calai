@@ -54,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _showValidationError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppColors.error.shade700),
+      SnackBar(content: Text(msg), backgroundColor: AppColors.error),
     );
   }
 

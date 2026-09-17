@@ -257,6 +257,7 @@ class GoogleFitService {
     }
 
     return HealthImportResult(
+      isSuccess: true,
       importedWorkouts: inserted,
       weightRecords: weights.length,
       sleepSessions: sleeps.length,
@@ -271,7 +272,7 @@ class GoogleFitService {
     final duration = point.dateTo.difference(point.dateFrom).inMinutes;
     final safeDuration = duration < 0 ? 0 : duration;
     final activity = point.value is WorkoutHealthValue
-        ? (point.value as WorkoutHealthValue).workoutActivityName ?? 'Workout'
+        ? (point.value as WorkoutHealthValue).workoutActivityType?.toString() ?? 'Workout'
         : 'Workout';
     final source = _sourceFor(point.sourceName);
     final externalId =

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'symmetry_rank_system.dart';
 
 class SymmetryWorkoutLedger {
   static final SymmetryWorkoutLedger _instance = SymmetryWorkoutLedger._internal();

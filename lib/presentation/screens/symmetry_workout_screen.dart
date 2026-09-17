@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
+import '../../core/symmetry/symmetry_workout_ledger.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/workout_calories.dart';

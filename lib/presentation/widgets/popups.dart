@@ -122,8 +122,8 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.accent.shade400,
-                    AppColors.accent.shade600,
+                    AppColors.accentStrong,
+                    AppColors.accent,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -166,7 +166,7 @@ class _FoodAddedPopupState extends State<FoodAddedPopup>
                       child: Icon(
                         Icons.check_circle,
                         size: 60,
-                        color: AppColors.accent.shade600,
+                        color: AppColors.accent,
                       ),
                     ),
                   ),
@@ -321,8 +321,8 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isGoalJustReached
-                    ? [AppColors.accent.shade400, AppColors.accent.shade600]
-                    : [AppColors.accent.shade400, AppColors.accent.shade600],
+                    ? [AppColors.accentStrong, AppColors.accent]
+                    : [AppColors.accentStrong, AppColors.accent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -364,7 +364,7 @@ class _WaterAddedPopupState extends State<WaterAddedPopup>
                               ? Icons.emoji_events
                               : Icons.water_drop,
                           size: 50,
-                          color: AppColors.accent.shade600,
+                          color: AppColors.accent,
                         ),
                       ),
                       if (isGoalJustReached)

@@ -737,14 +737,14 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
             children: [
               Icon(
                 Icons.error_outline,
-                color: AppColors.error.shade300,
+                color: AppColors.error,
                 size: 48,
               ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage ?? 'Error analyzing image',
                 style: TextStyle(
-                  color: AppColors.error.shade200,
+                  color: AppColors.error.withValues(alpha: 0.85),
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,

@@ -555,7 +555,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               _buildSymmetryStat(
                 'Racha disciplina',
-                '$_disciplineStreakd',
+                '${_disciplineStreak}d',
                 Icons.check_circle,
                 AppColors.accent,
               ),

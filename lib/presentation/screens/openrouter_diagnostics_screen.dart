@@ -131,7 +131,7 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _isConnected ? AppColors.accent.shade50 : AppColors.accent.shade50,
+        color: _isConnected ? AppColors.accentSubtle : AppColors.accentSubtle,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isConnected ? AppColors.accent : AppColors.accent,
@@ -145,7 +145,7 @@ class _OpenRouterDiagnosticsScreenState
             height: 60,
             decoration: BoxDecoration(
               color:
-                  _isConnected ? AppColors.accent.shade100 : AppColors.accent.shade100,
+                  _isConnected ? AppColors.accentSubtle : AppColors.accentSubtle,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -167,8 +167,8 @@ class _OpenRouterDiagnosticsScreenState
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _isConnected
-                        ? AppColors.accent.shade700
-                        : AppColors.accent.shade700,
+                        ? AppColors.accentStrong
+                        : AppColors.accentStrong,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -178,8 +178,8 @@ class _OpenRouterDiagnosticsScreenState
                       : t.translate('failed'),
                   style: TextStyle(
                     color: _isConnected
-                        ? AppColors.accent.shade600
-                        : AppColors.accent.shade600,
+                        ? AppColors.accent
+                        : AppColors.accent,
                   ),
                 ),
               ],
@@ -257,7 +257,7 @@ class _OpenRouterDiagnosticsScreenState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.textSecondary.shade900,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
