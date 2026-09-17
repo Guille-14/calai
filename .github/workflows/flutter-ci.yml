@@ -27,6 +27,7 @@ on:
 permissions:
   contents: write
   checks: write
+  statuses: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -118,11 +119,33 @@ jobs:
           req.add_header("Authorization", "Bearer " + token)
           req.add_header("Accept", "application/vnd.github+json")
           req.add_header("Content-Type", "application/json")
+          result = "release PUT: HTTP ?"
           try:
               with urllib.request.urlopen(req) as r:
+                  result = "release PUT: HTTP " + str(r.status)
                   print("release ci-debug actualizada:", r.status)
           except Exception as e:
+              result = "release PUT FALLA: " + str(e)[:50]
               print("no se pudo publicar la release ci-debug:", e)
+          # Diagnostico legible via API (GET /commits/{sha}/status):
+          try:
+              sreq = urllib.request.Request(
+                  "https://api.github.com/repos/"
+                  + os.environ.get("GITHUB_REPOSITORY", "")
+                  + "/statuses/" + os.environ.get("GITHUB_SHA", ""),
+                  data=json.dumps({
+                      "state": "success",
+                      "context": "ci-debug-channel",
+                      "description": result[:60],
+                  }).encode(),
+                  method="POST",
+              )
+              sreq.add_header("Authorization", "Bearer " + token)
+              sreq.add_header("Accept", "application/vnd.github+json")
+              sreq.add_header("Content-Type", "application/json")
+              urllib.request.urlopen(sreq)
+          except Exception as e2:
+              print("status no publicado:", e2)
           PYEOF
 
       # GATE 3: tests (solo cuando ya existe test/)
