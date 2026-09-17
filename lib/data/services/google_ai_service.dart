@@ -296,8 +296,8 @@ class GoogleAiService {
           duration: duration,
         );
       }
-      final finishReason = candidates is List && candidates.isNotEmpty
-          ? candidates.first['finishReason']?.toString()
+      final finishReason = firstCandidate is Map
+          ? firstCandidate['finishReason']?.toString()
           : null;
       return GoogleAiResponse.error(
         error: 'Google no devolvió texto${finishReason == null ? '' : ' ($finishReason)'}.',

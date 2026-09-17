@@ -399,11 +399,11 @@ class GoogleFitService {
     final source = _sourceFor(point.sourceName);
     final externalId = '$source|${point.uuid}';
     final calories = point.value is WorkoutHealthValue
-        ? (point.value as WorkoutHealthValue).totalEnergyBurned?.toDouble() ?? 0
-        : 0;
+        ? (point.value as WorkoutHealthValue).totalEnergyBurned?.toDouble() ?? 0.0
+        : 0.0;
     final distance = point.value is WorkoutHealthValue
-        ? (point.value as WorkoutHealthValue).totalDistance?.toDouble() ?? 0
-        : 0;
+        ? (point.value as WorkoutHealthValue).totalDistance?.toDouble() ?? 0.0
+        : 0.0;
     final steps = point.value is WorkoutHealthValue
         ? (point.value as WorkoutHealthValue).totalSteps ?? 0
         : 0;
