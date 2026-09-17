@@ -7,7 +7,11 @@ import '../widgets/ollama_terminal_widget.dart';
 
 /// Screen for AI selection and configuration (Ollama & Google Gemini)
 class AiSettingsScreen extends StatefulWidget {
-  const AiSettingsScreen({super.key});
+  /// Cuando se abre desde el aviso de Perfil, muestra directamente el
+  /// formulario para añadir la IP del equipo que ejecuta Ollama.
+  final bool openAddServer;
+
+  const AiSettingsScreen({super.key, this.openAddServer = false});
 
   @override
   State<AiSettingsScreen> createState() => _AiSettingsScreenState();
@@ -22,13 +26,14 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   final TextEditingController _googleApiKeyController = TextEditingController();
 
   bool _isLoading = true;
+  bool _didOpenAddServer = false;
   String _activeProvider = 'ollama';
 
   // Ollama states
   bool _ollamaAvailable = false;
   bool _testingConnection = false;
   bool _loadingModels = false;
-  String _selectedModel = 'llava:7b';
+  String _selectedModel = OllamaService.defaultVisionModel;
   List<String> _installedModels = [];
   int _responseTimeMs = 0;
   List<OllamaServer> _servers = [];
@@ -94,6 +99,13 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
           _googleAvailable = googleAvailable;
           _isLoading = false;
         });
+
+        if (widget.openAddServer && !_didOpenAddServer && mounted) {
+          _didOpenAddServer = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _addOrEditServer();
+          });
+        }
 
         if (ollamaAvailable) {
           _loadInstalledModels();
@@ -567,6 +579,31 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
             decoration: const InputDecoration(filled: true, fillColor: AppColors.elevatedCardBackground, border: InputBorder.none),
           ),
           const SizedBox(height: 8),
+          if (!_ollamaAvailable)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No se detecta servidor Ollama en ${_ollamaService.baseUrl}. Añade la IP de tu PC (ej. tu IP de Tailscale) aquí.',
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _addOrEditServer,
+                    icon: const Icon(Icons.add_link, size: 18),
+                    label: const Text('Añadir servidor'),
+                  ),
+                ],
+              ),
+            ),
           if (_ollamaService.isLoopbackUrl)
             const Align(
               alignment: Alignment.centerLeft,
@@ -789,9 +826,9 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       title: 'Modelos Recomendados',
       child: Column(
         children: [
-          _buildRecCard('PC Personal (Potente)', 'llama3.2-vision:11b', 'El mejor para tu RTX 3060 8GB de VRAM. Excelente visión y respuestas.'),
+          _buildRecCard('PC Personal (Potente)', 'qwen3.5:9b', 'Más capacidad de razonamiento y visión para un equipo con margen de memoria.'),
           const SizedBox(height: 10),
-          _buildRecCard('Servidor Ubuntu (Eficiente)', 'llava:7b', 'Ideal para tu RX 580 8GB VRAM y procesador básico. Rápido y muy estable.'),
+          _buildRecCard('Servidor Ubuntu (Eficiente)', OllamaService.defaultVisionModel, 'Modelo multimodal actual y más contenido para un servidor doméstico.'),
         ]
       )
     );

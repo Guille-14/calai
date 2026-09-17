@@ -39,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ---- de settings_screen ----
   UserData? _userData;
   bool _ollamaAvailable = false;
+  String _ollamaUrl = '';
   String _selectedLanguage = 'Español';
   bool _notificationsEnabled = true;
   final _notificationService = NotificationService();
@@ -127,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _userData = userData;
           _ollamaAvailable = available;
+          _ollamaUrl = ollama.baseUrl;
           _selectedLanguage = savedLang;
           _notificationsEnabled = notifEnabled;
           _healthConnectAvailable = healthAvailable;
@@ -1186,9 +1188,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   _ollamaAvailable
                       ? 'Ollama está listo'
-                      : 'Verifica conexión Tailscale',
+                      : 'No se detecta servidor Ollama en ${_ollamaUrl.isEmpty ? 'la URL activa' : _ollamaUrl}. Añade la IP de tu PC (ej. tu IP de Tailscale) aquí.',
                   style: TextStyle(
-                      color: AppColors.textPrimary.withValues(alpha: 0.4), fontSize: 12),
+                      color: AppColors.textPrimary.withValues(alpha: 0.65), fontSize: 12),
                 ),
               ],
             ),
@@ -1196,7 +1198,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AiSettingsScreen())),
+                MaterialPageRoute(
+                    builder: (_) => AiSettingsScreen(
+                          openAddServer: !_ollamaAvailable,
+                        ))),
             child: Text('CONFIGURAR',
                 style: TextStyle(
                     color: AppColors.accent,

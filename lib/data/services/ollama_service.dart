@@ -121,8 +121,12 @@ class OllamaService {
   static const String _activeServerKey = 'ollama_active_server';
   static const String _modelKey = 'ollama_selected_model';
 
-  /// Modelo por defecto
-  String _selectedModel = 'llava:7b';
+  /// Modelo de visión local recomendado actualmente por el catálogo oficial de
+  /// Ollama. La variante 4B mantiene un tamaño razonable para un equipo
+  /// doméstico y admite texto e imagen.
+  static const String defaultVisionModel = 'qwen3.5:4b';
+  static const String _legacyVisionModel = 'llava:7b';
+  String _selectedModel = defaultVisionModel;
 
   /// Timeout para solicitudes de texto (60 segundos)
   static const Duration _timeout = Duration(seconds: 60);
@@ -187,7 +191,14 @@ class OllamaService {
 
       final savedModel = prefs.getString(_modelKey);
       if (savedModel != null && savedModel.isNotEmpty) {
-        _selectedModel = savedModel;
+        // No dejamos instalaciones antiguas ancladas al modelo de visión que
+        // se usaba antes; el usuario aún puede elegir otro desde Ajustes.
+        _selectedModel = savedModel == _legacyVisionModel
+            ? defaultVisionModel
+            : savedModel;
+        if (savedModel == _legacyVisionModel) {
+          await prefs.setString(_modelKey, _selectedModel);
+        }
       }
 
       final savedServersJson = prefs.getString(_serversKey);
@@ -298,6 +309,11 @@ class OllamaService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_modelKey, _selectedModel);
     debugPrint('OllamaService: Modelo actualizado a $_selectedModel');
+  }
+
+  String _unreachableMessage() {
+    final url = baseUrl.isEmpty ? 'el servidor activo' : baseUrl;
+    return 'No se detecta servidor Ollama en $url. Añade la IP de tu PC (ej. tu IP de Tailscale) aquí.';
   }
 
   /// Verifica si el servidor Ollama está disponible
@@ -434,8 +450,7 @@ class OllamaService {
       await _checkServerAvailability();
       if (!_serverAvailable) {
         return OllamaResponse.error(
-          error:
-              'No se pudo conectar con el servidor ($baseUrl). Verifica que Tailscale esté ACTIVO en este dispositivo y que tu servidor Ollama esté encendido.',
+          error: _unreachableMessage(),
           model: model,
         );
       }
@@ -465,8 +480,7 @@ class OllamaService {
       await _checkServerAvailability();
       if (!_serverAvailable) {
         return OllamaResponse.error(
-          error:
-              'No se pudo conectar con el servidor ($baseUrl) para visión. Verifica que Tailscale esté ACTIVO en este dispositivo y que tu servidor Ollama esté encendido.',
+          error: _unreachableMessage(),
           model: model,
         );
       }
@@ -542,18 +556,17 @@ class OllamaService {
       }
     } on TimeoutException {
       stopwatch.stop();
-      final timeoutError =
-          'Timeout: Servidor no respondió en ${_timeout.inSeconds} segundos';
-      debugPrint('OllamaService: $timeoutError');
+      final errorMsg = _unreachableMessage();
+      debugPrint('OllamaService: $errorMsg');
       return OllamaResponse.error(
-        error: timeoutError,
+        error: errorMsg,
         model: model,
         duration: stopwatch.elapsed,
       );
     } catch (e) {
       stopwatch.stop();
-      final errorMsg = 'Error de conexión: $e';
-      debugPrint('OllamaService: $errorMsg');
+      final errorMsg = _unreachableMessage();
+      debugPrint('OllamaService: $errorMsg ($e)');
       return OllamaResponse.error(
         error: errorMsg,
         model: model,
@@ -622,18 +635,17 @@ class OllamaService {
       }
     } on TimeoutException {
       stopwatch.stop();
-      final timeoutError =
-          'Timeout: Servidor no respondió en ${_visionTimeout.inSeconds} segundos';
-      debugPrint('OllamaService: $timeoutError');
+      final errorMsg = _unreachableMessage();
+      debugPrint('OllamaService: $errorMsg');
       return OllamaResponse.error(
-        error: timeoutError,
+        error: errorMsg,
         model: model,
         duration: stopwatch.elapsed,
       );
     } catch (e) {
       stopwatch.stop();
-      final errorMsg = 'Error de conexión: $e';
-      debugPrint('OllamaService: $errorMsg');
+      final errorMsg = _unreachableMessage();
+      debugPrint('OllamaService: $errorMsg ($e)');
       return OllamaResponse.error(
         error: errorMsg,
         model: model,
