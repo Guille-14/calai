@@ -148,6 +148,48 @@ jobs:
               print("status no publicado:", e2)
           PYEOF
 
+      # Publica una copia legible del log en una release draft única por run.
+      # El artefacto sigue siendo el canal principal; esta copia permite
+      # diagnosticar el gate incluso cuando el blob de artifacts no es
+      # accesible desde el entorno de desarrollo.
+      - name: Publish analyze output as readable debug release
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
+          repo = os.environ['GITHUB_REPOSITORY']
+          run_id = os.environ['GITHUB_RUN_ID']
+          token = os.environ['GITHUB_TOKEN']
+          try:
+              with open('analyze_human.txt', encoding='utf-8', errors='replace') as f:
+                  body = f.read()
+          except FileNotFoundError:
+              body = '(sin analyze_human.txt)'
+          payload = {
+              'tag_name': 'ci-debug-analyze-' + run_id,
+              'name': 'Analyze debug ' + run_id,
+              'draft': True,
+              'target_commitish': os.environ['GITHUB_SHA'],
+              'body': ('Salida REAL de flutter analyze\\n\\n' + body)[:900000],
+          }
+          req = urllib.request.Request(
+              'https://api.github.com/repos/' + repo + '/releases',
+              data=json.dumps(payload).encode(), method='POST',
+              headers={
+                  'Authorization': 'Bearer ' + token,
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+              },
+          )
+          try:
+              with urllib.request.urlopen(req) as response:
+                  print('release de diagnóstico creada:', response.status)
+          except Exception as error:
+              print('no se pudo publicar release de diagnóstico:', error)
+          PYEOF
+
       # GATE 3: tests (solo cuando ya existe test/)
       - name: Flutter test
         if: hashFiles('test/**') != ''
@@ -174,6 +216,8 @@ jobs:
       # como release draft (tag ci-debug-test).
       - name: Publish test logs as draft release (debug channel)
         if: always() && hashFiles('test/**') != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
           import json, os, urllib.request
@@ -188,9 +232,10 @@ jobs:
               + os.environ.get("GITHUB_RUN_ID", "?")
               + ", sha " + os.environ.get("GITHUB_SHA", "?")[:7] + ")\n\n"
           )
+          run_id = os.environ.get("GITHUB_RUN_ID", "?")
           payload = {
-              "tag_name": "ci-debug-test",
-              "name": "CI test debug (run " + os.environ.get("GITHUB_RUN_ID", "?") + ")",
+              "tag_name": "ci-debug-test-" + run_id,
+              "name": "CI test debug (run " + run_id + ")",
               "draft": True,
               "target_commitish": os.environ.get("GITHUB_SHA", ""),
               "body": (header + body)[:900000],
@@ -198,16 +243,16 @@ jobs:
           req = urllib.request.Request(
               "https://api.github.com/repos/"
               + os.environ.get("GITHUB_REPOSITORY", "")
-              + "/releases/tags/ci-debug-test",
+              + "/releases",
               data=json.dumps(payload).encode(),
-              method="PUT",
+              method="POST",
           )
           req.add_header("Authorization", "Bearer " + token)
           req.add_header("Accept", "application/vnd.github+json")
           req.add_header("Content-Type", "application/json")
           try:
               with urllib.request.urlopen(req) as r:
-                  print("release ci-debug-test actualizada:", r.status)
+                  print("release de test creada:", r.status)
           except Exception as e:
               print("no se pudo publicar la release ci-debug-test:", e)
           PYEOF
@@ -217,7 +262,7 @@ jobs:
   build-apk:
     name: Build APK (release)
     needs: analyze-and-test
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/') || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -256,6 +301,19 @@ jobs:
           name: calai-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+      # En esta rama de trabajo dejamos también el APK como asset de una
+      # release draft descargable; no se comitea un binario al repositorio.
+      - name: Publish APK draft for Arena branch
+        if: success() && startsWith(github.ref, 'refs/heads/arena/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: calai-arena-apk
+          name: CalAI APK (Arena)
+          draft: true
+          prerelease: true
+          files: build/app/outputs/flutter-apk/app-release.apk
+          fail_on_unmatched_files: true
 
       # Misma vía de debug que analyze/test: la salida del build + datos del
       # APK (tamaño, sha256) como release draft ci-build, siempre.

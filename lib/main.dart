@@ -52,12 +52,6 @@ Future<void> _bootstrap() async {
   } catch (e) {
     debugPrint('main: error inicializando notificaciones: $e');
   }
-  try {
-    await notificationService.scheduleSmartNotifications();
-  } catch (e) {
-    debugPrint('main: error programando notificaciones: $e');
-  }
-
   final prefs = await SharedPreferences.getInstance();
 
   final bool showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
@@ -76,10 +70,8 @@ Future<void> _bootstrap() async {
   final databaseService = DatabaseService();
   final imageStorageService = ImageStorageService();
 
-  final foodService = FoodService();
   final externalFoodService = ExternalFoodService();
   final foodRepository = FoodRepository(
-    foodService,
     prefs,
     databaseService,
     externalFoodService,
@@ -103,6 +95,11 @@ Future<void> _bootstrap() async {
       foodRepository: foodRepository,
     ),
   );
+
+  // No bloquear el primer frame por tareas de fondo de notificaciones.
+  unawaited(notificationService.scheduleSmartNotifications().catchError((error) {
+    debugPrint('main: error programando notificaciones: $error');
+  }));
 }
 
 class LocaleNotifier extends StatefulWidget {

@@ -1,29 +1,10 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  static const Color background = Color(0xFF000000);
-  static const Color surface = Color(0xFF000000);
-  static const Color cardBackground = Color(0xFF111111);
-  static const Color textPrimary = Colors.white;
-  static const Color textSecondary = Color(0xB3FFFFFF);
-  static const Color textTertiary = Color(0x61FFFFFF);
+import 'app_theme.dart';
 
-  static const Color accentProtein = Color(0xFF00C853);
-  static const Color accentCarbs = Color(0xFF2196F3);
-  static const Color accentFat = Color(0xFFFFAB00);
-  static const Color accentCalories = Color(0xFF00C853);
-
-  static const Color healthBlue = Color(0xFF1A73E8);
-  static const Color goalPurple = Color(0xFF7C4DFF);
-  
-  static const Color coral = Color(0xFFFF6B6B);
-  static const Color emerald = Color(0xFF00C853);
-  static const Color royalBlue = Color(0xFF2196F3);
-
-  static const Color divider = Color(0xFF222222);
-  static const Color cardShadow = Color(0x40000000);
-}
-
+// Reexportamos los tokens para que las pantallas antiguas que importan
+// app_constants.dart sigan usando exactamente la misma paleta.
+export 'app_theme.dart' show AppColors;
 
 class AppRadius {
   static const double primary = 24.0;
@@ -32,30 +13,12 @@ class AppRadius {
   static const double button = 50.0;
 }
 
+/// Las tarjetas de CalAI son planas. Se conservan estos getters por
+/// compatibilidad con widgets antiguos, pero no generan sombras.
 class AppShadows {
-  static List<BoxShadow> get card => [
-        BoxShadow(
-          color: AppColors.cardShadow,
-          blurRadius: 20,
-          offset: const Offset(0, 4),
-        ),
-      ];
-
-  static List<BoxShadow> get soft => [
-        BoxShadow(
-          color: AppColors.cardShadow,
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ];
-
-  static List<BoxShadow> get elevated => [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 30,
-          offset: const Offset(0, 8),
-        ),
-      ];
+  static List<BoxShadow> get card => const [];
+  static List<BoxShadow> get soft => const [];
+  static List<BoxShadow> get elevated => const [];
 }
 
 class AppTextStyles {

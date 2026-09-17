@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
@@ -13,14 +12,12 @@ import '../services/external_food_service.dart';
 import '../services/image_storage_service.dart';
 
 class FoodRepository {
-  final FoodService _foodService;
   final SharedPreferences _prefs;
   final DatabaseService _databaseService;
   final ExternalFoodService _externalFoodService;
   final ImageStorageService _imageStorageService;
 
   FoodRepository(
-    this._foodService,
     this._prefs,
     this._databaseService,
     this._externalFoodService,

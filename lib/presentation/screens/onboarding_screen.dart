@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/app_translations.dart';
@@ -53,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _showValidationError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+      SnackBar(content: Text(msg), backgroundColor: AppColors.error),
     );
   }
 
@@ -198,7 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
-                      ?.copyWith(color: Colors.white),
+                      ?.copyWith(color: AppColors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 24),
@@ -217,9 +218,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         DropdownButton<String>(
           value: activityLevel,
           isExpanded: true,
-          dropdownColor: const Color(0xFF1C1C1E),
-          style: const TextStyle(color: Colors.white),
-          iconEnabledColor: Colors.white,
+          dropdownColor: AppColors.elevatedCardBackground,
+          style: const TextStyle(color: AppColors.textPrimary),
+          iconEnabledColor: AppColors.textPrimary,
           items: activityLevelDescriptions.entries
               .map((entry) => DropdownMenuItem(
                     value: entry.key,
@@ -229,11 +230,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(entry.key,
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white)),
+                                color: AppColors.textPrimary)),
                         Text(
                           entry.value,
                           style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                              const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -241,7 +242,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               .toList(),
           onChanged: (value) => setState(() => activityLevel = value),
           hint: Text(AppTranslations.of(context).translate('activity_level'),
-              style: const TextStyle(color: Colors.white70)),
+              style: const TextStyle(color: AppColors.textSecondary)),
         ),
       ],
     );
@@ -251,11 +252,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final t = AppTranslations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       appBar: _currentPage == 0
           ? AppBar(
-              backgroundColor: const Color(0xFF000000),
+              backgroundColor: AppColors.background,
               elevation: 0,
               automaticallyImplyLeading: false,
               actions: [
@@ -263,7 +264,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPressed: _skipToMain,
                   child: Text(
                     t.translate('skip'),
-                    style: const TextStyle(color: Colors.white70),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -279,11 +280,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'assets/onboarding/onboarding_weight.png',
             TextField(
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textPrimary),
               onChanged: (value) => weight = double.tryParse(value),
               decoration: InputDecoration(
                 labelText: t.translate('weight_in_kg'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
           ),
@@ -292,11 +293,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'assets/onboarding/onboarding_height.png',
             TextField(
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textPrimary),
               onChanged: (value) => height = double.tryParse(value),
               decoration: InputDecoration(
                 labelText: t.translate('height_in_cm'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
           ),
@@ -305,11 +306,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'assets/onboarding/onboarding_age.png',
             TextField(
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textPrimary),
               onChanged: (value) => age = int.tryParse(value),
               decoration: InputDecoration(
                 labelText: t.translate('age_in_years'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
           ),
@@ -324,18 +325,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             DropdownButton<String>(
               value: gender,
               isExpanded: true,
-              dropdownColor: const Color(0xFF1C1C1E),
-              style: const TextStyle(color: Colors.white),
-              iconEnabledColor: Colors.white,
+              dropdownColor: AppColors.elevatedCardBackground,
+              style: const TextStyle(color: AppColors.textPrimary),
+              iconEnabledColor: AppColors.textPrimary,
               items: ['Male', 'Female', 'Other']
                   .map((g) => DropdownMenuItem(
                       value: g,
                       child: Text(t.translate(g.toLowerCase()),
-                          style: const TextStyle(color: Colors.white))))
+                          style: const TextStyle(color: AppColors.textPrimary))))
                   .toList(),
               onChanged: (value) => setState(() => gender = value),
               hint: Text(t.translate('select_gender_hint'),
-                  style: const TextStyle(color: Colors.white70)),
+                  style: const TextStyle(color: AppColors.textSecondary)),
             ),
           ),
           _buildPage(
@@ -344,19 +345,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             DropdownButton<String>(
               value: userGoal,
               isExpanded: true,
-              dropdownColor: const Color(0xFF1C1C1E),
-              style: const TextStyle(color: Colors.white),
-              iconEnabledColor: Colors.white,
+              dropdownColor: AppColors.elevatedCardBackground,
+              style: const TextStyle(color: AppColors.textPrimary),
+              iconEnabledColor: AppColors.textPrimary,
               items: ['Weight Loss', 'Maintenance', 'Muscle Gain']
                   .map((goal) => DropdownMenuItem(
                       value: goal,
                       child: Text(
                           t.translate(goal.toLowerCase().replaceAll(' ', '_')),
-                          style: const TextStyle(color: Colors.white))))
+                          style: const TextStyle(color: AppColors.textPrimary))))
                   .toList(),
               onChanged: (value) => setState(() => userGoal = value),
               hint: Text(t.translate('select_goal'),
-                  style: const TextStyle(color: Colors.white70)),
+                  style: const TextStyle(color: AppColors.textSecondary)),
             ),
           ),
           _buildWelcomePage(),
@@ -378,7 +379,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
+                        color: AppColors.background.withValues(alpha: 0.15),
                         blurRadius: 12,
                         offset: Offset(0, 4),
                       ),
@@ -387,8 +388,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: ElevatedButton(
                     onPressed: _nextPage,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF000000),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.background,
+                      foregroundColor: AppColors.textPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
@@ -399,7 +400,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -420,7 +421,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         child: Text(
                           _currentPage > 0 ? t.translate('back') : '',
                           style: const TextStyle(
-                              fontSize: 16, color: Colors.white),
+                              fontSize: 16, color: AppColors.textPrimary),
                         ),
                       ),
                     ),
@@ -430,13 +431,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: ElevatedButton(
                         onPressed: _nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                          backgroundColor: AppColors.textPrimary,
+                          foregroundColor: AppColors.background,
                         ),
                         child: Text(
                           t.translate('next'),
                           style: const TextStyle(
-                              fontSize: 16, color: Colors.black),
+                              fontSize: 16, color: AppColors.background),
                         ),
                       ),
                     ),
@@ -471,7 +472,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .headlineMedium
-                      ?.copyWith(color: Colors.white),
+                      ?.copyWith(color: AppColors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: 24),
@@ -479,7 +480,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4A90D9).withValues(alpha: 0.15),
+                    color: AppColors.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -488,7 +489,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         t.translate('your_daily_target'),
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF4A90D9),
+                          color: AppColors.accent,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -497,7 +498,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],

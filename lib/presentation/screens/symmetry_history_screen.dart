@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_rank_system.dart';
-import '../../core/symmetry/health_connect_bridge.dart';
+import '../../core/utils/date_key.dart';
+import '../../core/symmetry/symmetry_workout_ledger.dart';
+import '../../data/services/database_service.dart';
 
 class SymmetryHistoryScreen extends StatefulWidget {
   const SymmetryHistoryScreen({super.key});
@@ -15,7 +20,6 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       SymmetryProgressionService();
   bool _isLoading = true;
   List<WorkoutSession> _workouts = [];
-  HealthConnectBridge _healthBridge = HealthConnectBridge();
 
   @override
   void initState() {
@@ -25,11 +29,51 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
 
   Future<void> _loadData() async {
     await _symmetryService.initialize();
+    final rows = await DatabaseService().getRecentWorkoutSessions(limit: 100);
+    final workouts = rows.map(_workoutFromRow).toList();
     if (mounted) {
       setState(() {
-        _workouts = _healthBridge.recentWorkouts;
+        _workouts = workouts;
         _isLoading = false;
       });
+    }
+  }
+
+  WorkoutSession _workoutFromRow(Map<String, dynamic> row) {
+    final rawMuscles = row['muscle_group_tonnage']?.toString();
+    final decoded = rawMuscles == null || rawMuscles.isEmpty
+        ? <String, dynamic>{}
+        : (jsonDecode(rawMuscles) as Map<String, dynamic>);
+    return WorkoutSession(
+      date: DateTime.fromMillisecondsSinceEpoch(row['date'] as int),
+      totalTonnage: (row['total_tonnage'] as num?)?.toDouble() ?? 0,
+      durationMinutes: (row['duration_minutes'] as num?)?.toInt() ?? 0,
+      muscleGroupTonnage: decoded.map(
+          (key, value) => MapEntry(key, (value as num).toDouble())),
+      exercises: const [],
+      source: row['source']?.toString() ?? 'native',
+      externalId: row['external_id']?.toString(),
+      caloriesBurned: (row['calories_burned'] as num?)?.toDouble() ?? 0,
+      distanceMeters: (row['distance_meters'] as num?)?.toDouble() ?? 0,
+      steps: (row['steps'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  double get _totalTonnage =>
+      _workouts.fold(0, (total, workout) => total + workout.totalTonnage);
+
+  String _sourceLabel(String source) {
+    switch (source) {
+      case 'mifit':
+        return 'MI FITNESS';
+      case 'symmetry_app':
+        return 'SYMMETRY';
+      case 'hevy':
+        return 'HEVY';
+      case 'health_connect':
+        return 'HEALTH CONNECT';
+      default:
+        return 'REGISTRADO AQUÍ';
     }
   }
 
@@ -37,25 +81,25 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         title: const Text(
           'Historial',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white70),
+            icon: const Icon(Icons.refresh, color: AppColors.textSecondary),
             onPressed: _loadData,
           ),
         ],
@@ -70,15 +114,15 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.history,
+            Icons.history_outlined,
             size: 80,
-            color: Colors.white.withValues(alpha: 0.1),
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 24),
           const Text(
             'Sin entrenamientos aún',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -87,7 +131,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
           const Text(
             'Completa tu primer entrenamiento\npara ver tu progreso aquí',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -111,14 +155,14 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
                 const Text(
                   'Entrenamientos recientes',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   '${_workouts.length} sesiones',
-                  style: const TextStyle(color: Colors.white54),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -142,17 +186,10 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            progress.currentRank.color.withValues(alpha: 0.15),
-            progress.currentRank.color.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: progress.currentRank.color.withValues(alpha: 0.3),
+          color: progress.currentRank.color.withValues(alpha: 0.35),
         ),
       ),
       child: Column(
@@ -160,7 +197,7 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star, color: progress.currentRank.color, size: 24),
+              Icon(Icons.star_outline, color: progress.currentRank.color, size: 24),
               const SizedBox(width: 8),
               Text(
                 progress.currentRank.displayName,
@@ -178,19 +215,19 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
             children: [
               _buildStatItem(
                 label: 'Total XP',
-                value: '${progress.totalXP.toStringAsFixed(0)}',
-                icon: Icons.stars,
+                value: progress.totalXP.toStringAsFixed(0),
+                icon: Icons.stars_outlined,
               ),
               _buildStatItem(
                 label: 'Entrenos',
-                value: '${_healthBridge.totalWorkouts}',
-                icon: Icons.fitness_center,
+                value: _workouts.length.toString(),
+                icon: Icons.fitness_center_outlined,
               ),
               _buildStatItem(
                 label: 'Tonelaje',
                 value:
-                    '${(_healthBridge.totalTonnage / 1000).toStringAsFixed(1)}t',
-                icon: Icons.monitor_weight,
+                    '${(_totalTonnage / 1000).toStringAsFixed(1)}t',
+                icon: Icons.monitor_weight_outlined,
               ),
             ],
           ),
@@ -201,12 +238,12 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               _buildStatItem(
                 label: 'Racha',
                 value: '${progress.streakDays.toInt()} días',
-                icon: Icons.local_fire_department,
+                icon: Icons.local_fire_department_outlined,
               ),
               _buildStatItem(
                 label: 'Semanal',
                 value: '+${progress.weeklyXP.toStringAsFixed(0)} XP',
-                icon: Icons.calendar_today,
+                icon: Icons.calendar_today_outlined,
               ),
             ],
           ),
@@ -222,19 +259,19 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
   }) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white38, size: 18),
+        Icon(icon, color: AppColors.textTertiary, size: 18),
         const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
         ),
       ],
     );
@@ -245,9 +282,9 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,20 +295,26 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               Text(
                 _formatDate(workout.date),
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: AppColors.textSecondary,
                   fontSize: 12,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                  color: AppColors.accent.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${workout.totalTonnage.toStringAsFixed(0)} kg',
+                  workout.source == 'native'
+                      ? '${workout.totalTonnage.toStringAsFixed(0)} kg'
+                      : workout.caloriesBurned > 0
+                          ? '${workout.caloriesBurned.toStringAsFixed(0)} kcal'
+                          : (workout.exercises.isNotEmpty
+                              ? workout.exercises.first.name
+                              : 'Actividad importada'),
                   style: const TextStyle(
-                    color: Color(0xFF00C853),
+                    color: AppColors.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -279,20 +322,64 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
-              _buildWorkoutStat(Icons.fitness_center,
-                  '${workout.exercises.length} ejercicios'),
-              const SizedBox(width: 16),
-              _buildWorkoutStat(Icons.timer, '${workout.durationMinutes} min'),
-              const SizedBox(width: 16),
-              _buildWorkoutStat(
-                Icons.category,
-                workout.muscleGroupTonnage.keys.isNotEmpty
-                    ? workout.muscleGroupTonnage.keys.first
-                    : 'General',
+              Icon(
+                workout.source == 'native'
+                    ? Icons.edit_note_outlined
+                    : Icons.cloud_download_outlined,
+                color: workout.source == 'native'
+                    ? AppColors.textSecondary
+                    : AppColors.accent,
+                size: 15,
               ),
+              const SizedBox(width: 5),
+              Text(
+                _sourceLabel(workout.source),
+                style: TextStyle(
+                  color: workout.source == 'native'
+                      ? AppColors.textSecondary
+                      : AppColors.accent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildWorkoutStat(
+                workout.source == 'native'
+                    ? Icons.fitness_center_outlined
+                    : Icons.local_fire_department_outlined,
+                workout.source == 'native'
+                    ? '${workout.exercises.length} ejercicios'
+                    : (workout.exercises.isNotEmpty
+                        ? workout.exercises.first.name
+                        : 'Actividad importada'),
+              ),
+              const SizedBox(width: 12),
+              _buildWorkoutStat(Icons.timer_outlined, '${workout.durationMinutes} min'),
+              const SizedBox(width: 12),
+              if (workout.source == 'native')
+                _buildWorkoutStat(
+                  Icons.category_outlined,
+                  workout.muscleGroupTonnage.keys.isNotEmpty
+                      ? workout.muscleGroupTonnage.keys.first
+                      : 'General',
+                )
+              else
+                _buildWorkoutStat(
+                  Icons.directions_walk_outlined,
+                  workout.steps > 0
+                      ? '${workout.steps} pasos'
+                      : workout.distanceMeters > 0
+                          ? '${(workout.distanceMeters / 1000).toStringAsFixed(1)} km'
+                          : 'Datos del reloj',
+                ),
             ],
           ),
         ],
@@ -303,28 +390,15 @@ class _SymmetryHistoryScreenState extends State<SymmetryHistoryScreen> {
   Widget _buildWorkoutStat(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.white38, size: 14),
+        Icon(icon, color: AppColors.textTertiary, size: 14),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays == 0) {
-      return 'Hoy';
-    } else if (diff.inDays == 1) {
-      return 'Ayer';
-    } else if (diff.inDays < 7) {
-      return 'Hace ${diff.inDays} días';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+  String _formatDate(DateTime date) => formatDateKey(date);
 }

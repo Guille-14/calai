@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'health_connect_bridge.dart';
+import 'symmetry_workout_ledger.dart';
 
 class MuscleFatigueMap {
   static final MuscleFatigueMap _instance = MuscleFatigueMap._internal();

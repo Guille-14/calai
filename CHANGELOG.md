@@ -34,7 +34,7 @@
   (transacción; marca `migrated_food_log_v1`; no pierde comidas).
 - Progreso usa consultas de rango/LIMIT indexadas; las sesiones de
   Symmetry persisten en `workout_sessions` (con backfill del historial
-  legado del HealthConnectBridge).
+  legado del SymmetryWorkoutLedger).
 - Las notificaciones de objetivos leen el total del día de SQLite.
 
 ### Phase 4 — feat: seguridad
@@ -423,7 +423,7 @@ HealthConnectImporter
   ├─ Calculate tonnage
   ├─ Detect muscles
   ↓
-HealthConnectBridge (local storage)
+SymmetryWorkoutLedger (local storage)
   ↓
 SymmetryProgressionService (RPG engine)
   ↓
