@@ -91,6 +91,16 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   /// consultas por rango (Progreso) sin duplicar la instancia.
   FoodRepository get repository => _repository;
 
+  /// Emisión segura: un Cubit cerrado lanza `StateError` si recibe `emit`.
+  /// Como casi todas las operaciones son asíncronas (SQLite, prefs, IA), la
+  /// respuesta puede llegar cuando la pantalla que abrió el cubit ya se
+  /// desmontó. Antes eso tiraba la app; ahora el resultado tardío se
+  /// descarta en silencio.
+  void _safeEmit(FoodLogState newState) {
+    if (isClosed) return;
+    emit(newState);
+  }
+
   Future<SharedPreferences> get _getPrefs async {
     _prefs ??= await SharedPreferences.getInstance();
     return _prefs!;
@@ -102,7 +112,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
 
   Future<void> loadLogForDate(DateTime date) async {
     final generation = ++_loadGeneration;
-    emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
+    _safeEmit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(date);
       final totals = _calculateTotals(meals);
@@ -114,7 +124,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       // anterior justo después de guardar una comida.
       await _syncProteinToMacroBridge(totals['protein'] ?? 0.0, date);
 
-      emit(state.copyWith(
+      _safeEmit(state.copyWith(
         meals: meals,
         totalCalories: totals['calories'],
         totalProtein: totals['protein'],
@@ -128,7 +138,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       ));
     } catch (e) {
       if (generation != _loadGeneration) return;
-      emit(state.copyWith(
+      _safeEmit(state.copyWith(
         error: e.toString(),
         isLoading: false,
       ));
@@ -180,14 +190,14 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   Future<void> _optimisticWaterChange(int newCount) async {
     final previousCount = state.waterGlasses;
     final date = state.selectedDate ?? DateTime.now();
-    if (!isClosed) emit(state.copyWith(waterGlasses: newCount));
+    if (!isClosed) _safeEmit(state.copyWith(waterGlasses: newCount));
     try {
       await _enqueueWaterWrite(date, newCount);
     } catch (error) {
       // Si no hubo otro tap posterior, revertimos; si lo hubo, no pisamos su
       // valor optimista y dejamos que la cola termine de persistirlo.
       if (!isClosed && state.waterGlasses == newCount) {
-        emit(state.copyWith(waterGlasses: previousCount, error: error.toString()));
+        _safeEmit(state.copyWith(waterGlasses: previousCount, error: error.toString()));
       }
     }
   }
@@ -208,14 +218,14 @@ class FoodLogCubit extends Cubit<FoodLogState> {
 
   Future<void> loadWeeklySummary() async {
     final generation = ++_loadGeneration;
-    emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
+    _safeEmit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
     try {
       final meals = await _repository.getDailyFoodLog(DateTime.now());
       final totals = _calculateTotals(meals);
       final weeklyData = await _loadWeeklyData();
       if (generation != _loadGeneration) return;
 
-      emit(state.copyWith(
+      _safeEmit(state.copyWith(
         meals: meals,
         totalCalories: totals['calories'],
         totalProtein: totals['protein'],
@@ -228,7 +238,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       ));
     } catch (e) {
       if (generation != _loadGeneration) return;
-      emit(state.copyWith(
+      _safeEmit(state.copyWith(
         error: e.toString(),
         isLoading: false,
       ));
@@ -263,14 +273,14 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   Future<void> addMeal(FoodItem meal) async {
     final previousMeals = state.meals;
     final operationGeneration = ++_loadGeneration;
-    emit(_stateWithMeals([...previousMeals, meal]));
+    _safeEmit(_stateWithMeals([...previousMeals, meal]));
 
     try {
       await _enqueueFoodWrite(() => _repository.addFoodItem(meal));
       _invalidateWeeklyCache();
     } catch (error) {
       if (!isClosed && operationGeneration == _loadGeneration) {
-        emit(_stateWithMeals(previousMeals, error: error.toString()));
+        _safeEmit(_stateWithMeals(previousMeals, error: error.toString()));
       }
     }
   }
@@ -337,43 +347,60 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   }
 
   Future<void> addMealFromImage(Uint8List imageBytes) async {
-    emit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
+    _safeEmit(state.copyWith(isLoading: true, clearError: true, clearSuccess: true));
 
-    final result = await _repository.detectFoodFromImage(imageBytes);
+    // `detectFoodFromImage` habla con la IA: puede lanzar (red caída, timeout,
+    // respuesta ilegible). Sin este try la excepción escapaba del cubit hacia
+    // la zona global y dejaba `isLoading: true` para siempre.
+    FoodItem? meal;
+    String? failureMessage;
+    try {
+      final result = await _repository.detectFoodFromImage(imageBytes);
+      // `fold` es síncrono: pasarle un callback `async` devolvía un Future que
+      // nadie esperaba ni capturaba, así que un fallo al guardar la comida se
+      // convertía en un error asíncrono no gestionado. Aquí solo se extraen
+      // los valores y el trabajo asíncrono se hace fuera, con await.
+      result.fold(
+        (failure) => failureMessage = failure,
+        (value) => meal = value,
+      );
+    } catch (error) {
+      _safeEmit(state.copyWith(error: error.toString(), isLoading: false));
+      return;
+    }
 
-    result.fold(
-      (failure) {
-        emit(state.copyWith(
-          error: failure,
-          isLoading: false,
-        ));
-      },
-      (meal) async {
-        await addMeal(meal);
-        emit(state.copyWith(
-          successMessage: 'Food "${meal.name}" detected successfully!',
-          isLoading: false,
-        ));
-      },
-    );
+    final detected = meal;
+    if (detected == null) {
+      _safeEmit(state.copyWith(
+        error: failureMessage ?? 'Error en el análisis',
+        isLoading: false,
+      ));
+      return;
+    }
+
+    await addMeal(detected);
+    _safeEmit(state.copyWith(
+      successMessage: 'Food "${detected.name}" detected successfully!',
+      isLoading: false,
+    ));
   }
 
   void clearMessages() {
-    emit(state.copyWith(clearError: true, clearSuccess: true));
+    _safeEmit(state.copyWith(clearError: true, clearSuccess: true));
   }
 
   Future<void> deleteMeal(FoodItem meal) async {
     final previousMeals = state.meals;
     final optimisticMeals = previousMeals.where((item) => item.id != meal.id).toList();
     final operationGeneration = ++_loadGeneration;
-    emit(_stateWithMeals(optimisticMeals));
+    _safeEmit(_stateWithMeals(optimisticMeals));
 
     try {
       await _enqueueFoodWrite(() => _repository.deleteFoodItem(meal));
       _invalidateWeeklyCache();
     } catch (error) {
       if (!isClosed && operationGeneration == _loadGeneration) {
-        emit(_stateWithMeals(previousMeals, error: error.toString()));
+        _safeEmit(_stateWithMeals(previousMeals, error: error.toString()));
       }
     }
   }
@@ -386,7 +413,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       _invalidateWeeklyCache();
       await loadDailyLog();
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      _safeEmit(state.copyWith(error: e.toString()));
     }
   }
 
@@ -396,7 +423,7 @@ class FoodLogCubit extends Cubit<FoodLogState> {
       _invalidateWeeklyCache();
       await loadDailyLog();
     } catch (e) {
-      emit(state.copyWith(error: e.toString()));
+      _safeEmit(state.copyWith(error: e.toString()));
     }
   }
 }

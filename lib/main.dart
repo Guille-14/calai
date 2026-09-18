@@ -24,20 +24,41 @@ import 'presentation/screens/profile_screen.dart';
 import 'presentation/widgets/app_error_boundary.dart';
 import 'presentation/widgets/app_error_fallback.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  // `ensureInitialized` DEBE ejecutarse dentro de la misma zona que `runApp`.
+  // Estaba fuera de `runZonedGuarded`, y esa discrepancia de zonas es un error
+  // fatal de arranque en Flutter ("Zone mismatch"): la app moría al abrirla.
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Red global de seguridad: ningún error asíncrono o de framework
-  // debe matar la app en silencio.
-  FlutterError.onError = (details) {
-    // El detalle técnico queda en los logs de desarrollo; la UI solo muestra
-    // el fallback recuperable cuando Flutter no puede pintar el árbol.
-    AppErrorBoundary.report(details.exception, details.stack ?? StackTrace.empty);
-  };
-  ErrorWidget.builder = (_) => const AppErrorFallback();
+    // Red global de seguridad: ningún error de framework debe matar la app.
+    //
+    // Antes, CUALQUIER error de Flutter (un overflow de layout, una imagen que
+    // no carga, un setState tardío...) llamaba a `AppErrorBoundary.report` y
+    // eso sustituía la aplicación ENTERA por la pantalla de error. Como esos
+    // avisos son frecuentes y casi siempre inofensivos, la app parecía
+    // "petarse cada dos por tres" aunque nada crítico hubiera fallado.
+    //
+    // Ahora el error se registra y se deja que Flutter lo aísle: solo el
+    // widget que no se pudo pintar se sustituye por el fallback
+    // (ErrorWidget.builder), y el resto de la pantalla sigue viva.
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+    };
+    ErrorWidget.builder = (_) => const AppErrorFallback();
 
-  await runZonedGuarded(() async {
-    await _bootstrap();
+    try {
+      await _bootstrap();
+    } catch (error, stack) {
+      // Si el arranque falla (SharedPreferences corrupto, disco lleno...) hay
+      // que pintar algo igualmente: antes la app se quedaba en negro porque
+      // nunca se llegaba a llamar a runApp.
+      debugPrint('main: fallo de arranque: $error\n$stack');
+      runApp(const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: AppErrorFallback(),
+      ));
+    }
   }, (error, stack) {
     debugPrint('Uncaught zone error: $error\n$stack');
   });

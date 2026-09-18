@@ -190,7 +190,15 @@ class GoogleFitService {
     DateTime end,
   ) async {
     if (!Platform.isAndroid || end.isBefore(start)) return const [];
-    if (!await _ensureAuthorization()) return const [];
+    // `_ensureAuthorization` habla con el plugin nativo y puede lanzar; el
+    // histórico es un extra, así que un fallo devuelve lista vacía en vez de
+    // propagar la excepción a la pantalla de progreso.
+    try {
+      if (!await _ensureAuthorization()) return const [];
+    } catch (e) {
+      debugPrint('GoogleFitService: sin autorización para el histórico: $e');
+      return const [];
+    }
 
     final firstDay = DateTime(start.year, start.month, start.day);
     final lastDay = DateTime(end.year, end.month, end.day);

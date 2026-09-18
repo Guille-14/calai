@@ -452,7 +452,12 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
   }
 
   Widget _buildLastSyncInfo() {
-    final timeAgo = _lastSync!.difference(DateTime.now()).inHours.abs();
+    // El `!` crasheaba si el widget se reconstruía justo cuando _lastSync
+    // se limpiaba (p.ej. tras revocar el acceso). Si no hay fecha, no hay
+    // tarjeta que pintar.
+    final lastSync = _lastSync;
+    if (lastSync == null) return const SizedBox.shrink();
+    final timeAgo = lastSync.difference(DateTime.now()).inHours.abs();
     final timeLabel = timeAgo < 1
         ? 'hace menos de 1 hora'
         : timeAgo < 24
@@ -505,7 +510,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            _lastSync.toString().split('.')[0],
+            lastSync.toString().split('.')[0],
             style: const TextStyle(
               fontSize: 11,
               color: AppColors.textTertiary,

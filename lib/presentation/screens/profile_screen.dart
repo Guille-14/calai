@@ -180,10 +180,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           _healthAvailableFrom = result.availableFrom;
           _healthAvailableTo = result.availableTo;
         });
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${result.importedWorkouts} entrenamientos importados. XP reducido aplicado.')),
         );
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.error ?? 'No se pudo sincronizar Health Connect')),
         );

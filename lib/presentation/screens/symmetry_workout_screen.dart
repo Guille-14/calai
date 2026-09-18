@@ -8,6 +8,7 @@ import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/workout_calories.dart';
 import '../../data/local/preference_manager.dart';
+import '../../data/models/symmetry_routine_analysis.dart';
 import '../../data/services/ai_gateway.dart';
 import '../widgets/hevy_sync_button_widget.dart';
 
@@ -552,7 +553,13 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen>
 
   Future<void> _scanRoutine() async {
     final picker = ImagePicker();
-    final xfile = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? xfile;
+    try {
+      xfile = await picker.pickImage(source: ImageSource.gallery);
+    } catch (e) {
+      debugPrint('Symmetry: error abriendo la galería: $e');
+      return;
+    }
     if (xfile == null) return;
 
     if (!mounted) return;
@@ -564,8 +571,25 @@ class _SymmetryWorkoutScreenState extends State<SymmetryWorkoutScreen>
       ),
     );
 
-    final bytes = await xfile.readAsBytes();
-    final result = await AiGateway.analyzeSymmetryRoutineFromBytes(bytes, _selectedMuscleGroup);
+    // La lectura del fichero y la llamada a la IA pueden fallar. Sin este
+    // try/catch el diálogo de carga se quedaba bloqueando la pantalla para
+    // siempre y el error subía sin gestionar.
+    final SymmetryRoutineAnalysisResult result;
+    try {
+      final bytes = await xfile.readAsBytes();
+      result = await AiGateway.analyzeSymmetryRoutineFromBytes(
+          bytes, _selectedMuscleGroup);
+    } catch (e) {
+      debugPrint('Symmetry: error analizando la rutina: $e');
+      if (!mounted) return;
+      Navigator.pop(context); // cierra el loader pase lo que pase
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No se pudo leer la rutina. Inténtalo de nuevo.'),
+            backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
     if (!mounted) return;
     Navigator.pop(context); // close loader

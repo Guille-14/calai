@@ -85,14 +85,22 @@ class _ProgressScreenState extends State<ProgressScreen>
   }
 
   Future<void> _loadHealthHistory() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final history = await _healthService.fetchHistoricalDaily(
-      today.subtract(const Duration(days: 6)),
-      now,
-    );
-    if (!mounted) return;
-    setState(() => _healthHistory = history);
+    // Health Connect es opcional y puede lanzar (plugin ausente, permisos
+    // revocados, servicio caído). Sin este try el error escapaba hasta el
+    // `Future.wait` del pull-to-refresh y tumbaba la pantalla de progreso,
+    // que funciona perfectamente sin datos de salud.
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final history = await _healthService.fetchHistoricalDaily(
+        today.subtract(const Duration(days: 6)),
+        now,
+      );
+      if (!mounted) return;
+      setState(() => _healthHistory = history);
+    } catch (error) {
+      debugPrint('Progress: no se pudo leer el histórico de salud: $error');
+    }
   }
 
   Future<void> _refreshAll() async {

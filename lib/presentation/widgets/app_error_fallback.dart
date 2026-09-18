@@ -11,6 +11,18 @@ class AppErrorFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Este widget es el sustituto de un widget que YA ha fallado, y también se
+    // usa como pantalla de arranque de emergencia. En esos casos puede quedar
+    // fuera del MaterialApp, sin `Directionality` encima: `Text` lanzaría
+    // entonces su propio error y provocaría un bucle de fallos. Se aporta el
+    // contexto mínimo aquí para que el fallback nunca pueda fallar.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Material(
       color: AppColors.background,
       child: Center(
