@@ -5,6 +5,13 @@ Welcome to the **Calorie Detector App**! This Flutter app uses Google Gemini AI 
 ---
 
 ## Screenshots
+
+> ⚠️ **Capturas desactualizadas.** Las imágenes de abajo son de una versión
+> antigua: tema lila claro, 3 pestañas y textos en inglés. La app actual usa
+> tema oscuro con acento naranja, 5 pestañas (Inicio, Escanear, Entrenar,
+> Progreso, Perfil) e interfaz en español. Pendiente de rehacerlas desde un
+> dispositivo real.
+
 | Welcome Screen | Main Screen |
 |:---:|:---:|
 | ![Welcome Screen](screenshots/welcome_screen.png) | ![Main Screen](screenshots/main_screen.png) |

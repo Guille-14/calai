@@ -837,20 +837,22 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.3),
+                    color: _confidenceColor(data.confidence)
+                        .withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   // El modelo solo devuelve low/medium/high. Mostrar "90%"
                   // inventa una precisión que la IA nunca calculó, así que se
-                  // enseña la etiqueta cualitativa tal cual.
+                  // enseña la etiqueta cualitativa, con color semántico para
+                  // que una estimación floja se distinga de una fiable.
                   child: Text(
                     data.confidence == 'high'
                         ? 'Confianza alta'
                         : data.confidence == 'medium'
                             ? 'Confianza media'
                             : 'Confianza baja',
-                    style: const TextStyle(
-                      color: AppColors.accentStrong,
+                    style: TextStyle(
+                      color: _confidenceColor(data.confidence),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -952,6 +954,12 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       ),
     );
   }
+
+  Color _confidenceColor(String confidence) => switch (confidence) {
+        'high' => AppColors.success,
+        'medium' => AppColors.warning,
+        _ => AppColors.error,
+      };
 
   Widget _buildErrorOverlay() {
     return Container(

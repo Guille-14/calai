@@ -19,6 +19,14 @@ class AppColors {
   static const Color accentMuted = Color(0x99FF6B35);
   static const Color accentSubtle = Color(0x33FF6B35);
   static const Color error = Color(0xFFFF5C5C);
+
+  // Colores semánticos. El naranja de marca no puede significar a la vez
+  // "vas bien" y "te pasaste": sin distinción, el usuario no tiene ninguna
+  // pista visual de si está dentro o fuera de objetivo, ni de si la IA
+  // respondió con confianza alta o baja.
+  static const Color success = Color(0xFF4ADE80);
+  static const Color warning = Color(0xFFFFC107);
+
   static const Color divider = Color(0xFF29292D);
 }
 

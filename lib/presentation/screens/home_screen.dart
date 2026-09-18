@@ -479,7 +479,11 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     circularStrokeCap: CircularStrokeCap.round,
                     backgroundColor: AppColors.divider,
-                    progressColor: Theme.of(context).colorScheme.primary,
+                    // Color semántico: el anillo era siempre naranja, así que
+                    // no había ninguna pista visual de si ibas dentro de
+                    // objetivo o ya te habías pasado.
+                    progressColor: _calorieRingColor(
+                        state.totalCalories, calorieGoal.toDouble()),
                   ),
                   const SizedBox(width: 40),
                   Expanded(
@@ -875,6 +879,16 @@ class _HomeScreenState extends State<HomeScreen>
         ],
       ),
     );
+  }
+
+  /// Verde mientras vas dentro de objetivo, ámbar al acercarte al límite
+  /// (>=95%) y rojo al pasarte. Antes todo era del mismo naranja.
+  Color _calorieRingColor(double consumed, double goal) {
+    if (goal <= 0) return AppColors.accent;
+    final ratio = consumed / goal;
+    if (ratio > 1.0) return AppColors.error;
+    if (ratio >= 0.95) return AppColors.warning;
+    return AppColors.success;
   }
 
   Widget _buildMacroRow(String label, String value, Color color) {
