@@ -73,16 +73,9 @@ Future<void> _bootstrap() async {
     aiGateway: const AiGatewayAdapter(),
   );
 
-  // Migración one-shot: registro de comidas desde SharedPreferences
-  // (food_log_YYYY-MM-DD) a la tabla SQLite food_entries. No debe perderse
-  // ninguna comida ya registrada; si falla, se reintenta en el próximo
-  // arranque (la marca se escribe al final).
-  try {
-    await foodRepository.migrateFoodLogFromPrefs();
-  } catch (e) {
-    debugPrint('main: error migrando food_log a SQLite: $e');
-  }
-
+  // No bloqueamos el primer frame con la migración de comidas: en un
+  // dispositivo con mucho histórico podía dejar el onboarding congelado
+  // antes de que el usuario pudiera escribir su peso.
   runApp(
     AppErrorBoundary(
       child: LocaleNotifier(
@@ -92,6 +85,19 @@ Future<void> _bootstrap() async {
       ),
     ),
   );
+
+  // La migración también se ejecuta después del primer frame. No se pierde
+  // ninguna comida: si falla, la marca no se escribe y se reintenta en otro
+  // arranque.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(() async {
+      try {
+        await foodRepository.migrateFoodLogFromPrefs();
+      } catch (error) {
+        debugPrint('main: error migrando food_log: $error');
+      }
+    }());
+  });
 
   // Las tareas nativas y la configuración de IA se ejecutan después del
   // primer frame. Ambas APIs también tienen inicialización perezosa, por lo

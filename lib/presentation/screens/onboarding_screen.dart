@@ -15,7 +15,11 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   late final PageController _pageController;
+  final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _ageController = TextEditingController();
   int _currentPage = 0;
+  bool _isSaving = false;
 
   double? weight;
   double? height;
@@ -49,6 +53,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -56,6 +63,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: AppColors.error),
     );
+  }
+
+  double? _parseDecimal(String value) {
+    final normalized = value.trim().replaceAll(',', '.');
+    final parsed = double.tryParse(normalized);
+    return parsed != null && parsed.isFinite ? parsed : null;
   }
 
   /// Devuelve true si los datos son válidos y se guardaron.
@@ -121,29 +134,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       carbsGoal: macroGoals['carbsGoal']!,
     );
 
-    final prefManager =
-        PreferenceManager(await SharedPreferences.getInstance());
-    await prefManager.saveUserData(userData);
     final prefs = await SharedPreferences.getInstance();
+    final prefManager = PreferenceManager(prefs);
+    await prefManager.saveUserData(userData);
     await prefs.setBool('onboarding_complete', true);
     return true;
   }
 
-  void _nextPage() {
+  Future<void> _nextPage() async {
+    if (_isSaving) return;
+
     if (_currentPage < 6) {
       if (_currentPage == 5) {
-        // Guarda y solo avanza si los datos son válidos.
-        _savePreferences().then((ok) {
+        // Guarda y solo avanza si los datos son válidos. Mientras se persiste
+        // no aceptamos taps duplicados ni dejamos el botón sin feedback.
+        setState(() => _isSaving = true);
+        try {
+          final ok = await _savePreferences();
           if (!ok || !mounted) return;
-          _pageController.nextPage(
-            duration: Duration(milliseconds: 300),
+          await _pageController.nextPage(
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
-        });
+        } finally {
+          if (mounted) setState(() => _isSaving = false);
+        }
         return;
       }
-      _pageController.nextPage(
-        duration: Duration(milliseconds: 300),
+      await _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
@@ -253,7 +272,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final t = AppTranslations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       appBar: _currentPage == 0
           ? AppBar(
               backgroundColor: AppColors.background,
@@ -279,9 +298,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'enter_weight',
             'assets/onboarding/onboarding_weight.png',
             TextField(
-              keyboardType: TextInputType.number,
+              controller: _weightController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
               style: const TextStyle(color: AppColors.textPrimary),
-              onChanged: (value) => weight = double.tryParse(value),
+              onChanged: (value) => weight = _parseDecimal(value),
               decoration: InputDecoration(
                 labelText: t.translate('weight_in_kg'),
                 labelStyle: const TextStyle(color: AppColors.textSecondary),
@@ -292,9 +313,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'enter_height',
             'assets/onboarding/onboarding_height.png',
             TextField(
-              keyboardType: TextInputType.number,
+              controller: _heightController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
               style: const TextStyle(color: AppColors.textPrimary),
-              onChanged: (value) => height = double.tryParse(value),
+              onChanged: (value) => height = _parseDecimal(value),
               decoration: InputDecoration(
                 labelText: t.translate('height_in_cm'),
                 labelStyle: const TextStyle(color: AppColors.textSecondary),
@@ -305,9 +328,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'enter_age',
             'assets/onboarding/onboarding_age.png',
             TextField(
+              controller: _ageController,
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
               style: const TextStyle(color: AppColors.textPrimary),
-              onChanged: (value) => age = int.tryParse(value),
+              onChanged: (value) => age = int.tryParse(value.trim()),
               decoration: InputDecoration(
                 labelText: t.translate('age_in_years'),
                 labelStyle: const TextStyle(color: AppColors.textSecondary),
@@ -429,16 +454,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       height: 48,
                       width: 120,
                       child: ElevatedButton(
-                        onPressed: _nextPage,
+                        onPressed: _isSaving ? null : _nextPage,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.textPrimary,
                           foregroundColor: AppColors.background,
                         ),
-                        child: Text(
-                          t.translate('next'),
-                          style: const TextStyle(
-                              fontSize: 16, color: AppColors.background),
-                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.background,
+                                ),
+                              )
+                            : Text(
+                                t.translate('next'),
+                                style: const TextStyle(
+                                    fontSize: 16, color: AppColors.background),
+                              ),
                       ),
                     ),
                   ],
