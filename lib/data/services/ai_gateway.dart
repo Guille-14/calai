@@ -85,6 +85,29 @@ class AiGateway {
   static String get activeProvider => _activeProvider.id;
   static AiProviderKind get activeProviderKind => _activeProvider;
 
+  /// Motivo por el que la IA no puede analizar todavía, o `null` si está
+  /// lista. De fábrica la app cae en Ollama apuntando a localhost, que en un
+  /// móvil no es ningún servidor: sin este aviso el usuario solo ve fallar el
+  /// escaneo sin saber por qué.
+  static Future<String?> configurationIssue() async {
+    await initFromPrefs();
+    switch (_activeProvider) {
+      case AiProviderKind.openRouter:
+        return _openrouterApiKey.isEmpty
+            ? 'Falta la API key de OpenRouter.'
+            : null;
+      case AiProviderKind.google:
+        return _googleService.apiKey.isEmpty
+            ? 'Falta la API key de Gemini.'
+            : null;
+      case AiProviderKind.ollama:
+        final ollama = OllamaService();
+        await ollama.initialize();
+        if (await ollama.isServerAvailable()) return null;
+        return 'No hay servidor Ollama accesible en ${ollama.baseUrl}.';
+    }
+  }
+
   static String _openrouterApiKey = '';
   static String _openrouterModel = 'google/gemini-2.5-flash';
 
@@ -286,11 +309,11 @@ class AiGateway {
       const prompt = _foodAnalysisPrompt;
 
       if (_activeProvider == AiProviderKind.google) {
-        final available = await _googleService.isModelAvailable();
-        if (available == false) {
-          return FoodAnalysisResult.error(
-              'El modelo configurado ya no está disponible, elige uno de la lista actual en Ajustes IA.');
-        }
+        // Antes se llamaba a isModelAvailable() antes de CADA foto: una
+        // petición HTTP extra para comprobar algo que casi nunca cambia, que
+        // duplicaba la latencia y la superficie de fallo. Si el modelo ya no
+        // existe, la propia llamada de análisis devuelve 404 y ahí se traduce
+        // al mensaje que manda al usuario a Ajustes IA.
         final resp = await _googleService.generateResponseWithImage(
           prompt: prompt,
           imageBase64: base64Image,
@@ -336,8 +359,16 @@ class AiGateway {
     } catch (parseErr) {
       debugPrint('AiGateway: Error parseando JSON: $parseErr');
     }
-    return FoodAnalysisResult.error(
-        'La IA respondió pero no se pudo interpretar. Inténtalo de nuevo.');
+    // Sin ver qué contestó el modelo, un "no se pudo interpretar" es
+    // imposible de depurar. Se vuelca la respuesta cruda al log y se añade
+    // un extracto al mensaje para poder reportar el fallo con datos.
+    debugPrint('AiGateway: respuesta no interpretable: $responseText');
+    final preview = responseText.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final snippet =
+        preview.length > 120 ? '${preview.substring(0, 120)}…' : preview;
+    return FoodAnalysisResult.error(snippet.isEmpty
+        ? 'La IA no devolvió ninguna respuesta. Inténtalo de nuevo.'
+        : 'La IA respondió pero no se pudo interpretar. Respondió: "$snippet"');
   }
 
   /// Extrae el primer objeto JSON completo, incluso si el proveedor lo

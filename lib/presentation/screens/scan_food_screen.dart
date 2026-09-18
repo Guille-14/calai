@@ -10,6 +10,7 @@ import '../../data/models/food_item.dart';
 import '../../data/services/ai_gateway.dart';
 import '../cubit/food_log_cubit.dart';
 import '../widgets/ai_analysis_progress.dart';
+import 'ai_settings_screen.dart';
 import 'openrouter_diagnostics_screen.dart';
 import 'nutritional_chat_screen.dart';
 
@@ -33,6 +34,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   bool _isAnalyzing = false;
   AiAnalysisStage _analysisStage = AiAnalysisStage.preparing;
   String? _errorMessage;
+  String? _configIssue;
   FoodAnalysisResult? _analysisResult;
 
   late AnimationController _pulseController;
@@ -49,6 +51,15 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
+    _checkAiConfiguration();
+  }
+
+  /// Comprueba si la IA puede analizar antes de que el usuario gaste una foto
+  /// en descubrir que no. De fábrica el proveedor es Ollama en localhost, que
+  /// en el móvil no existe.
+  Future<void> _checkAiConfiguration() async {
+    final issue = await AiGateway.configurationIssue();
+    if (mounted) setState(() => _configIssue = issue);
   }
 
   @override
@@ -628,11 +639,17 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
 
   Widget _buildBody() {
     if (_selectedImageBytes == null) {
-      return _buildEmptyState();
+      return Column(
+        children: [
+          if (_configIssue != null) _buildConfigBanner(),
+          Expanded(child: _buildEmptyState()),
+        ],
+      );
     }
 
     return Column(
       children: [
+        if (_configIssue != null) _buildConfigBanner(),
         Expanded(
           child: Stack(
             children: [
@@ -643,6 +660,56 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         ),
         _buildBottomControls(),
       ],
+    );
+  }
+
+  /// Aviso previo: la IA no está lista, con acceso directo a arreglarlo.
+  Widget _buildConfigBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: AppColors.error, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'La IA no está configurada',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _configIssue!,
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AiSettingsScreen()),
+              );
+              await _checkAiConfiguration();
+            },
+            child: const Text('Configurar'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -773,12 +840,15 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     color: AppColors.accent.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  // El modelo solo devuelve low/medium/high. Mostrar "90%"
+                  // inventa una precisión que la IA nunca calculó, así que se
+                  // enseña la etiqueta cualitativa tal cual.
                   child: Text(
                     data.confidence == 'high'
-                        ? '90%'
+                        ? 'Confianza alta'
                         : data.confidence == 'medium'
-                            ? '70%'
-                            : '50%',
+                            ? 'Confianza media'
+                            : 'Confianza baja',
                     style: const TextStyle(
                       color: AppColors.accentStrong,
                       fontWeight: FontWeight.w600,
@@ -905,6 +975,33 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
+              ),
+              // Un error sin salida deja al usuario atascado: casi todos los
+              // fallos de análisis se arreglan en Ajustes IA (proveedor sin
+              // configurar, modelo inexistente, servidor caído).
+              const SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _errorMessage = null),
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Reintentar'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const AiSettingsScreen()),
+                      );
+                      if (mounted) setState(() => _errorMessage = null);
+                    },
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('Ajustes IA'),
+                  ),
+                ],
               ),
             ],
           ),
