@@ -97,6 +97,14 @@ class FoodAnalysisResult {
       if (calories <= 0 || divergence > tolerance) {
         calories = macroCalories.round();
       }
+    } else if (calories > 0) {
+      // Calorías sin un solo gramo de macros detrás. Pasa cuando la respuesta
+      // llega truncada (se pierde todo menos name y calories) o cuando el
+      // modelo se inventa el total sin desglosar. No hay nada que validar
+      // contra ello y guardarlo dejaría una comida con todos los macros a
+      // cero, así que se rechaza.
+      return const FoodAnalysisResult.error(
+          'La IA no devolvió los macronutrientes de este plato');
     }
 
     final validationError = _validate(

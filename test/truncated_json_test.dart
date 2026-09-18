@@ -24,7 +24,7 @@ void main() {
       // puede pasar es guardar 633 kcal con macros en blanco como si fueran
       // datos medidos.
       expect(result.isError, isTrue);
-      expect(result.errorMessage, contains('calorías'));
+      expect(result.errorMessage, contains('macronutrientes'));
     });
 
     test('un plato completo sí se acepta con sus macros', () {
