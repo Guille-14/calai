@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../data/services/ollama_service.dart';
@@ -82,43 +83,53 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
         });
       }
 
-      final ollamaAvailable = await _ollamaService.isServerAvailable();
-      bool googleAvailable = false;
-      if (_googleService.apiKey.isNotEmpty) {
-        try {
-          final resp = await _googleService.generateResponse(prompt: 'ping');
-          googleAvailable = resp.isSuccess;
-        } catch (e) {
-          googleAvailable = false;
-        }
-      }
+      // La pantalla ya se puede pintar: lo de arriba sale de preferencias
+      // locales. Antes se esperaba aquí a un sondeo de Ollama (5 s si el
+      // servidor no responde) y a un "ping" real a Gemini, EN SERIE, antes de
+      // mostrar nada: de ahí que Ajustes IA tardase tanto en abrir.
+      if (mounted) setState(() => _isLoading = false);
 
-      if (mounted) {
-        setState(() {
-          _ollamaAvailable = ollamaAvailable;
-          _googleAvailable = googleAvailable;
-          _isLoading = false;
+      if (widget.openAddServer && !_didOpenAddServer && mounted) {
+        _didOpenAddServer = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _addOrEditServer();
         });
-
-        if (widget.openAddServer && !_didOpenAddServer && mounted) {
-          _didOpenAddServer = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _addOrEditServer();
-          });
-        }
-
-        if (ollamaAvailable) {
-          _loadInstalledModels();
-        }
-        // El catálogo se consulta al abrir Ajustes IA, no solo después de
-        // un ping exitoso: así se detectan modelos retirados antes de escanear.
-        _loadGoogleModels();
       }
+
+      // Las comprobaciones de red van en segundo plano y en paralelo; cada
+      // una actualiza su indicador cuando termina.
+      unawaited(_refreshOllamaStatus());
+      unawaited(_refreshGoogleStatus());
+      _loadGoogleModels();
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         _showSnackBar('Error inicializando: $e', AppColors.error);
       }
+    }
+  }
+
+  /// Sondea Ollama sin bloquear la apertura de la pantalla.
+  Future<void> _refreshOllamaStatus() async {
+    try {
+      final available = await _ollamaService.isServerAvailable();
+      if (!mounted) return;
+      setState(() => _ollamaAvailable = available);
+      if (available) _loadInstalledModels();
+    } catch (_) {
+      if (mounted) setState(() => _ollamaAvailable = false);
+    }
+  }
+
+  /// Comprueba Gemini en segundo plano.
+  Future<void> _refreshGoogleStatus() async {
+    if (_googleService.apiKey.isEmpty) return;
+    try {
+      final resp = await _googleService.generateResponse(prompt: 'ping');
+      if (!mounted) return;
+      setState(() => _googleAvailable = resp.isSuccess);
+    } catch (_) {
+      if (mounted) setState(() => _googleAvailable = false);
     }
   }
 

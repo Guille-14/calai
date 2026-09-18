@@ -189,7 +189,12 @@ class GoogleAiService {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final generationConfig = <String, dynamic>{'temperature': 0.7};
+      // Mismo motivo que en la ruta con imagen: sin desactivar el
+      // razonamiento, los thinking tokens se comen la respuesta.
+      final generationConfig = <String, dynamic>{
+        'temperature': 0.7,
+        'thinkingConfig': {'thinkingBudget': 0},
+      };
       if (responseSchema != null) {
         generationConfig['responseMimeType'] = 'application/json';
         generationConfig['responseSchema'] = responseSchema;
@@ -242,9 +247,13 @@ class GoogleAiService {
     try {
       final generationConfig = <String, dynamic>{
         'temperature': 0.2,
-        // Las respuestas estructuradas de imágenes pueden ser largas; sin
-        // este límite Gemini puede truncar el JSON antes de cerrarlo.
-        'maxOutputTokens': 1024,
+        // Los modelos Flash actuales razonan por defecto y esos "thinking
+        // tokens" se descuentan de maxOutputTokens: el modelo se gastaba el
+        // presupuesto pensando y el JSON llegaba cortado a media clave
+        // ("...,\"protein\":"). Se desactiva el razonamiento (no aporta nada
+        // para leer una foto de comida) y se sube el margen de salida.
+        'maxOutputTokens': 2048,
+        'thinkingConfig': {'thinkingBudget': 0},
       };
       if (responseSchema != null) {
         generationConfig['responseMimeType'] = 'application/json';
@@ -314,6 +323,34 @@ class GoogleAiService {
         await Future<void>.delayed(delay);
         continue;
       }
+
+      // Los modelos antiguos (1.5 y anteriores) no conocen thinkingConfig y
+      // responden 400. En ese caso se repite la petición sin ese campo, para
+      // no romper a quien tenga elegido uno de esos modelos.
+      final config = body['generationConfig'];
+      if (response.statusCode == 400 &&
+          config is Map &&
+          config.containsKey('thinkingConfig') &&
+          RegExp('thinking', caseSensitive: false)
+              .hasMatch(utf8.decode(response.bodyBytes))) {
+        debugPrint(
+            'GoogleAiService: el modelo no admite thinkingConfig; reintento sin él');
+        final fallbackConfig = Map<String, dynamic>.from(config)
+          ..remove('thinkingConfig');
+        final fallbackBody = Map<String, dynamic>.from(body)
+          ..['generationConfig'] = fallbackConfig;
+        return http
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': _apiKey,
+              },
+              body: jsonEncode(fallbackBody),
+            )
+            .timeout(timeout);
+      }
+
       return response;
     }
     throw StateError('Google API no devolvió respuesta');
@@ -340,6 +377,23 @@ class GoogleAiService {
               .join()
               .trim()
           : '';
+      final finishReason = firstCandidate is Map
+          ? firstCandidate['finishReason']?.toString()
+          : null;
+
+      // Una respuesta truncada llega con contenido (JSON a medias) y
+      // finishReason MAX_TOKENS. Devolverla como éxito hacía que el parser
+      // fallase después con un "no se pudo interpretar" que no explicaba
+      // nada; el motivo real hay que darlo aquí.
+      if (finishReason?.trim().toUpperCase() == 'MAX_TOKENS') {
+        return GoogleAiResponse.error(
+          error: 'La respuesta de Gemini se cortó por longitud. '
+              'Prueba otra vez o elige otro modelo en Ajustes IA.',
+          model: model,
+          duration: duration,
+        );
+      }
+
       if (content.isNotEmpty) {
         return GoogleAiResponse.success(
           text: content,
@@ -347,9 +401,6 @@ class GoogleAiService {
           duration: duration,
         );
       }
-      final finishReason = firstCandidate is Map
-          ? firstCandidate['finishReason']?.toString()
-          : null;
       final promptFeedback = data is Map ? data['promptFeedback'] : null;
       final blockReason = promptFeedback is Map
           ? promptFeedback['blockReason']?.toString()
