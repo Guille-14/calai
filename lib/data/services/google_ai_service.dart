@@ -75,17 +75,48 @@ class GoogleAiService {
 
   /// Schema de la respuesta de comida. Gemini devuelve JSON válido y con la
   /// forma que consume FoodAnalysisResult, sin depender solo del prompt.
+  /// Esquema estructurado del análisis de comida.
+  ///
+  /// Las descripciones no son decorativas: con salida estructurada el modelo
+  /// las usa como instrucción por campo. Sin ellas devolvía a veces valores
+  /// por 100 g en lugar de por ración, que es el error que más desviaba el
+  /// conteo del usuario.
   static Map<String, dynamic> get foodResponseSchema => {
         'type': 'OBJECT',
         'properties': {
-          'name': {'type': 'STRING'},
-          'calories': {'type': 'NUMBER'},
-          'protein': {'type': 'NUMBER'},
-          'carbs': {'type': 'NUMBER'},
-          'fat': {'type': 'NUMBER'},
-          'sugar': {'type': 'NUMBER'},
+          'name': {
+            'type': 'STRING',
+            'description': 'Nombre descriptivo del plato o producto.',
+          },
+          'calories': {
+            'type': 'NUMBER',
+            'description':
+                'Calorías de la ración visible. Debe cuadrar con los macros: '
+                    'proteína x4 + carbohidratos x4 + grasa x9.',
+          },
+          'protein': {
+            'type': 'NUMBER',
+            'description': 'Gramos de proteína de la ración visible.',
+          },
+          'carbs': {
+            'type': 'NUMBER',
+            'description': 'Gramos de carbohidratos de la ración visible.',
+          },
+          'fat': {
+            'type': 'NUMBER',
+            'description':
+                'Gramos de grasa de la ración visible, incluyendo el aceite o '
+                    'la mantequilla de cocción aunque no se vean.',
+          },
+          'sugar': {
+            'type': 'NUMBER',
+            'description': 'Gramos de azúcar de la ración visible.',
+          },
           'confidence': {
             'type': 'STRING',
+            'description':
+                'Usa "low" si la foto está borrosa o no distingues los '
+                    'ingredientes; "high" solo si el plato es inequívoco.',
             'enum': ['low', 'medium', 'high'],
           },
         },

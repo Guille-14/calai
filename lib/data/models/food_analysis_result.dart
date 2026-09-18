@@ -36,6 +36,22 @@ class FoodAnalysisResult {
         isError = true,
         errorMessage = message;
 
+  /// Margen que se acepta entre las calorías declaradas por la IA y las que
+  /// se derivan de sus propios macros antes de recalcular (10%).
+  static const double _atwaterTolerance = 0.10;
+
+  /// Factores de Atwater: la energía que aporta cada gramo de macronutriente.
+  /// La fibra se contabiliza aparte (2 kcal/g) cuando el proveedor la informa.
+  static double atwaterCalories({
+    required double protein,
+    required double carbs,
+    required double fat,
+    double fiber = 0,
+  }) {
+    final total = protein * 4 + carbs * 4 + fat * 9 + fiber * 2;
+    return total.isFinite && total > 0 ? total : 0;
+  }
+
   /// Valida tanto el contrato estructurado actual como el formato legacy que
   /// algunos proveedores locales todavía devuelven.
   factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -56,8 +72,28 @@ class FoodAnalysisResult {
     }
     var calories = rawCalories.round();
 
-    if (calories == 0 && (protein > 0 || carbs > 0 || fat > 0)) {
-      calories = (protein * 4 + carbs * 4 + fat * 9).round();
+    // COHERENCIA DE ATWATER.
+    //
+    // Los modelos de visión estiman las calorías totales por un lado y los
+    // gramos de macros por otro, así que a menudo no cuadran: el usuario veía
+    // "550 kcal" junto a 30P/40C/10G, que solo suman 370 kcal. Eso destruye la
+    // credibilidad de la app al instante.
+    //
+    // Los macros se estiman mejor que el total (van por ingrediente), así que
+    // la fuente de verdad son ellos: P*4 + C*4 + G*9. Se tolera una desviación
+    // del 10% porque los factores reales varían (fibra, alcohol, redondeos) y
+    // no queremos "corregir" estimaciones que ya eran correctas.
+    final macroCalories = atwaterCalories(
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+    );
+    if (macroCalories > 0) {
+      final divergence = (calories - macroCalories).abs();
+      final tolerance = macroCalories * _atwaterTolerance;
+      if (calories <= 0 || divergence > tolerance) {
+        calories = macroCalories.round();
+      }
     }
 
     final validationError = _validate(

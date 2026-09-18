@@ -16,6 +16,34 @@ export '../models/food_analysis_result.dart';
 export '../models/symmetry_routine_analysis.dart';
 
 /// AiGateway - Gestiona la lógica de IA (Ollama vs Google Gemini vs OpenRouter)
+/// Prompt de producción para el análisis de comida.
+///
+/// Un prompt corto hacía que el modelo tratara el plato como un bloque único y
+/// le aplicara raciones estándar de restaurante. Con descomposición por
+/// ingredientes, anclajes visuales de tamaño y la regla de grasas ocultas, las
+/// estimaciones dejan de quedarse cortas de forma sistemática.
+const String _foodAnalysisPrompt = '''
+Eres un nutricionista clínico experto en estimación visual volumétrica de
+alimentos. Analiza la imagen y estima la ración VISIBLE (no valores por 100 g).
+
+REGLAS OBLIGATORIAS:
+1. DESCOMPOSICIÓN: no trates el plato como un bloque único. Sepáralo
+   mentalmente en sus componentes (p. ej. pasta cocida, salsa de tomate, carne
+   picada, aceite de cocción) y suma sus macros.
+2. GRASAS OCULTAS: si el alimento está salteado, frito o tiene brillo
+   superficial, asume entre 10 g y 15 g de aceite o mantequilla de cocción. Es
+   el error más habitual y el que más sabotea al usuario.
+3. REFERENCIAS DE VOLUMEN:
+   - Un puño cerrado ≈ 150-200 g de hidratos densos (arroz, pasta, patata).
+   - La palma de la mano ≈ 100-150 g de carne o pescado.
+   - Una cuchara sopera rasa de aceite = 10 g (~90 kcal).
+4. COHERENCIA: las calorías deben cuadrar con los macros que informes
+   (proteína x4 + carbohidratos x4 + grasa x9). No los estimes por separado.
+5. AMBIGÜEDAD: si la foto está borrosa, demasiado cerca o no distingues los
+   ingredientes, usa confidence "low" en vez de inventar una cifra precisa.
+
+Devuelve únicamente el objeto JSON del esquema, sin texto adicional.''';
+
 class AiGateway {
   static final OllamaService _ollamaService = OllamaService();
   static final GoogleAiService _googleService = GoogleAiService();
@@ -255,10 +283,7 @@ class AiGateway {
       // JPEG de hasta 1024 px y calidad 85, con el mismo coste de cuota.
       final normalizedBytes = await _imageStorageService.prepareForAi(imageBytes);
       final base64Image = await compute(base64Encode, normalizedBytes);
-      const prompt = '''Analiza la comida de la imagen. Identifica el plato o
-producto y estima la ración visible. Devuelve únicamente el objeto JSON pedido
-por el esquema, sin texto adicional. Los valores nutricionales son para la
-ración visible, no por 100 g.''';
+      const prompt = _foodAnalysisPrompt;
 
       if (_activeProvider == AiProviderKind.google) {
         final available = await _googleService.isModelAvailable();

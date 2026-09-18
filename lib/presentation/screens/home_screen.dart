@@ -140,7 +140,13 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         if (!data.hasError) {
           _steps = data.steps;
-          _kcalBurned = data.activeCalories;
+          // Solo calorías ACTIVAS. `activeCalories` incluye también el
+          // metabolismo basal, así que la tarjeta "Kcal quemadas" mostraba el
+          // gasto total del día (basal ~1600 kcal incluido) y parecía que el
+          // usuario había quemado muchísimo más de lo real. La app ya calcula
+          // su propio BMR con Mifflin-St Jeor en el objetivo diario, de modo
+          // que sumar aquí el basal sería contarlo dos veces.
+          _kcalBurned = data.activeCaloriesOnly;
           _isFitConnected = true;
           _lastSync = 'Actualizado hace un momento';
         } else {
@@ -295,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 Expanded(child: _buildHealthStat('Pasos', '$_steps', '10000', Icons.show_chart)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildHealthStat('Kcal', '$_kcalBurned', '500', Icons.local_fire_department)),
+                Expanded(child: _buildHealthStat('Kcal activas', '$_kcalBurned', '500', Icons.local_fire_department)),
               ],
             )
           ],
