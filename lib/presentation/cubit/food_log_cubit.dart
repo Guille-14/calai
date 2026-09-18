@@ -297,7 +297,6 @@ class FoodLogCubit extends Cubit<FoodLogState> {
   /// está guardada en CalAI y no debe verse afectada.
   void _publishMealToHealthConnect(FoodItem meal) {
     unawaited(GoogleFitService.instance.writeMealToHealthConnect(
-      clientRecordId: meal.id,
       name: meal.name,
       calories: meal.calories,
       protein: meal.protein,
@@ -421,10 +420,10 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     try {
       await _enqueueFoodWrite(() => _repository.deleteFoodItem(meal));
       _invalidateWeeklyCache();
-      // El mismo id local con el que se escribió: así no quedan registros
+      // Mismo instante con el que se escribió: así no quedan registros
       // huérfanos en Health Connect al borrar la comida en CalAI.
-      unawaited(
-          GoogleFitService.instance.deleteMealFromHealthConnect(meal.id));
+      unawaited(GoogleFitService.instance
+          .deleteMealFromHealthConnect(meal.timestamp));
     } catch (error) {
       if (!isClosed && operationGeneration == _loadGeneration) {
         _safeEmit(_stateWithMeals(previousMeals, error: error.toString()));

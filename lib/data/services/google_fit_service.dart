@@ -644,14 +644,12 @@ class GoogleFitService {
 
   /// Publica una comida en Health Connect.
   ///
-  /// `clientRecordId` es el id local de CalAI: gracias a él, editar o borrar
-  /// la comida en la app actualiza o elimina el mismo registro en Health
-  /// Connect en vez de dejar duplicados huérfanos.
+  /// El borrado se correlaciona por marca temporal exacta, de modo que
+  /// eliminar la comida en CalAI también la quita de Health Connect.
   ///
   /// Nunca lanza: registrar la comida en CalAI no puede fallar porque Health
   /// Connect no esté disponible o el usuario no haya dado permiso.
   Future<bool> writeMealToHealthConnect({
-    required String clientRecordId,
     required String name,
     required double calories,
     required double protein,
@@ -663,11 +661,14 @@ class GoogleFitService {
     if (!Platform.isAndroid) return false;
     try {
       if (!await ensureNutritionWriteAccess()) return false;
+      // `clientRecordId` no existe en la versión de `health` fijada por el
+      // proyecto (13.1.4); llegó en una posterior que además sube compileSDK
+      // y Gradle, así que no se actualiza solo por esto. La correlación con
+      // el registro local se hace por ventana temporal exacta al borrar.
       return await _health.writeMeal(
         mealType: MealType.UNKNOWN,
         startTime: timestamp,
         endTime: timestamp,
-        clientRecordId: clientRecordId,
         name: name,
         caloriesConsumed: calories,
         protein: protein,
@@ -682,15 +683,20 @@ class GoogleFitService {
     }
   }
 
-  /// Elimina de Health Connect la comida borrada en CalAI, usando el mismo
-  /// id local con el que se escribió.
-  Future<bool> deleteMealFromHealthConnect(String clientRecordId) async {
+  /// Elimina de Health Connect la comida borrada en CalAI.
+  ///
+  /// Se borra por ventana temporal exacta (el instante en que se registró la
+  /// comida) porque `deleteByClientRecordId` no está en la versión de
+  /// `health` que fija el proyecto. Sin esto quedarían registros huérfanos en
+  /// Health Connect al borrar la comida en la app.
+  Future<bool> deleteMealFromHealthConnect(DateTime timestamp) async {
     if (!Platform.isAndroid) return false;
     try {
       if (!_isConfigured && !await configureHealth()) return false;
-      return await _health.deleteByClientRecordId(
-        dataTypeKey: HealthDataType.NUTRITION,
-        clientRecordId: clientRecordId,
+      return await _health.delete(
+        type: HealthDataType.NUTRITION,
+        startTime: timestamp,
+        endTime: timestamp,
       );
     } catch (e) {
       debugPrint('GoogleFitService: no se pudo borrar la comida: $e');
