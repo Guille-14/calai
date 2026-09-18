@@ -341,7 +341,24 @@ class GoogleFitService {
   /// Las sesiones nuevas reciben XP reducido (50% de la tasa nativa), sin
   /// inventar tonelaje, series ni repeticiones. Las sesiones ya importadas se
   /// deduplican por fuente e identificador externo.
-  Future<HealthImportResult> importFullHistory({DateTime? since}) async {
+  /// Serializa los imports: Perfil, el importador de Symmetry y el auto-sync
+  /// llaman todos aquí, y solo había flags locales por pantalla. Dos imports
+  /// a la vez pueden conceder XP dos veces por el mismo entrenamiento (el
+  /// insert usa ConflictAlgorithm.replace) antes de que el índice único lo
+  /// detecte, así que el segundo espera al primero en vez de solaparse.
+  Future<HealthImportResult> importFullHistory({DateTime? since}) {
+    final pending = _runningImport;
+    if (pending != null) return pending;
+    final future = _importFullHistory(since: since);
+    _runningImport = future;
+    return future.whenComplete(() {
+      if (identical(_runningImport, future)) _runningImport = null;
+    });
+  }
+
+  Future<HealthImportResult>? _runningImport;
+
+  Future<HealthImportResult> _importFullHistory({DateTime? since}) async {
     if (!Platform.isAndroid) {
       return HealthImportResult.error('Solo Android soportado');
     }
