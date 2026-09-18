@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _healthAvailableTo = result.availableTo;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${result.importedWorkouts} entrenamientos importados. Los importados no dan XP.')),
+          SnackBar(content: Text('${result.importedWorkouts} entrenamientos importados. XP reducido aplicado.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -855,7 +855,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Los entrenamientos importados se muestran en Historial, pero no conceden XP automático para evitar duplicados.',
+            'Los entrenamientos importados conceden XP reducido (50%) y se deduplican para evitar bonificaciones repetidas.',
             style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/symmetry/symmetry_progression_service.dart';
 import '../../core/symmetry/symmetry_workout_ledger.dart';
 import 'database_service.dart';
 
@@ -252,8 +253,9 @@ class GoogleFitService {
   ///   y pasos cuando el origen los publica;
   /// - resúmenes diarios de pasos, calorías, distancia, peso, sueño y pulso.
   ///
-  /// No concede XP: una sesión externa se muestra como importada para evitar
-  /// duplicar la progresión de una sesión introducida en Symmetry.
+  /// Las sesiones nuevas reciben XP reducido (50% de la tasa nativa), sin
+  /// inventar tonelaje, series ni repeticiones. Las sesiones ya importadas se
+  /// deduplican por fuente e identificador externo.
   Future<HealthImportResult> importFullHistory({DateTime? since}) async {
     if (!Platform.isAndroid) {
       return HealthImportResult.error('Solo Android soportado');
@@ -285,6 +287,8 @@ class GoogleFitService {
     _lastImportedSessions = sessions;
 
     final db = DatabaseService();
+    final progression = SymmetryProgressionService();
+    await progression.initialize();
     final idsBySource = <String, Set<String>>{};
     for (final session in sessions) {
       final externalId = session.externalId;
@@ -309,12 +313,13 @@ class GoogleFitService {
           (existingIds.contains(uniqueKey) || !seenIds.add(uniqueKey))) {
         continue;
       }
+      final importedXp = await progression.addImportedWorkout(session);
       await db.insertWorkoutSession(
         date: session.date,
         totalTonnage: session.totalTonnage,
         durationMinutes: session.durationMinutes,
         muscleGroupTonnage: session.muscleGroupTonnage,
-        xpEarned: 0,
+        xpEarned: importedXp,
         source: session.source,
         externalId: externalId,
         importedAt: end,

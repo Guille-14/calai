@@ -18,6 +18,13 @@ class SymmetryProgressionService {
   static const String _storageKey = 'symmetry_progression';
   static const double _baseXPPerTonnage = 1.0;
   static const double _streakBonusXP = 0.1;
+
+  /// Las sesiones externas aportan progreso, pero a mitad de la tasa de una
+  /// sesión registrada en CalAI. Health Connect no suele proporcionar
+  /// tonelaje, series ni repeticiones fiables para aplicar la fórmula nativa.
+  static const double importedWorkoutXpMultiplier = 0.5;
+  static const double _importedXpPerActiveMinute = 1.0;
+  static const double _importedXpPerCalorie = 0.1;
   static const double _consistencyBonusXP = 0.05;
 
   final SymmetryWorkoutLedger _ledger = SymmetryWorkoutLedger();
@@ -208,6 +215,47 @@ class SymmetryProgressionService {
     await _saveToStorage();
 
     return effectiveXP;
+  }
+
+  /// Estima el XP base de una sesión importada sin inventar tonelaje.
+  /// Health Connect suele exponer duración y/o calorías, que son las únicas
+  /// señales cuantitativas disponibles de forma consistente.
+  static double calculateImportedWorkoutXp(WorkoutSession session) {
+    final byDuration =
+        session.durationMinutes * _importedXpPerActiveMinute;
+    final byCalories = session.caloriesBurned * _importedXpPerCalorie;
+    final base = byCalories > byDuration ? byCalories : byDuration;
+    return base * importedWorkoutXpMultiplier;
+  }
+
+  /// Registra la progresión de una sesión externa ya deduplicada por
+  /// Health Connect. No inserta otra fila SQLite: esa responsabilidad sigue
+  /// siendo de GoogleFitService.
+  Future<double> addImportedWorkout(WorkoutSession session) async {
+    ensureFreshPeriods();
+    final xp = calculateImportedWorkoutXp(session) *
+        _macroBridge.proteinMultiplier;
+
+    _ledger.addWorkout(session);
+    _fatigueMap.updateFromWorkout(session);
+    _totalXP += xp;
+
+    // No trasladamos todo el histórico importado al contador diario/semanal.
+    // Solo una sesión de hoy afecta esos contadores.
+    final now = DateTime.now();
+    final sessionDay =
+        DateTime(session.date.year, session.date.month, session.date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    if (sessionDay == today) {
+      _dailyXP += xp;
+    }
+    final currentWeekStart = today.subtract(Duration(days: today.weekday - 1));
+    if (!sessionDay.isBefore(currentWeekStart)) {
+      _weeklyXP += xp;
+    }
+
+    await _saveToStorage();
+    return xp;
   }
 
   double _calculateXPGain(double tonnage) {
