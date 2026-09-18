@@ -42,6 +42,9 @@ class RecipeDetailScreen extends StatelessWidget {
                   ? Image.file(
                       File(recipe.localImagePath!),
                       height: 250, width: double.infinity, fit: BoxFit.cover,
+                      // Cabecera de 250 px: no hace falta decodificar la foto
+                      // a resolución completa de cámara.
+                      cacheHeight: 750,
                     )
                   : Container(
                       height: 250,

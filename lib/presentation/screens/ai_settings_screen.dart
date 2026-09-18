@@ -124,6 +124,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
   Future<void> _changeProvider(String provider) async {
     await AiGateway.setProvider(provider);
+    if (!mounted) return;
     setState(() {
       _activeProvider = provider;
       _responseTimeMs = 0; // Reset response time on switch
@@ -149,6 +150,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     });
 
     await _ollamaService.setActiveServer(serverId);
+    if (!mounted) return;
     setState(() {
       _urlController.text = _ollamaService.baseUrl;
     });
@@ -187,6 +189,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
 
     final unavailable = models.isNotEmpty &&
         !models.contains(_selectedGoogleModel);
+    if (!mounted) return;
     setState(() {
       _googleModels = models;
       _loadingGoogleModels = false;
@@ -280,9 +283,11 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
   Future<void> _selectModel(String model) async {
     if (_activeProvider == 'ollama') {
       await _ollamaService.updateModel(model);
+      if (!mounted) return;
       setState(() => _selectedModel = model);
     } else {
       await _googleService.updateModel(model);
+      if (!mounted) return;
       setState(() {
         _selectedGoogleModel = model;
         _googleModelUnavailable = false;
@@ -354,7 +359,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
       } else {
         await _ollamaService.addServer(newServer);
       }
-      setState(() => _servers = _ollamaService.servers);
+      if (mounted) setState(() => _servers = _ollamaService.servers);
     }
     nameController.dispose();
     urlController.dispose();
@@ -398,6 +403,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen>
     );
     if (confirm == true) {
       await _ollamaService.removeServer(serverId);
+      if (!mounted) return;
       setState(() {
         _servers = _ollamaService.servers;
         _selectedServerId = _ollamaService.activeServer?.id;

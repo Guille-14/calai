@@ -53,6 +53,9 @@ class _OpenRouterDiagnosticsScreenState
     _addLog('Step 1: Testing connection to OpenRouter...');
     final connected = await AiGateway.testConnection();
 
+    // La prueba de conexión tarda segundos: si el usuario sale de la pantalla
+    // mientras tanto, seguir tocando el estado del widget cierra la app.
+    if (!mounted) return;
     setState(() {
       _isConnected = connected;
     });
@@ -73,12 +76,15 @@ class _OpenRouterDiagnosticsScreenState
     _addLog('');
     _addLog('Diagnostics complete.');
 
+    if (!mounted) return;
     setState(() {
       _isChecking = false;
     });
   }
 
   void _addLog(String message) {
+    // Se llama también después de awaits, así que puede llegar tarde.
+    if (!mounted) return;
     setState(() {
       _logs += '$message\n';
     });

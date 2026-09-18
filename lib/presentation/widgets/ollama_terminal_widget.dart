@@ -91,6 +91,10 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
             final modelName = parts[1];
             _addInfo('Iniciando descarga de $modelName...');
             await for (final status in _ollamaService.pullModel(modelName)) {
+              // Una descarga dura minutos: si el usuario cierra la terminal
+              // mientras tanto, seguir llamando a setState sobre un widget
+              // desmontado tumba la app.
+              if (!mounted) return;
               setState(() {
                 if (_history.isNotEmpty && _history.last.content.startsWith('Status:')) {
                   _history.removeLast();
@@ -116,16 +120,22 @@ class _OllamaTerminalWidgetState extends State<OllamaTerminalWidget> {
     } catch (e) {
       _addError('Excepción: $e');
     } finally {
-      setState(() => _isProcessing = false);
-      _scrollToBottom();
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        _scrollToBottom();
+      }
     }
   }
 
+  // Ambos se llaman después de awaits (consultas a Ollama que pueden tardar
+  // o expirar), así que comprueban que el widget siga montado.
   void _addInfo(String msg) {
+    if (!mounted) return;
     setState(() => _history.add(TerminalEntry(content: msg, type: EntryType.info)));
   }
 
   void _addError(String msg) {
+    if (!mounted) return;
     setState(() => _history.add(TerminalEntry(content: msg, type: EntryType.error)));
   }
 

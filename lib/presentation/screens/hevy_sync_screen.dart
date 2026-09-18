@@ -56,9 +56,11 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
         _loadLastSyncTime();
       }
     } catch (e) {
-      setState(() {
-        _statusMessage = 'Error: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Error: $e';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -102,6 +104,8 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
       // Actualizar progresión
       await _progressionService.initialize();
 
+      // Hay otro await por medio: hay que volver a comprobarlo.
+      if (!mounted) return;
       setState(() {
         _workoutsImported = workoutsCount;
         _lastSync = DateTime.now();

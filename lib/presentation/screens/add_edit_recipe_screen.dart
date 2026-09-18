@@ -50,7 +50,9 @@ class _AddEditRecipeScreenState extends State<AddEditRecipeScreen> {
 
   Future<void> _pickImage() async {
     final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    // Elegir foto saca al usuario de la app: al volver, la pantalla puede
+    // haberse desmontado.
+    if (pickedFile != null && mounted) {
       setState(() {
         _imageFile = File(pickedFile.path);
       });

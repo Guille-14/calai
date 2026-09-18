@@ -721,8 +721,11 @@ class _ProgressScreenState extends State<ProgressScreen>
                   if (snapshot.hasData && snapshot.data != null) {
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(12),
+                      // Se decodifica al tamaño de la miniatura, no al de la
+                      // foto original: evita reventar la memoria en listas.
                       child: Image.file(snapshot.data!,
-                          width: 56, height: 56, fit: BoxFit.cover),
+                          width: 56, height: 56, fit: BoxFit.cover,
+                          cacheWidth: 168, cacheHeight: 168),
                     );
                   }
                   return Container(

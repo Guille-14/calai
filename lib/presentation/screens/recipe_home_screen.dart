@@ -172,6 +172,9 @@ IconButton(
             ? Image.file(
                 File(recipe.localImagePath!), 
                 width: 60, height: 60, fit: BoxFit.cover, 
+                // Decodificar al tamaño de la miniatura, no al de la foto
+                // original: una lista de recetas agotaba la memoria.
+                cacheWidth: 180, cacheHeight: 180,
                 errorBuilder: (_, __, ___) => _buildDefaultImage()
               )
             : _buildDefaultImage(),

@@ -708,7 +708,12 @@ class _HomeScreenState extends State<HomeScreen>
                     if (snapshot.hasData && snapshot.data != null) {
                       return ClipRRect(
                         borderRadius: BorderRadius.circular(12),
+                        // cacheWidth/cacheHeight: sin esto Flutter decodifica
+                        // la foto de cámara completa (~3000x4000 = 46 MB en
+                        // RAM) para pintarla en 60 px. Con varias comidas del
+                        // día en pantalla, Android mata la app por memoria.
                         child: Image.file(snapshot.data!, width: 60, height: 60, fit: BoxFit.cover,
+                            cacheWidth: 180, cacheHeight: 180,
                             errorBuilder: (_, __, ___) => _buildDefaultImage()),
                       );
                     }
