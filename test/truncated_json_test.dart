@@ -19,18 +19,12 @@ void main() {
         'fat': 0,
       });
 
-      // 633 kcal con todos los macros a cero es imposible. La regla de
-      // Atwater debe corregirlo o marcarlo como error, pero nunca guardar
-      // 633 kcal junto a macros en blanco como si fueran datos medidos.
-      if (!result.isError) {
-        final macroDerived =
-            result.protein * 4 + result.carbs * 4 + result.fat * 9;
-        expect(
-          result.estimatedCalories.toDouble(),
-          closeTo(macroDerived, macroDerived * 0.10 + 1),
-          reason: 'Las calorías deben cuadrar con los macros devueltos',
-        );
-      }
+      // 633 kcal con todos los macros a cero es imposible: Atwater recalcula
+      // a 0 kcal a partir de los macros y la validación lo rechaza. Lo que no
+      // puede pasar es guardar 633 kcal con macros en blanco como si fueran
+      // datos medidos.
+      expect(result.isError, isTrue);
+      expect(result.errorMessage, contains('calorías'));
     });
 
     test('un plato completo sí se acepta con sus macros', () {
