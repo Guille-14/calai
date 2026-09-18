@@ -59,6 +59,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ---- Health Connect ----
   final GoogleFitService _healthService = GoogleFitService.instance;
   bool _healthConnectAvailable = false;
+  HealthConnectAvailability _healthConnectStatus =
+      HealthConnectAvailability.unknown;
   bool _healthConnectAuthorized = false;
   bool _healthSyncing = false;
   Map<String, int> _workoutSourceCounts = {};
@@ -93,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }();
       final notifFuture = _notificationService.isEnabled();
       final symmetryFuture = _symmetryService.initialize();
-      final healthAvailableFuture = _healthService.isHealthConnectInstalled();
+      final healthAvailableFuture = _healthService.getHealthConnectAvailability();
       final results = await Future.wait<dynamic>([
         availableFuture,
         notifFuture,
@@ -106,7 +108,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       final savedCode = prefs.getString('language_code') ?? 'es';
       final savedLang = savedCode == 'en' ? 'English' : 'Español';
       final notifEnabled = results[1] as bool;
-      final healthAvailable = results[3] as bool;
+      final healthStatus = results[3] as HealthConnectAvailability;
+      final healthAvailable =
+          healthStatus == HealthConnectAvailability.available;
 
       _creditWorkoutCalories = prefs.getBool(kCreditWorkoutCaloriesKey) ?? false;
       final healthAuthorized = healthAvailable
@@ -136,6 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _selectedLanguage = savedLang;
           _notificationsEnabled = notifEnabled;
           _healthConnectAvailable = healthAvailable;
+          _healthConnectStatus = healthStatus;
           _healthConnectAuthorized = healthAuthorized;
           _healthToday = healthToday;
           _workoutSourceCounts = sourceCounts;
@@ -759,11 +764,31 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildHealthConnectCard() {
-    final status = !_healthConnectAvailable
-        ? 'Health Connect no disponible'
-        : _healthConnectAuthorized
+    // Cada estado dice qué pasa y qué hacer: un "no disponible" a secas dejaba
+    // al usuario sin saber si faltaba instalarlo, actualizarlo o dar permisos.
+    final String status;
+    switch (_healthConnectStatus) {
+      case HealthConnectAvailability.notInstalled:
+        status = 'Health Connect no está instalado';
+        break;
+      case HealthConnectAvailability.updateRequired:
+        status = 'Health Connect necesita actualizarse';
+        break;
+      case HealthConnectAvailability.notSupported:
+        status = 'Health Connect solo está disponible en Android';
+        break;
+      case HealthConnectAvailability.unknown:
+        status = 'No se pudo comprobar Health Connect';
+        break;
+      case HealthConnectAvailability.available:
+        status = _healthConnectAuthorized
             ? 'Conectado y autorizado'
             : 'Instalado, falta autorización';
+        break;
+    }
+    final needsInstall =
+        _healthConnectStatus == HealthConnectAvailability.notInstalled ||
+            _healthConnectStatus == HealthConnectAvailability.updateRequired;
     final imported = _workoutSourceCounts.entries
         .where((entry) => entry.key != 'native')
         .fold<int>(0, (total, entry) => total + entry.value);
@@ -804,6 +829,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: AppColors.accent, size: 20),
             ],
           ),
+          if (needsInstall) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await _healthService.openHealthConnectInstall();
+                  if (mounted) await _loadData();
+                },
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: Text(
+                  _healthConnectStatus ==
+                          HealthConnectAvailability.updateRequired
+                      ? 'Actualizar Health Connect'
+                      : 'Instalar Health Connect',
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Text(
             '$imported entrenamientos importados · MiFit ${_workoutSourceCounts['mifit'] ?? 0} · Symmetry ${_workoutSourceCounts['symmetry_app'] ?? 0}',

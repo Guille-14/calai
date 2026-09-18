@@ -19,6 +19,9 @@
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
+    <!-- Permite refrescar pasos y calorías sin tener la app en primer plano.
+         Health Connect la trata como permiso aparte del de lectura normal. -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"/>
     <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
     <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
     <uses-permission android:name="android.permission.health.READ_BASAL_ENERGY_BURNED"/>

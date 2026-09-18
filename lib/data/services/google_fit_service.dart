@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,25 @@ import 'database_service.dart';
 /// con Google Fit. Health Connect solo puede devolver lo que cada aplicación
 /// haya escrito allí: si Mi Fitness no publica series de ejercicios, no es
 /// posible inventar sus series, pesos o repeticiones desde este plugin.
+/// Estado de Health Connect en el dispositivo, para poder dar al usuario una
+/// salida concreta en vez de un escueto "no disponible".
+enum HealthConnectAvailability {
+  /// Instalado y utilizable.
+  available,
+
+  /// Instalado pero desactualizado: hay que actualizarlo desde Play Store.
+  updateRequired,
+
+  /// No está instalado.
+  notInstalled,
+
+  /// iOS u otra plataforma sin Health Connect.
+  notSupported,
+
+  /// No se pudo determinar (error del plugin o del sistema).
+  unknown,
+}
+
 class GoogleFitService {
   GoogleFitService._privateConstructor();
 
@@ -119,12 +139,69 @@ class GoogleFitService {
   Future<bool> _ensureHistoricalAuthorization() async {
     if (!await _ensureAuthorization()) return false;
     try {
+      // Lectura en segundo plano: Health Connect la pide aparte del permiso
+      // de lectura normal. Es opcional —si el usuario la deniega, el resto de
+      // la sincronización sigue funcionando en primer plano—, así que no se
+      // usa su resultado para abortar.
+      unawaited(_requestBackgroundReadAccess());
       if (!await _health.isHealthDataHistoryAvailable()) return true;
       if (await _health.isHealthDataHistoryAuthorized()) return true;
       return await _health.requestHealthDataHistoryAuthorization();
     } catch (e) {
       debugPrint('GoogleFitService: no se pudo solicitar histórico: $e');
       return false;
+    }
+  }
+
+  /// Pide el permiso de lectura en segundo plano. Es opcional: si falla o el
+  /// usuario lo deniega, la sincronización en primer plano no se ve afectada.
+  Future<void> _requestBackgroundReadAccess() async {
+    try {
+      await _health.requestHealthDataInBackgroundAuthorization();
+    } catch (e) {
+      debugPrint('GoogleFitService: sin permiso de segundo plano: $e');
+    }
+  }
+
+  /// Estado real del SDK de Health Connect en el dispositivo.
+  ///
+  /// `isHealthConnectInstalled()` solo dice sí/no, y eso deja al usuario en un
+  /// callejón sin salida: no distingue "no está instalado" de "está pero hay
+  /// que actualizarlo", que se arreglan de forma distinta.
+  Future<HealthConnectAvailability> getHealthConnectAvailability() async {
+    if (!Platform.isAndroid) {
+      return HealthConnectAvailability.notSupported;
+    }
+    try {
+      if (!_isConfigured && !await configureHealth()) {
+        return HealthConnectAvailability.unknown;
+      }
+      final status = await _health.getHealthConnectSdkStatus();
+      switch (status) {
+        case HealthConnectSdkStatus.sdkAvailable:
+          return HealthConnectAvailability.available;
+        case HealthConnectSdkStatus.sdkUnavailableProviderUpdateRequired:
+          return HealthConnectAvailability.updateRequired;
+        case HealthConnectSdkStatus.sdkUnavailable:
+          return HealthConnectAvailability.notInstalled;
+        default:
+          return HealthConnectAvailability.unknown;
+      }
+    } catch (e) {
+      debugPrint('GoogleFitService: error leyendo estado del SDK: $e');
+      return HealthConnectAvailability.unknown;
+    }
+  }
+
+  /// Abre la ficha de Health Connect (Play Store o el propio ajuste del
+  /// sistema) para que el usuario pueda instalarlo o actualizarlo.
+  Future<void> openHealthConnectInstall() async {
+    if (!Platform.isAndroid) return;
+    try {
+      if (!_isConfigured) await configureHealth();
+      await _health.installHealthConnect();
+    } catch (e) {
+      debugPrint('GoogleFitService: no se pudo abrir la instalación: $e');
     }
   }
 
