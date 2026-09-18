@@ -28,9 +28,9 @@ class AiAnalysisProgress extends StatelessWidget {
   ];
 
   String get _message => switch (stage) {
-        AiAnalysisStage.preparing => 'Preparando la imagen...',
-        AiAnalysisStage.analyzing => 'Analizando tu plato...',
-        AiAnalysisStage.validating => 'Validando calorías y macros...',
+        AiAnalysisStage.preparing => 'Identificando alimentos en el plato...',
+        AiAnalysisStage.analyzing => 'Calculando volumen y porciones...',
+        AiAnalysisStage.validating => 'Extrayendo macronutrientes...',
         AiAnalysisStage.completed => 'Análisis listo',
       };
 

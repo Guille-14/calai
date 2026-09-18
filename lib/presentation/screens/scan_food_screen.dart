@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,10 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
 
   late AnimationController _pulseController;
 
+  /// Temporizadores que hacen avanzar los micro-estados de progreso mientras
+  /// la llamada a la IA sigue pendiente.
+  final List<Timer> _stageTimers = [];
+
   @override
   void initState() {
     super.initState();
@@ -48,8 +53,35 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
 
   @override
   void dispose() {
+    _cancelStageTimers();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _cancelStageTimers() {
+    for (final timer in _stageTimers) {
+      timer.cancel();
+    }
+    _stageTimers.clear();
+  }
+
+  /// Avanza los micro-estados por tiempo, no solo cuando resuelve la promesa.
+  ///
+  /// El análisis es una única llamada, así que antes el usuario se quedaba
+  /// mirando "Analizando tu plato..." durante todos los segundos que tardara:
+  /// se percibía como que la app se había colgado. Los temporizadores hacen
+  /// visible que el trabajo avanza. Si la respuesta llega antes, se cancelan.
+  void _startStageTimers() {
+    _cancelStageTimers();
+    void schedule(Duration delay, AiAnalysisStage stage) {
+      _stageTimers.add(Timer(delay, () {
+        if (!mounted || !_isAnalyzing) return;
+        setState(() => _analysisStage = stage);
+      }));
+    }
+
+    schedule(const Duration(milliseconds: 800), AiAnalysisStage.analyzing);
+    schedule(const Duration(milliseconds: 1800), AiAnalysisStage.validating);
   }
 
   void _maybePausePulse() {
@@ -138,6 +170,9 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    // Impacto suave al disparar: sin feedback táctil la captura se siente
+    // "muerta" y el usuario no sabe si el botón registró el toque.
+    HapticFeedback.lightImpact();
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: source,
@@ -176,15 +211,14 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       _analysisResult = null;
     });
 
+    // Los micro-estados avanzan por tiempo mientras la IA responde.
+    _startStageTimers();
+
     try {
-      // El servicio comprime la imagen en un isolate; el estado visible evita
-      // que el usuario interprete ese trabajo como un bloqueo de la app.
-      await Future<void>.delayed(Duration.zero);
-      if (!mounted) return;
-      setState(() => _analysisStage = AiAnalysisStage.analyzing);
       final result =
           await AiGateway.analyzeFoodImageFromBytes(_selectedImageBytes!);
 
+      _cancelStageTimers();
       if (!mounted) return;
       setState(() {
         _analysisStage = AiAnalysisStage.validating;
@@ -196,6 +230,10 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
         _isAnalyzing = false;
       });
 
+      // Confirmación háptica al completar el análisis: el usuario nota que
+      // terminó sin tener que estar mirando la pantalla.
+      if (!result.isError) HapticFeedback.heavyImpact();
+
       if (!result.isError) {
         await _saveFood(result);
       } else {
@@ -205,6 +243,7 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
       }
     } catch (error, stack) {
       debugPrint('ScanFood: error analizando imagen: $error\n$stack');
+      _cancelStageTimers();
       if (!mounted) return;
       setState(() {
         _isAnalyzing = false;
@@ -253,13 +292,21 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
   Future<void> _showFoodResultDialog(FoodItem foodItem) async {
     final nameController = TextEditingController(text: foodItem.name);
 
+    // Ración estimada por la IA. El usuario puede corregirla y todos los
+    // macros se reescalan proporcionalmente sobre esta referencia.
+    final baseGrams =
+        foodItem.quantity > 0 ? foodItem.quantity.toDouble() : 100.0;
+    var grams = baseGrams;
+
     try {
       await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, _) => Container(
+        builder: (context, setSheetState) {
+          final portionFactor = baseGrams > 0 ? grams / baseGrams : 1.0;
+          return Container(
           decoration: const BoxDecoration(
             color: AppColors.elevatedCardBackground,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -325,14 +372,31 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                     const SizedBox(height: 12),
                     _buildMacroRow(
                         'Calorías',
-                        '${foodItem.calories.toInt()} kcal',
+                        '${(foodItem.calories * portionFactor).round()} kcal',
                         AppColors.accent),
-                    _buildMacroRow('Proteína', '${foodItem.protein.toInt()}g',
-                        AppColors.accent),
-                    _buildMacroRow('Carbohidratos',
-                        '${foodItem.carbs.toInt()}g', AppColors.accent),
                     _buildMacroRow(
-                        'Grasa', '${foodItem.fat.toInt()}g', AppColors.accent),
+                        'Proteína',
+                        '${(foodItem.protein * portionFactor).round()}g',
+                        AppColors.accent),
+                    _buildMacroRow(
+                        'Carbohidratos',
+                        '${(foodItem.carbs * portionFactor).round()}g',
+                        AppColors.accent),
+                    _buildMacroRow(
+                        'Grasa',
+                        '${(foodItem.fat * portionFactor).round()}g',
+                        AppColors.accent),
+                    const SizedBox(height: 12),
+                    // Ajuste rápido de ración: la IA casi nunca acierta el peso
+                    // exacto. Sin esto, corregir obligaba a abrir el teclado y
+                    // reescribir cada macro a mano, y el usuario abandonaba.
+                    _buildPortionNudge(
+                      grams: grams,
+                      onChanged: (next) {
+                        HapticFeedback.selectionClick();
+                        setSheetState(() => grams = next);
+                      },
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -354,15 +418,15 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Guardar = confirmar: única escritura, con el nombre final.
+                        // Guardar = confirmar: única escritura, con el nombre
+                        // final y la ración ya ajustada por el usuario.
                         final editedName = nameController.text.trim();
                         final finalName =
                             editedName.isNotEmpty ? editedName : foodItem.name;
-                        context.read<FoodLogCubit>().addMeal(
-                              finalName == foodItem.name
-                                  ? foodItem
-                                  : foodItem.copyWith(name: finalName),
-                            );
+                        context
+                            .read<FoodLogCubit>()
+                            .addMeal(_scaled(foodItem, finalName, portionFactor, grams));
+                        HapticFeedback.mediumImpact();
                         Navigator.pop(ctx);
                       },
                       icon: const Icon(Icons.check),
@@ -383,7 +447,12 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
                   onPressed: () {
                     // Confirmar también al ir al chat (el usuario quiere hablar
                     // de este alimento ya registrado).
-                    context.read<FoodLogCubit>().addMeal(foodItem);
+                    final editedName = nameController.text.trim();
+                    context.read<FoodLogCubit>().addMeal(_scaled(
+                        foodItem,
+                        editedName.isNotEmpty ? editedName : foodItem.name,
+                        portionFactor,
+                        grams));
                     Navigator.pop(ctx);
                     Navigator.push(
                         context,
@@ -410,12 +479,80 @@ class _ScanFoodScreenState extends State<ScanFoodScreen>
               SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
             ],
           ),
-        ),
+        );
+        },
       ),
     );
     } finally {
       nameController.dispose();
     }
+  }
+
+  /// Aplica la ración corregida por el usuario a todos los macros.
+  FoodItem _scaled(
+      FoodItem item, String name, double factor, double grams) {
+    return item.copyWith(
+      name: name,
+      calories: item.calories * factor,
+      protein: item.protein * factor,
+      carbs: item.carbs * factor,
+      fat: item.fat * factor,
+      sugar: item.sugar * factor,
+      quantity: grams,
+    );
+  }
+
+  /// Ajuste rápido de ración en pasos, sin teclado numérico.
+  Widget _buildPortionNudge({
+    required double grams,
+    required ValueChanged<double> onChanged,
+  }) {
+    Widget step(String label, double delta) => Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: OutlinedButton(
+              onPressed: () {
+                final next = (grams + delta).clamp(5.0, 2000.0);
+                if (next != grams) onChanged(next.toDouble());
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: BorderSide(
+                    color: AppColors.textPrimary.withValues(alpha: 0.15)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                minimumSize: Size.zero,
+              ),
+              child: Text(label, style: const TextStyle(fontSize: 12)),
+            ),
+          ),
+        );
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Ración',
+                style:
+                    TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            Text('${grams.round()} g',
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            step('-50', -50),
+            step('-10', -10),
+            step('+10', 10),
+            step('+50', 50),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildMacroRow(String label, String value, Color color) {
