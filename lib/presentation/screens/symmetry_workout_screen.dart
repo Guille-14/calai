@@ -8,7 +8,6 @@ import '../../core/symmetry/symmetry_rank_system.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/workout_calories.dart';
 import '../../data/local/preference_manager.dart';
-import '../../data/models/symmetry_routine_analysis.dart';
 import '../../data/services/ai_gateway.dart';
 import '../widgets/hevy_sync_button_widget.dart';
 
