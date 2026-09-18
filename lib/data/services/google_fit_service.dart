@@ -615,6 +615,89 @@ class GoogleFitService {
     return 'general';
   }
 
+  // --------------------------------------------------------------------
+  // Escritura de nutrición (sincronización bidireccional)
+  // --------------------------------------------------------------------
+
+  /// Pide permiso de ESCRITURA de nutrición. Se solicita por separado del
+  /// bloque de lectura para no reabrir el diálogo completo de permisos cada
+  /// vez que el usuario registra una comida.
+  Future<bool> ensureNutritionWriteAccess() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      if (!_isConfigured && !await configureHealth()) return false;
+      const types = [HealthDataType.NUTRITION];
+      final granted = await _health.hasPermissions(
+        types,
+        permissions: const [HealthDataAccess.READ_WRITE],
+      );
+      if (granted == true) return true;
+      return await _health.requestAuthorization(
+        types,
+        permissions: const [HealthDataAccess.READ_WRITE],
+      );
+    } catch (e) {
+      debugPrint('GoogleFitService: sin permiso de escritura de nutrición: $e');
+      return false;
+    }
+  }
+
+  /// Publica una comida en Health Connect.
+  ///
+  /// `clientRecordId` es el id local de CalAI: gracias a él, editar o borrar
+  /// la comida en la app actualiza o elimina el mismo registro en Health
+  /// Connect en vez de dejar duplicados huérfanos.
+  ///
+  /// Nunca lanza: registrar la comida en CalAI no puede fallar porque Health
+  /// Connect no esté disponible o el usuario no haya dado permiso.
+  Future<bool> writeMealToHealthConnect({
+    required String clientRecordId,
+    required String name,
+    required double calories,
+    required double protein,
+    required double carbs,
+    required double fat,
+    required double sugar,
+    required DateTime timestamp,
+  }) async {
+    if (!Platform.isAndroid) return false;
+    try {
+      if (!await ensureNutritionWriteAccess()) return false;
+      return await _health.writeMeal(
+        mealType: MealType.UNKNOWN,
+        startTime: timestamp,
+        endTime: timestamp,
+        clientRecordId: clientRecordId,
+        name: name,
+        caloriesConsumed: calories,
+        protein: protein,
+        carbohydrates: carbs,
+        fatTotal: fat,
+        sugar: sugar,
+        recordingMethod: RecordingMethod.manual,
+      );
+    } catch (e) {
+      debugPrint('GoogleFitService: no se pudo escribir la comida: $e');
+      return false;
+    }
+  }
+
+  /// Elimina de Health Connect la comida borrada en CalAI, usando el mismo
+  /// id local con el que se escribió.
+  Future<bool> deleteMealFromHealthConnect(String clientRecordId) async {
+    if (!Platform.isAndroid) return false;
+    try {
+      if (!_isConfigured && !await configureHealth()) return false;
+      return await _health.deleteByClientRecordId(
+        dataTypeKey: HealthDataType.NUTRITION,
+        clientRecordId: clientRecordId,
+      );
+    } catch (e) {
+      debugPrint('GoogleFitService: no se pudo borrar la comida: $e');
+      return false;
+    }
+  }
+
   Future<void> revokeAccess() async {
     try {
       await _health.revokePermissions();

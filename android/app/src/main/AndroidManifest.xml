@@ -32,6 +32,12 @@
     <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
     <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
     <uses-permission android:name="android.permission.health.READ_WATER"/>
+    <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+
+    <!-- Escritura: CalAI publica en Health Connect lo que el usuario come,
+         para que el resto de apps de salud lo vean. Es la única escritura que
+         hace la app. -->
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
 
     <application
         android:label="CalAI"

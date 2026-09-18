@@ -66,7 +66,10 @@ class FoodAnalysisResult {
     final sugar = _readNumber(json['sugar'] ?? macros['sugar']);
     final rawCalories =
         _readNumber(json['calories'] ?? json['estimatedCalories']);
-    if (!rawCalories.isFinite) {
+    // Un valor negativo no es una simple desviación: es una respuesta
+    // corrupta, y si el proveedor devuelve eso el resto de sus cifras tampoco
+    // es de fiar. Se rechaza en vez de "repararla" con los macros.
+    if (!rawCalories.isFinite || rawCalories < 0) {
       return const FoodAnalysisResult.error(
           'La IA devolvió un valor de calorías no válido');
     }

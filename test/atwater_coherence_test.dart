@@ -67,6 +67,22 @@ void main() {
       );
     });
 
+    test('rechaza calorías negativas en vez de repararlas con los macros', () {
+      // Un negativo indica respuesta corrupta, no una simple desviación: no
+      // se debe "arreglar" recalculando, porque el resto de cifras del
+      // proveedor tampoco son fiables.
+      final result = FoodAnalysisResult.fromJson({
+        'name': 'Plato imposible',
+        'calories': -20,
+        'protein': 4,
+        'carbs': 3,
+        'fat': 2,
+      });
+
+      expect(result.isError, isTrue);
+      expect(result.errorMessage, contains('calorías'));
+    });
+
     test('sigue rechazando un plato sin macros ni calorías', () {
       final result = FoodAnalysisResult.fromJson({
         'name': 'Vacío',

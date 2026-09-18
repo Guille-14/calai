@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +6,7 @@ import '../../core/symmetry/macro_bridge.dart';
 import '../../core/utils/date_key.dart';
 import '../../data/models/food_item.dart';
 import '../../data/repositories/food_repository.dart';
+import '../../data/services/google_fit_service.dart';
 
 class FoodLogState {
   final List<FoodItem> meals;
@@ -278,11 +280,32 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     try {
       await _enqueueFoodWrite(() => _repository.addFoodItem(meal));
       _invalidateWeeklyCache();
+      _publishMealToHealthConnect(meal);
     } catch (error) {
       if (!isClosed && operationGeneration == _loadGeneration) {
         _safeEmit(_stateWithMeals(previousMeals, error: error.toString()));
       }
     }
+  }
+
+  /// Publica la comida en Health Connect para que el resto de apps de salud
+  /// la vean (sincronización bidireccional: CalAI ya leía pasos y calorías,
+  /// pero no aportaba nada).
+  ///
+  /// Es best-effort y no se espera: si Health Connect no está instalado, el
+  /// usuario no dio permiso de escritura o la llamada falla, la comida ya
+  /// está guardada en CalAI y no debe verse afectada.
+  void _publishMealToHealthConnect(FoodItem meal) {
+    unawaited(GoogleFitService.instance.writeMealToHealthConnect(
+      clientRecordId: meal.id,
+      name: meal.name,
+      calories: meal.calories,
+      protein: meal.protein,
+      carbs: meal.carbs,
+      fat: meal.fat,
+      sugar: meal.sugar,
+      timestamp: meal.timestamp,
+    ));
   }
 
   Map<String, double> _calculateTotals(List<FoodItem> meals) {
@@ -398,6 +421,10 @@ class FoodLogCubit extends Cubit<FoodLogState> {
     try {
       await _enqueueFoodWrite(() => _repository.deleteFoodItem(meal));
       _invalidateWeeklyCache();
+      // El mismo id local con el que se escribió: así no quedan registros
+      // huérfanos en Health Connect al borrar la comida en CalAI.
+      unawaited(
+          GoogleFitService.instance.deleteMealFromHealthConnect(meal.id));
     } catch (error) {
       if (!isClosed && operationGeneration == _loadGeneration) {
         _safeEmit(_stateWithMeals(previousMeals, error: error.toString()));
