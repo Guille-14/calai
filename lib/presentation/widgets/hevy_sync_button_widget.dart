@@ -144,7 +144,7 @@ class _HevySyncButtonWidgetState extends State<HevySyncButtonWidget>
               if (widget.showLabel) ...[
                 const SizedBox(width: 6),
                 Text(
-                  _isSyncing ? 'Sincronizando...' : 'Hevy Sync',
+                  _isSyncing ? 'Sincronizando...' : 'Importar entrenos',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

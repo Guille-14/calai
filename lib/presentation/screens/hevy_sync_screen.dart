@@ -80,7 +80,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
   Future<void> _syncWithHevy() async {
     setState(() {
       _isSyncing = true;
-      _statusMessage = 'Conectando con Hevy vía Health Connect...';
+      _statusMessage = 'Conectando con Health Connect...';
     });
 
     try {
@@ -170,7 +170,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Se importaron $count entrenamientos desde Hevy',
+                'Se importaron $count entrenamientos desde Health Connect',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 14,
@@ -210,7 +210,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         title: const Text(
-          'Sincronizar con Hevy',
+          'Importar entrenamientos',
           style: TextStyle(
             color: AppColors.accent,
             fontWeight: FontWeight.w800,
@@ -366,7 +366,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           const SizedBox(height: 8),
           _buildInfoRow(
             'Fuente de Datos',
-            'Aplicación Hevy',
+            'Apps con Health Connect (Hevy, Mi Fitness...)',
             Icons.fit_screen,
           ),
           const SizedBox(height: 8),
@@ -439,7 +439,7 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
               )
             : const Icon(Icons.cloud_sync),
         label: Text(
-          _isSyncing ? 'Sincronizando...' : 'Sincronizar con Hevy',
+          _isSyncing ? 'Sincronizando...' : 'Importar de Health Connect',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
@@ -646,19 +646,19 @@ class _HevySyncScreenState extends State<HevySyncScreen> {
           const SizedBox(height: 16),
           _buildInstructionStep(
             '1',
-            'Abre la app Hevy y registra tus entrenamientos',
+            'Registra tus entrenamientos en tu app habitual (Hevy, Mi Fitness...)',
             Icons.fitness_center,
           ),
           const SizedBox(height: 12),
           _buildInstructionStep(
             '2',
-            'Asegúrate de que Hevy tenga acceso a Health Connect',
+            'Asegúrate de que esa app tenga acceso a Health Connect',
             Icons.health_and_safety,
           ),
           const SizedBox(height: 12),
           _buildInstructionStep(
             '3',
-            'Toca el botón "Sincronizar con Hevy"',
+            'Toca el botón "Importar de Health Connect"',
             Icons.cloud_sync,
           ),
           const SizedBox(height: 12),
